@@ -38,22 +38,26 @@ cp -a $(dirname $0)/test-configure .
 echo "version1" > app-data
 cp $(dirname $0)/test.json .
 cp $(dirname $0)/test.yaml .
+cp $(dirname $0)/test.eson .
 cp $(dirname $0)/test-runtime.json .
 cp $(dirname $0)/0001-Add-test-logo.patch .
 mkdir include1
 cp $(dirname $0)/module1.json include1/
 cp $(dirname $0)/module1.yaml include1/
+cp $(dirname $0)/module1.eson include1/
 cp $(dirname $0)/source1.json include1/
 cp $(dirname $0)/data1 include1/
 cp $(dirname $0)/data1.patch include1/
 mkdir include1/include2
 cp $(dirname $0)/module2.json include1/include2/
 cp $(dirname $0)/module2.yaml include1/include2/
+cp $(dirname $0)/module2.eson include1/include2/
 cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
 ${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.json >&2
 ${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.yaml >&2
+${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.eson >&2
 
 assert_file_has_content appdir/files/share/app-data version1
 assert_file_has_content appdir/metadata shared=network;
@@ -91,6 +95,8 @@ echo "version2" > app-data
 ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.json >&2
 assert_file_has_content appdir/files/share/app-data version2
 ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.yaml >&2
+assert_file_has_content appdir/files/share/app-data version2
+${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.eson >&2
 assert_file_has_content appdir/files/share/app-data version2
 
 ${FLATPAK} ${U} update -y org.test.Hello2 master >&2

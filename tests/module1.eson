@@ -1,0 +1,20 @@
+"module1 "name (,,)
+  "include2/module2.eson
+    "module1-first "name (,,)
+    "simple "buildsystem (,,)
+      "echo%20module1%20>%20/app/modify_me
+      "echo%20module1%20>%20/app/ran_module1
+      2 [] "build-commands (,,)
+        "patch "type (,,)
+        0 "strip-components (,,)
+        "data1.patch "path (,,)
+        3 {:}
+
+        "file "type (,,)
+        "data1 "path (,,)
+        2 {:}
+
+        2 [] "sources (,,)
+    4 {:}
+  2 [] "modules (,,)
+2 {:}

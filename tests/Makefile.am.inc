@@ -24,13 +24,16 @@ dist_installed_test_data = \
 	tests/source2.json \
 	tests/test.json \
 	tests/test.yaml \
+	tests/test.eson \
 	tests/test-runtime.json \
 	tests/module1.json \
 	tests/module1.yaml \
+	tests/module1.eson \
 	tests/data1 \
 	tests/data1.patch \
 	tests/module2.json \
 	tests/module2.yaml \
+	tests/module2.eson \
 	tests/data2 \
 	tests/data2.patch \
 	tests/session.conf.in \

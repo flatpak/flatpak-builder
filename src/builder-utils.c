@@ -41,6 +41,7 @@
 
 G_DEFINE_QUARK (builder-curl-error, builder_curl_error)
 G_DEFINE_QUARK (builder-yaml-parse-error, builder_yaml_parse_error)
+G_DEFINE_QUARK (builder-eson-parse-error, builder_eson_parse_error)
 
 #ifdef FLATPAK_BUILDER_ENABLE_YAML
 #include <yaml.h>
@@ -510,6 +511,232 @@ parse_yaml_to_json (const gchar *contents,
 
 #endif  // FLATPAK_BUILDER_ENABLE_YAML
 
+typedef struct {
+  int line, col;
+} EsonPos;
+
+static JsonNode *
+eson_stack_pop (GPtrArray     *stack,
+                const EsonPos *pos,
+                GError       **error)
+{
+  if (stack->len == 0)
+  {
+    g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                 "%d:%d: Stack underflow", pos->line, pos->col);
+    return NULL;
+  }
+
+  return g_ptr_array_steal_index (stack, stack->len - 1);
+}
+
+static gboolean
+eson_stack_pop_int (GPtrArray     *stack,
+                    const EsonPos *pos,
+                    gint64        *out,
+                    GError       **error)
+{
+  g_autoptr(JsonNode) node = NULL;
+
+  node = eson_stack_pop (stack, pos, error);
+  if (!node)
+    return FALSE;
+
+  if (!JSON_NODE_HOLDS_VALUE (node) ||
+      json_node_get_value_type (node) != G_TYPE_INT64)
+    {
+      g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                   "%d:%d: Expected an int64", pos->line, pos->col);
+      return FALSE;
+    }
+
+  *out = json_node_get_int (node);
+  return TRUE;
+}
+
+static JsonNode *
+parse_eson_to_json (const gchar *contents,
+                    GError     **error)
+{
+
+  g_autoptr(GPtrArray) stack = g_ptr_array_new_with_free_func ((GDestroyNotify)json_node_unref);
+  EsonPos pos = {1, 1};
+
+  for (;;)
+    {
+      g_autofree gchar *word = NULL;
+      const gchar *word_start = NULL;
+
+      for (; g_ascii_isspace (*contents); contents++)
+        {
+          if (*contents == '\n')
+            {
+              pos.line++;
+              pos.col = 1;
+            }
+          else
+            pos.col++;
+        }
+
+      if (!*contents)
+        break;
+
+      word_start = contents;
+      while (*contents && !g_ascii_isspace (*contents))
+        contents++;
+
+      word = g_strndup (word_start, contents - word_start);
+
+      if (*word == '"')
+        {
+          g_autofree char *unescaped = g_uri_unescape_string (word + 1, NULL);
+          if (!unescaped)
+            {
+              g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                           "%d:%d: Null character in string", pos.line, pos.col);
+              return NULL;
+            }
+
+          g_ptr_array_add (stack, json_node_init_string (json_node_alloc (), unescaped));
+        }
+      else if (g_ascii_isdigit (*word) || *word == '_')
+        {
+          g_autoptr(GString) word_s = NULL;
+          gchar *end = NULL;
+          guint alt_base = 0;
+
+          if (strchr (word, '.'))
+            {
+              g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                           "%d:%d: doubles are not supported", pos.line, pos.col);
+              return NULL;
+            }
+
+          if (g_str_has_prefix (word, "0b"))
+            alt_base = 2;
+          else if (g_str_has_prefix (word, "0q"))
+            alt_base = 3;
+          else if (g_str_has_prefix (word, "0o"))
+            alt_base = 8;
+          else if (g_str_has_prefix (word, "0x"))
+            alt_base = 16;
+
+          word_s = g_string_new (alt_base ? word + 2 : word);
+          g_string_replace (word_s, "_", "", 0);
+
+          gint64 value = g_ascii_strtoll (word_s->str, &end, alt_base ?: 10);
+          if (*end != 0)
+            {
+              g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                           "%d:%d: Invalid number '%s'", pos.line, pos.col, word);
+              return NULL;
+            }
+
+          g_ptr_array_add (stack, json_node_init_int (json_node_alloc (), value));
+        }
+      else if (g_regex_match_simple ("^\\(,*\\)$", word, 0, 0))
+        {
+          g_autoptr(JsonArray) array = json_array_new ();
+          gint64 i = 0;
+
+          for (i = 0; i < strlen (word) - 2; i++)
+            {
+              JsonNode* item = eson_stack_pop (stack, &pos, error);
+              if (!item)
+                return NULL;
+
+              json_array_add_element (array, item);
+            }
+
+          g_ptr_array_add (stack, json_node_init_array (json_node_alloc (),
+                                                        g_steal_pointer (&array)));
+        }
+      else if (g_str_equal (word, "[]"))
+        {
+          g_autoptr(JsonArray) array = json_array_new ();
+          gint64 i = 0, len;
+
+          if (!eson_stack_pop_int (stack, &pos, &len, error))
+            return NULL;
+
+          for (i = 0; i < len; i++)
+            {
+              JsonNode* item = eson_stack_pop (stack, &pos, error);
+              if (!item)
+                return NULL;
+
+              json_array_add_element (array, item);
+            }
+
+          g_ptr_array_add (stack, json_node_init_array (json_node_alloc (),
+                                                        g_steal_pointer (&array)));
+        }
+      else if (g_str_equal (word, "{:}"))
+        {
+          g_autoptr(JsonObject) object = json_object_new ();
+          gint64 i, len;
+
+          if (!eson_stack_pop_int (stack, &pos, &len, error))
+            return NULL;
+
+          for (i = 0; i < len; i++)
+            {
+              g_autoptr(JsonNode) pair_node = eson_stack_pop (stack, &pos, error);
+              JsonArray *pair = NULL;
+              const gchar *key = NULL;
+
+              if (!pair_node)
+                return NULL;
+              else if (!JSON_NODE_HOLDS_ARRAY (pair_node))
+                {
+                  g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                               "%d:%d: Expected an array for pair #%d",
+                               pos.line, pos.col, (int)i+1);
+                  return NULL;
+                }
+
+              pair = json_node_get_array (pair_node);
+              if (json_array_get_length (pair) != 2)
+                {
+                  g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                               "%d:%d: Expected an array with 2 elements for pair #%d, not %u",
+                               pos.line, pos.col, (int)i+1, json_array_get_length (pair));
+                  return NULL;
+                }
+
+              key = json_array_get_string_element (pair, 0);
+              if (key == NULL)
+                {
+                  g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                               "%d:%d: First element of pair #%d should be a string",
+                               pos.line, pos.col, (int)i+1);
+                  return NULL;
+                }
+
+              json_object_set_member (object, key,
+                                      json_node_ref (json_array_get_element (pair, 1)));
+            }
+
+          g_ptr_array_add (stack, json_node_init_object (json_node_alloc (),
+                                                         g_steal_pointer (&object)));
+        }
+      else if (g_str_equal (word, "T"))
+        g_ptr_array_add (stack, json_node_init_boolean (json_node_alloc (), TRUE));
+      else if (g_str_equal (word, "F"))
+        g_ptr_array_add (stack, json_node_init_boolean (json_node_alloc (), FALSE));
+      else
+        {
+          g_set_error (error, BUILDER_ESON_PARSE_ERROR, 0,
+                       "%d:%d: Unknown command '%s'", pos.line, pos.col, word);
+          return NULL;
+        }
+
+      pos.col += contents - word_start;
+    }
+
+  return eson_stack_pop (stack, &pos, error);
+}
+
 JsonNode *
 builder_json_node_from_data (const char *relpath,
                              const char *contents,
@@ -517,6 +744,8 @@ builder_json_node_from_data (const char *relpath,
 {
   if (g_str_has_suffix (relpath, ".yaml") || g_str_has_suffix (relpath, ".yml"))
     return parse_yaml_to_json (contents, error);
+  else if (g_str_has_suffix (relpath, ".eson"))
+    return parse_eson_to_json (contents, error);
   else
     return json_from_string (contents, error);
 }

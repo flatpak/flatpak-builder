@@ -1,0 +1,17 @@
+"module2 "name (,,)
+"simple "buildsystem (,,)
+"/modify_me 1 [] "ensure-writable (,,)
+  "echo%20module2%20>%20/app/modify_me
+  "echo%20module2%20>%20/app/ran_module2
+  2 [] "build-commands (,,)
+
+    "patch "type (,,)
+    "data2.patch "path (,,)
+    2 {:}
+
+    "file "type (,,)
+    "data2 "path (,,)
+    2 {:}
+  2 [] "sources (,,)
+
+5 {:}

@@ -77,8 +77,10 @@ if get_option('installed_tests')
     'libtest.sh',
     'module1.json',
     'module1.yaml',
+    'module1.eson',
     'module2.json',
     'module2.yaml',
+    'module2.eson',
     'org.test.Deprecated.MD5.archive.json',
     'org.test.Deprecated.MD5.archive.yaml',
     'org.test.Deprecated.MD5.file.json',
@@ -94,6 +96,7 @@ if get_option('installed_tests')
     'source1.json',
     'source2.json',
     'test-runtime.json',
+    'test.eson',
     'test.json',
     'test.yaml',
 

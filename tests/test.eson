@@ -1,0 +1,76 @@
+"org.test.Hello2 "app-id (,,)
+"org.test.Platform "runtime (,,)
+"org.test.Sdk "sdk (,,)
+"hello2.sh "command (,,)
+"test 1 [] "tags (,,)
+0 "token-type (,,)
+"--share=network 1 [] "finish-args (,,)
+  "-O2%20-g "cflags (,,)
+  "-O2%20-g "cxxflags (,,)
+    "bar "FOO (,,)
+    "1 "V (,,)
+    2 {:} "env (,,)
+  3 {:} "build-options (,,)
+"*.cleanup "/cleanup 2 [] "cleanup (,,)
+"touch%20/app/cleaned_up 1 [] "cleanup-commands (,,)
+  "root "name (,,)
+      "empty "name (,,)
+      1 {:}
+
+      "test2 "name (,,)
+        "cp%20source[12]%20/app
+        "echo%20foo2%20>%20/app/out2
+        2 [] "build-commands (,,)
+      "simple "buildsystem (,,)
+          "include1/source1.json
+          "include1/include2/source2.json
+
+          "file "type (,,)
+          "app-data "path (,,)
+          2 {:}
+        3 [] "sources (,,)
+      4 {:}
+
+      "test "name (,,)
+      "--some-arg 1 [] "config-opts (,,)
+        "cp%20org.test.Hello.png%20/app/share/icons/
+        "mkdir%20-p%20/app/share/icons/
+        "touch%20/app/bin/file.cleanup
+        3 [] "post-install (,,)
+      "BAR=2 1 [] "make-args (,,)
+      "BAR=3 1 [] "make-install-args (,,)
+      "echo%20foo%20>%20/app/out 1 [] "build-commands (,,)
+          "patch "type (,,)
+          "0001-Add-test-logo.patch "path (,,)
+          T "use-git (,,)
+          3 {:}
+
+          "shell "type (,,)
+            "touch%20/app/cleanup/a_file
+            "mkdir%20/app/cleanup/
+            2 [] "commands (,,)
+          2 {:}
+
+          "script "type (,,)
+          "hello2.sh "dest-filename (,,)
+          "echo%20"Hello%20world2,%20from%20a%20sandbox" 1 [] "commands (,,)
+          3 {:}
+
+          "file "type (,,)
+          "app-data "path (,,)
+          2 {:}
+
+          "file "type (,,)
+          "test-configure "path (,,)
+          "configure "dest-filename (,,)
+          "675a1ac2feec4d4f54e581b4b01bc3cfd2c1cf31aa5963574d31228c8a11b7e7 "sha256 (,,)
+          4 {:}
+        5 [] "sources (,,)
+      7 {:}
+    3 [] "modules (,,)
+  2 {:}
+
+  "include1/module1.eson
+
+  2 [] "modules (,,)
+11 {:}

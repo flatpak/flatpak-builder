@@ -67,6 +67,9 @@ GQuark builder_curl_error_quark (void);
 GQuark builder_yaml_parse_error_quark (void);
 #define BUILDER_YAML_PARSE_ERROR (builder_yaml_parse_error_quark ())
 
+GQuark builder_eson_parse_error_quark (void);
+#define BUILDER_ESON_PARSE_ERROR (builder_eson_parse_error_quark ())
+
 JsonNode * builder_json_node_from_data (const char *relpath,
                                         const char *contents,
                                         GError    **error);
