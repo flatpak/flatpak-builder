@@ -21,11 +21,6 @@
 #include "config.h"
 
 #include "flatpak-utils.h"
-#include "lib/flatpak-error.h"
-#include "flatpak-dir.h"
-#include "flatpak-portal-error.h"
-#include "flatpak-oci-registry.h"
-#include "flatpak-run.h"
 
 #include <glib/gi18n.h>
 
@@ -48,34 +43,6 @@
 #include <gio/gunixoutputstream.h>
 #include <gio/gunixinputstream.h>
 
-/* This is also here so the common code can report these errors to the lib */
-static const GDBusErrorEntry flatpak_error_entries[] = {
-  {FLATPAK_ERROR_ALREADY_INSTALLED,     "org.freedesktop.Flatpak.Error.AlreadyInstalled"},
-  {FLATPAK_ERROR_NOT_INSTALLED,         "org.freedesktop.Flatpak.Error.NotInstalled"},
-};
-
-typedef struct archive FlatpakAutoArchiveRead;
-G_DEFINE_AUTOPTR_CLEANUP_FUNC(FlatpakAutoArchiveRead, archive_read_free)
-
-static void
-propagate_libarchive_error (GError      **error,
-                            struct archive *a)
-{
-  g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-               "%s", archive_error_string (a));
-}
-
-GQuark
-flatpak_error_quark (void)
-{
-  static volatile gsize quark_volatile = 0;
-
-  g_dbus_error_register_error_domain ("flatpak-error-quark",
-                                      &quark_volatile,
-                                      flatpak_error_entries,
-                                      G_N_ELEMENTS (flatpak_error_entries));
-  return (GQuark) quark_volatile;
-}
 
 GFile *
 flatpak_file_new_tmp_in (GFile *dir,
@@ -162,76 +129,6 @@ flatpak_splice_update_checksum (GOutputStream  *out,
   return TRUE;
 }
 
-GBytes *
-flatpak_read_stream (GInputStream *in,
-                     gboolean      null_terminate,
-                     GError      **error)
-{
-  g_autoptr(GOutputStream) mem_stream = NULL;
-
-  mem_stream = g_memory_output_stream_new_resizable ();
-  if (g_output_stream_splice (mem_stream, in,
-                              0, NULL, error) < 0)
-    return NULL;
-
-  if (null_terminate)
-    {
-      if (!g_output_stream_write (G_OUTPUT_STREAM (mem_stream), "\0", 1, NULL, error))
-        return NULL;
-    }
-
-  if (!g_output_stream_close (G_OUTPUT_STREAM (mem_stream), NULL, error))
-    return NULL;
-
-  return g_memory_output_stream_steal_as_bytes (G_MEMORY_OUTPUT_STREAM (mem_stream));
-}
-
-gint
-flatpak_strcmp0_ptr (gconstpointer a,
-                     gconstpointer b)
-{
-  return g_strcmp0 (*(char * const *) a, *(char * const *) b);
-}
-
-/* Compares if str has a specific path prefix. This differs
-   from a regular prefix in two ways. First of all there may
-   be multiple slashes separating the path elements, and
-   secondly, if a prefix is matched that has to be en entire
-   path element. For instance /a/prefix matches /a/prefix/foo/bar,
-   but not /a/prefixfoo/bar. */
-gboolean
-flatpak_has_path_prefix (const char *str,
-                         const char *prefix)
-{
-  while (TRUE)
-    {
-      /* Skip consecutive slashes to reach next path
-         element */
-      while (*str == '/')
-        str++;
-      while (*prefix == '/')
-        prefix++;
-
-      /* No more prefix path elements? Done! */
-      if (*prefix == 0)
-        return TRUE;
-
-      /* Compare path element */
-      while (*prefix != 0 && *prefix != '/')
-        {
-          if (*str != *prefix)
-            return FALSE;
-          str++;
-          prefix++;
-        }
-
-      /* Matched prefix path element,
-         must be entire str path element */
-      if (*str != '/' && *str != 0)
-        return FALSE;
-    }
-}
-
 /* Returns end of matching path prefix, or NULL if no match */
 const char *
 flatpak_path_match_prefix (const char *pattern,
@@ -304,55 +201,6 @@ flatpak_path_match_prefix (const char *pattern,
   return NULL; /* Should not be reached */
 }
 
-static const char *
-flatpak_get_kernel_arch (void)
-{
-  static struct utsname buf;
-  static char *arch = NULL;
-  char *m;
-
-  if (arch != NULL)
-    return arch;
-
-  if (uname (&buf))
-    {
-      arch = "unknown";
-      return arch;
-    }
-
-  /* By default, just pass on machine, good enough for most arches */
-  arch = buf.machine;
-
-  /* Override for some arches */
-
-  m = buf.machine;
-  /* i?86 */
-  if (strlen (m) == 4 && m[0] == 'i' && m[2] == '8'  && m[3] == '6')
-    {
-      arch = "i386";
-    }
-  else if (g_str_has_prefix (m, "arm"))
-    {
-      if (g_str_has_suffix (m, "b"))
-        arch = "armeb";
-      else
-        arch = "arm";
-    }
-  else if (strcmp (m, "mips") == 0)
-    {
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
-      arch = "mipsel";
-#endif
-    }
-  else if (strcmp (m, "mips64") == 0)
-    {
-#if G_BYTE_ORDER == G_LITTLE_ENDIAN
-      arch = "mips64el";
-#endif
-    }
-
-  return arch;
-}
 
 /* This maps the kernel-reported uname to a single string representing
  * the cpu family, in the sense that all members of this family would
@@ -388,106 +236,6 @@ flatpak_get_arch (void)
 }
 
 gboolean
-flatpak_is_linux32_arch (const char *arch)
-{
-  const char *kernel_arch = flatpak_get_kernel_arch ();
-
-  if (strcmp (kernel_arch, "x86_64") == 0 &&
-      strcmp (arch, "i386") == 0)
-    return TRUE;
-
-  if (strcmp (kernel_arch, "aarch64") == 0 &&
-      strcmp (arch, "arm") == 0)
-    return TRUE;
-
-  return FALSE;
-}
-
-/* Get all compatible arches for this host in order of priority */
-const char **
-flatpak_get_arches (void)
-{
-  static gsize arches = 0;
-  static struct {
-    const char *kernel_arch;
-    const char *compat_arch;
-  } compat_arches[] = {
-    { "x86_64", "i386" },
-    { "aarch64", "arm" },
-  };
-
-  if (g_once_init_enter (&arches))
-    {
-      gsize new_arches = 0;
-      const char *main_arch = flatpak_get_arch ();
-      const char *kernel_arch = flatpak_get_kernel_arch ();
-      GPtrArray *array = g_ptr_array_new ();
-      int i;
-
-      /* This is the userspace arch, i.e. the one flatpak itself was
-         build for. It's always first. */
-      g_ptr_array_add (array, (char *)main_arch);
-
-      /* Also add all other arches that are compatible with the kernel arch */
-      for (i = 0; i < G_N_ELEMENTS(compat_arches); i++)
-        {
-          if ((strcmp (compat_arches[i].kernel_arch, kernel_arch) == 0) &&
-              /* Don't re-add the main arch */
-              (strcmp (compat_arches[i].compat_arch, main_arch) != 0))
-            g_ptr_array_add (array, (char *)compat_arches[i].compat_arch);
-        }
-
-      g_ptr_array_add (array, NULL);
-      new_arches = (gsize)g_ptr_array_free (array, FALSE);
-
-      g_once_init_leave (&arches, new_arches);
- }
-
-  return (const char **)arches;
-}
-
-const char **
-flatpak_get_gl_drivers (void)
-{
-  static gsize drivers = 0;
-  if (g_once_init_enter (&drivers))
-    {
-      gsize new_drivers;
-      char **new_drivers_c = 0;
-      const char *env = g_getenv ("FLATPAK_GL_DRIVERS");
-      if (env != NULL && *env != 0)
-        new_drivers_c = g_strsplit (env, ":", -1);
-      else
-        {
-          g_autofree char *nvidia_version = NULL;
-          char *dot;
-          GPtrArray *array = g_ptr_array_new ();
-
-          if (g_file_get_contents ("/sys/module/nvidia/version",
-                                   &nvidia_version, NULL, NULL))
-            {
-              g_strstrip (nvidia_version);
-              /* Convert dots to dashes */
-              while ((dot = strchr (nvidia_version, '.')) != NULL)
-                *dot = '-';
-              g_ptr_array_add (array, g_strconcat ("nvidia-", nvidia_version, NULL));
-            }
-
-          g_ptr_array_add (array, (char *)"default");
-          g_ptr_array_add (array, (char *)"host");
-
-          g_ptr_array_add (array, NULL);
-          new_drivers_c = (char **)g_ptr_array_free (array, FALSE);
-        }
-
-      new_drivers = (gsize)new_drivers_c;
-      g_once_init_leave (&drivers, new_drivers);
-    }
-
-  return (const char **)drivers;
-}
-
-gboolean
 flatpak_is_in_sandbox (void)
 {
   static gsize in_sandbox = 0;
@@ -505,22 +253,6 @@ flatpak_is_in_sandbox (void)
  }
 
   return in_sandbox == 1;
-}
-
-gboolean
-flatpak_fancy_output (void)
-{
-        return isatty (STDOUT_FILENO);
-}
-
-const char *
-flatpak_get_bwrap (void)
-{
-  const char *e = g_getenv ("FLATPAK_BWRAP");
-
-  if (e != NULL)
-    return e;
-  return HELPER;
 }
 
 gboolean
@@ -553,29 +285,6 @@ flatpak_break_hardlink (GFile *file, GError **error)
   return TRUE;
 }
 
-/* We only migrate the user dir, because thats what most people used with xdg-app,
- * and its where all per-user state/config are stored.
- */
-void
-flatpak_migrate_from_xdg_app (void)
-{
-  g_autofree char *source = g_build_filename (g_get_user_data_dir (), "xdg-app", NULL);
-  g_autofree char *dest = g_build_filename (g_get_user_data_dir (), "flatpak", NULL);
-
-  if (!g_file_test (dest, G_FILE_TEST_EXISTS) &&
-      g_file_test (source, G_FILE_TEST_EXISTS))
-    {
-      g_print ("Migrating %s to %s\n", source, dest);
-      if (rename (source, dest) != 0)
-        {
-          if (errno != ENOENT &&
-              errno != ENOTEMPTY &&
-              errno != EEXIST)
-            g_print ("Error during migration: %s\n", g_strerror (errno));
-        }
-    }
-}
-
 static gboolean
 is_valid_initial_name_character (gint c, gboolean allow_dash)
 {
@@ -591,135 +300,6 @@ is_valid_name_character (gint c, gboolean allow_dash)
   return
     is_valid_initial_name_character (c, allow_dash) ||
     (c >= '0' && c <= '9');
-}
-
-/** flatpak_is_valid_name:
- * @string: The string to check
- * @error: Return location for an error
- *
- * Checks if @string is a valid application name.
- *
- * App names are composed of 3 or more elements separated by a period
- * ('.') character. All elements must contain at least one character.
- *
- * Each element must only contain the ASCII characters
- * "[A-Z][a-z][0-9]_-". Elements may not begin with a digit.
- * Additionally "-" is only allowed in the last element.
- *
- * App names must not begin with a '.' (period) character.
- *
- * App names must not exceed 255 characters in length.
- *
- * The above means that any app name is also a valid DBus well known
- * bus name, but not all DBus names are valid app names. The difference are:
- * 1) DBus name elements may contain '-' in the non-last element.
- * 2) DBus names require only two elements
- *
- * Returns: %TRUE if valid, %FALSE otherwise.
- *
- * Since: 2.26
- */
-gboolean
-flatpak_is_valid_name (const char *string,
-                       GError **error)
-{
-  guint len;
-  gboolean ret;
-  const gchar *s;
-  const gchar *end;
-  const gchar *last_dot;
-  int dot_count;
-  gboolean last_element;
-
-  g_return_val_if_fail (string != NULL, FALSE);
-
-  ret = FALSE;
-
-  len = strlen (string);
-  if (G_UNLIKELY (len == 0))
-    {
-      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Name can't be empty");
-      goto out;
-    }
-
-  if (G_UNLIKELY (len > 255))
-    {
-      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Name can't be longer than 255 characters");
-      goto out;
-    }
-
-  end = string + len;
-
-  last_dot = strrchr (string, '.');
-  last_element = FALSE;
-
-  s = string;
-  if (G_UNLIKELY (*s == '.'))
-    {
-      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Name can't start with a period");
-      goto out;
-    }
-  else if (G_UNLIKELY (!is_valid_initial_name_character (*s, last_element)))
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Name can't start with %c", *s);
-      goto out;
-    }
-
-  s += 1;
-  dot_count = 0;
-  while (s != end)
-    {
-      if (*s == '.')
-        {
-          if (s == last_dot)
-            last_element = TRUE;
-          s += 1;
-          if (G_UNLIKELY (s == end))
-            {
-              g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                                   "Name can't end with a period");
-              goto out;
-            }
-          if (!is_valid_initial_name_character (*s, last_element))
-            {
-              if (*s == '-')
-                g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                             "Only last name segment can contain -");
-              else
-                g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                             "Name segment can't start with %c", *s);
-              goto out;
-            }
-          dot_count++;
-        }
-      else if (G_UNLIKELY (!is_valid_name_character (*s, last_element)))
-        {
-          if (*s == '-')
-            g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                         "Only last name segment can contain -");
-          else
-            g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                         "Name can't contain %c", *s);
-          goto out;
-        }
-      s += 1;
-    }
-
-  if (G_UNLIKELY (dot_count < 2))
-    {
-      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Names must contain at least 2 periods");
-      goto out;
-    }
-
-  ret = TRUE;
-
-out:
-  return ret;
 }
 
 gboolean
@@ -738,89 +318,6 @@ flatpak_has_name_prefix (const char *string,
     !is_valid_name_character (*rest, FALSE);
 }
 
-static gboolean
-is_valid_initial_branch_character (gint c)
-{
-  return
-    (c >= '0' && c <= '9') ||
-    (c >= 'A' && c <= 'Z') ||
-    (c >= 'a' && c <= 'z') ||
-    (c == '_') ||
-    (c == '-');
-}
-
-static gboolean
-is_valid_branch_character (gint c)
-{
-  return
-    is_valid_initial_branch_character (c) ||
-    (c == '.');
-}
-
-/**
- * flatpak_is_valid_branch:
- * @string: The string to check
- * @error: return location for an error
- *
- * Checks if @string is a valid branch name.
- *
- * Branch names must only contain the ASCII characters
- * "[A-Z][a-z][0-9]_-.".
- * Branch names may not begin with a digit.
- * Branch names must contain at least one character.
- *
- * Returns: %TRUE if valid, %FALSE otherwise.
- *
- * Since: 2.26
- */
-gboolean
-flatpak_is_valid_branch (const char *string,
-                         GError **error)
-{
-  guint len;
-  gboolean ret;
-  const gchar *s;
-  const gchar *end;
-
-  g_return_val_if_fail (string != NULL, FALSE);
-
-  ret = FALSE;
-
-  len = strlen (string);
-  if (G_UNLIKELY (len == 0))
-    {
-      g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Branch can't be empty");
-      goto out;
-    }
-
-  end = string + len;
-
-  s = string;
-  if (G_UNLIKELY (!is_valid_initial_branch_character (*s)))
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Branch can't start with %c", *s);
-      goto out;
-    }
-
-  s += 1;
-  while (s != end)
-    {
-      if (G_UNLIKELY (!is_valid_branch_character (*s)))
-        {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "Branch can't contain %c", *s);
-          goto out;
-        }
-      s += 1;
-    }
-
-  ret = TRUE;
-
-out:
-  return ret;
-}
 
 /* Dashes are only valid in the last part of the app id, so
    we replace them with underscore so we can suffix the id */
@@ -842,212 +339,6 @@ flatpak_make_valid_id_prefix (const char *orig_id)
   return id;
 }
 
-gboolean
-flatpak_id_has_subref_suffix (const char *id)
-{
-  return
-    g_str_has_suffix (id, ".Locale") ||
-    g_str_has_suffix (id, ".Debug") ||
-    g_str_has_suffix (id, ".Sources");
-}
-
-char **
-flatpak_decompose_ref (const char *full_ref,
-                       GError    **error)
-{
-  g_auto(GStrv) parts = NULL;
-  g_autoptr(GError) local_error = NULL;
-
-  parts = g_strsplit (full_ref, "/", 0);
-  if (g_strv_length (parts) != 4)
-    {
-      flatpak_fail (error, "Wrong number of components in %s", full_ref);
-      return NULL;
-    }
-
-  if (strcmp (parts[0], "app") != 0 && strcmp (parts[0], "runtime") != 0)
-    {
-      flatpak_fail (error, "Not application or runtime");
-      return NULL;
-    }
-
-  if (!flatpak_is_valid_name (parts[1], &local_error))
-    {
-      flatpak_fail (error, "Invalid name %s: %s", parts[1], local_error->message);
-      return NULL;
-    }
-
-  if (strlen (parts[2]) == 0)
-    {
-      flatpak_fail (error, "Invalid arch %s", parts[2]);
-      return NULL;
-    }
-
-  if (!flatpak_is_valid_branch (parts[3], &local_error))
-    {
-      flatpak_fail (error, "Invalid branch %s: %s", parts[3], local_error->message);
-      return NULL;
-    }
-
-  return g_steal_pointer (&parts);
-}
-
-static const char *
-next_element (const char **partial_ref)
-{
-  const char *slash;
-  const char *end;
-  slash = (const char *)strchr (*partial_ref, '/');
-  if (slash != NULL)
-    {
-      end = slash;
-      *partial_ref = slash + 1;
-    }
-  else
-    {
-      end = *partial_ref + strlen (*partial_ref);
-      *partial_ref = end;
-    }
-
-  return end;
-}
-
-FlatpakKinds
-flatpak_kinds_from_bools (gboolean app, gboolean runtime)
-{
-  FlatpakKinds kinds = 0;
-
-  if (app)
-    kinds |= FLATPAK_KINDS_APP;
-
-  if (runtime)
-    kinds |= FLATPAK_KINDS_RUNTIME;
-
-  if (kinds == 0)
-    kinds = FLATPAK_KINDS_APP | FLATPAK_KINDS_RUNTIME;
-
-  return kinds;
-}
-
-static gboolean
-_flatpak_split_partial_ref_arg (const char   *partial_ref,
-                                gboolean      validate,
-                                FlatpakKinds  default_kinds,
-                                const char   *default_arch,
-                                const char   *default_branch,
-                                FlatpakKinds *out_kinds,
-                                char        **out_id,
-                                char        **out_arch,
-                                char        **out_branch,
-                                GError      **error)
-{
-  const char *id_start = NULL;
-  const char *id_end = NULL;
-  g_autofree char *id = NULL;
-  const char *arch_start = NULL;
-  const char *arch_end = NULL;
-  g_autofree char *arch = NULL;
-  const char *branch_start = NULL;
-  const char *branch_end = NULL;
-  g_autofree char *branch = NULL;
-  g_autoptr(GError) local_error = NULL;
-  FlatpakKinds kinds = 0;
-
-  if (g_str_has_prefix (partial_ref, "app/"))
-    {
-      partial_ref += strlen ("app/");
-      kinds = FLATPAK_KINDS_APP;
-    }
-  else if (g_str_has_prefix (partial_ref, "runtime/"))
-    {
-      partial_ref += strlen ("runtime/");
-      kinds = FLATPAK_KINDS_RUNTIME;
-    }
-  else
-    kinds = default_kinds;
-
-  id_start = partial_ref;
-  id_end = next_element (&partial_ref);
-  id = g_strndup (id_start, id_end - id_start);
-
-  if (validate && !flatpak_is_valid_name (id, &local_error))
-    return flatpak_fail (error, "Invalid id %s: %s", id, local_error->message);
-
-  arch_start = partial_ref;
-  arch_end = next_element (&partial_ref);
-  if (arch_end != arch_start)
-    arch = g_strndup (arch_start, arch_end - arch_start);
-  else
-    arch = g_strdup (default_arch);
-
-  branch_start = partial_ref;
-  branch_end = next_element (&partial_ref);
-  if (branch_end != branch_start)
-    branch = g_strndup (branch_start, branch_end - branch_start);
-  else
-    branch = g_strdup (default_branch);
-
-  if (validate && branch != NULL && !flatpak_is_valid_branch (branch, &local_error))
-    return flatpak_fail (error, "Invalid branch %s: %s", branch, local_error->message);
-
-  if (out_kinds)
-    *out_kinds = kinds;
-  if (out_id != NULL)
-    *out_id = g_steal_pointer (&id);
-  if (out_arch != NULL)
-    *out_arch = g_steal_pointer (&arch);
-  if (out_branch != NULL)
-    *out_branch = g_steal_pointer (&branch);
-
-  return TRUE;
-}
-
-gboolean
-flatpak_split_partial_ref_arg (const char   *partial_ref,
-                               FlatpakKinds  default_kinds,
-                               const char   *default_arch,
-                               const char   *default_branch,
-                               FlatpakKinds *out_kinds,
-                               char        **out_id,
-                               char        **out_arch,
-                               char        **out_branch,
-                               GError      **error)
-{
-  return _flatpak_split_partial_ref_arg (partial_ref,
-                                         TRUE,
-                                         default_kinds,
-                                         default_arch,
-                                         default_branch,
-                                         out_kinds,
-                                         out_id,
-                                         out_arch,
-                                         out_branch,
-                                         error);
-}
-
-gboolean
-flatpak_split_partial_ref_arg_novalidate (const char   *partial_ref,
-                                          FlatpakKinds  default_kinds,
-                                          const char   *default_arch,
-                                          const char   *default_branch,
-                                          FlatpakKinds *out_kinds,
-                                          char        **out_id,
-                                          char        **out_arch,
-                                          char        **out_branch)
-{
-  return _flatpak_split_partial_ref_arg (partial_ref,
-                                         FALSE,
-                                         default_kinds,
-                                         default_arch,
-                                         default_branch,
-                                         out_kinds,
-                                         out_id,
-                                         out_arch,
-                                         out_branch,
-                                         NULL);
-}
-
-
 char *
 flatpak_compose_ref (gboolean    app,
                      const char *name,
@@ -1056,18 +347,6 @@ flatpak_compose_ref (gboolean    app,
                      GError    **error)
 {
   g_autoptr(GError) local_error = NULL;
-
-  if (!flatpak_is_valid_name (name, &local_error))
-    {
-      flatpak_fail (error, "'%s' is not a valid name: %s", name, local_error->message);
-      return NULL;
-    }
-
-  if (branch && !flatpak_is_valid_branch (branch, &local_error))
-    {
-      flatpak_fail (error, "'%s' is not a valid branch name: %s", branch, local_error->message);
-      return NULL;
-    }
 
   if (app)
     return flatpak_build_app_ref (name, branch, arch);
@@ -1112,743 +391,6 @@ flatpak_build_app_ref (const char *app,
     arch = flatpak_get_arch ();
 
   return g_build_filename ("app", app, arch, branch, NULL);
-}
-
-char **
-flatpak_list_deployed_refs (const char   *type,
-                            const char   *name_prefix,
-                            const char   *branch,
-                            const char   *arch,
-                            GCancellable *cancellable,
-                            GError      **error)
-{
-  gchar **ret = NULL;
-
-  g_autoptr(GPtrArray) names = NULL;
-  g_autoptr(GHashTable) hash = NULL;
-  g_autoptr(FlatpakDir) user_dir = NULL;
-  g_autoptr(GPtrArray) system_dirs = NULL;
-  const char *key;
-  GHashTableIter iter;
-  int i;
-
-  hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
-
-  user_dir = flatpak_dir_get_user ();
-  system_dirs = flatpak_dir_get_system_list (cancellable, error);
-  if (system_dirs == NULL)
-    goto out;
-
-  if (!flatpak_dir_collect_deployed_refs (user_dir, type, name_prefix,
-                                          branch, arch, hash, cancellable,
-                                          error))
-    goto out;
-
-  for (i = 0; i < system_dirs->len; i++)
-    {
-      FlatpakDir *system_dir = g_ptr_array_index (system_dirs, i);
-      if (!flatpak_dir_collect_deployed_refs (system_dir, type, name_prefix,
-                                              branch, arch, hash, cancellable,
-                                              error))
-        goto out;
-    }
-
-  names = g_ptr_array_new ();
-  g_hash_table_iter_init (&iter, hash);
-  while (g_hash_table_iter_next (&iter, (gpointer *) &key, NULL))
-    g_ptr_array_add (names, g_strdup (key));
-
-  g_ptr_array_sort (names, flatpak_strcmp0_ptr);
-  g_ptr_array_add (names, NULL);
-
-  ret = (char **) g_ptr_array_free (names, FALSE);
-  names = NULL;
-
-out:
-  return ret;
-}
-
-char **
-flatpak_list_unmaintained_refs (const char   *name_prefix,
-                                const char   *branch,
-                                const char   *arch,
-                                GCancellable *cancellable,
-                                GError      **error)
-{
-  gchar **ret = NULL;
-  g_autoptr(GPtrArray) names = NULL;
-  g_autoptr(GHashTable) hash = NULL;
-  g_autoptr(FlatpakDir) user_dir = NULL;
-  const char *key;
-  GHashTableIter iter;
-  g_autoptr(GPtrArray) system_dirs = NULL;
-  int i;
-
-  hash = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
-
-  user_dir = flatpak_dir_get_user ();
-
-  if (!flatpak_dir_collect_unmaintained_refs (user_dir, name_prefix,
-                                              branch, arch, hash, cancellable,
-                                              error))
-    return NULL;
-
-  system_dirs = flatpak_dir_get_system_list (cancellable, error);
-  if (system_dirs == NULL)
-    return NULL;
-
-  for (i = 0; i < system_dirs->len; i++)
-    {
-      FlatpakDir *system_dir = g_ptr_array_index (system_dirs, i);
-
-      if (!flatpak_dir_collect_unmaintained_refs (system_dir, name_prefix,
-                                                  branch, arch, hash, cancellable,
-                                                  error))
-        return NULL;
-    }
-
-  names = g_ptr_array_new ();
-  g_hash_table_iter_init (&iter, hash);
-  while (g_hash_table_iter_next (&iter, (gpointer *) &key, NULL))
-    g_ptr_array_add (names, g_strdup (key));
-
-  g_ptr_array_sort (names, flatpak_strcmp0_ptr);
-  g_ptr_array_add (names, NULL);
-
-  ret = (char **) g_ptr_array_free (names, FALSE);
-  names = NULL;
-
-  return ret;
-}
-
-GFile *
-flatpak_find_deploy_dir_for_ref (const char   *ref,
-                                 FlatpakDir **dir_out,
-                                 GCancellable *cancellable,
-                                 GError      **error)
-{
-  g_autoptr(FlatpakDir) user_dir = NULL;
-  g_autoptr(GPtrArray) system_dirs = NULL;
-  FlatpakDir *dir = NULL;
-  g_autoptr(GFile) deploy = NULL;
-
-  user_dir = flatpak_dir_get_user ();
-  system_dirs = flatpak_dir_get_system_list (cancellable, error);
-  if (system_dirs == NULL)
-    return NULL;
-
-  dir = user_dir;
-  deploy = flatpak_dir_get_if_deployed (dir, ref, NULL, cancellable);
-  if (deploy == NULL)
-    {
-      int i;
-      for (i = 0; deploy == NULL && i < system_dirs->len; i++)
-        {
-          dir = g_ptr_array_index (system_dirs, i);
-          deploy = flatpak_dir_get_if_deployed (dir, ref, NULL, cancellable);
-          if (deploy != NULL)
-            break;
-        }
-    }
-
-  if (deploy == NULL)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, _("%s not installed"), ref);
-      return NULL;
-    }
-
-  if (dir_out)
-    *dir_out = g_object_ref (dir);
-  return g_steal_pointer (&deploy);
-}
-
-GFile *
-flatpak_find_files_dir_for_ref (const char   *ref,
-                                GCancellable *cancellable,
-                                GError      **error)
-{
-  g_autoptr(GFile) deploy = NULL;
-
-  deploy = flatpak_find_deploy_dir_for_ref (ref, NULL, cancellable, error);
-  if (deploy == NULL)
-    return NULL;
-
-  return g_file_get_child (deploy, "files");
-}
-
-GFile *
-flatpak_find_unmaintained_extension_dir_if_exists (const char   *name,
-                                                   const char   *arch,
-                                                   const char   *branch,
-                                                   GCancellable *cancellable)
-{
-  g_autoptr(FlatpakDir) user_dir = NULL;
-  g_autoptr(GFile) extension_dir = NULL;
-  g_autoptr(GError) local_error = NULL;
-
-  user_dir = flatpak_dir_get_user ();
-
-  extension_dir = flatpak_dir_get_unmaintained_extension_dir_if_exists (user_dir, name, arch, branch, cancellable);
-  if (extension_dir == NULL)
-    {
-      g_autoptr(GPtrArray) system_dirs = NULL;
-      int i;
-
-      system_dirs = flatpak_dir_get_system_list (cancellable, &local_error);
-      if (system_dirs == NULL)
-        {
-          g_warning ("Could not get the system installations: %s", local_error->message);
-          return NULL;
-        }
-
-      for (i = 0; i < system_dirs->len; i++)
-        {
-          FlatpakDir *system_dir = g_ptr_array_index (system_dirs, i);
-          extension_dir = flatpak_dir_get_unmaintained_extension_dir_if_exists (system_dir, name, arch, branch, cancellable);
-          if (extension_dir != NULL)
-            break;
-        }
-    }
-
-  if (extension_dir == NULL)
-    return NULL;
-
-  return g_steal_pointer(&extension_dir);
-}
-
-char *
-flatpak_find_current_ref (const char *app_id,
-                          GCancellable *cancellable,
-                          GError      **error)
-{
-  g_autofree char *current_ref = NULL;
-  g_autoptr(FlatpakDir) user_dir = flatpak_dir_get_user ();
-  int i;
-
-  current_ref = flatpak_dir_current_ref (user_dir, app_id, NULL);
-  if (current_ref == NULL)
-    {
-      g_autoptr(GPtrArray) system_dirs = NULL;
-
-      system_dirs = flatpak_dir_get_system_list (cancellable, error);
-      if (system_dirs == NULL)
-        return FALSE;
-
-      for (i = 0; i < system_dirs->len; i++)
-        {
-          FlatpakDir *dir = g_ptr_array_index (system_dirs, i);
-          current_ref = flatpak_dir_current_ref (dir, app_id, cancellable);
-          if (current_ref != NULL)
-            break;
-        }
-    }
-
-  if (current_ref)
-    return g_steal_pointer (&current_ref);
-
-  g_set_error (error, FLATPAK_ERROR, FLATPAK_ERROR_NOT_INSTALLED,
-               _("%s not installed"), app_id);
-  return NULL;
-}
-
-FlatpakDeploy *
-flatpak_find_deploy_for_ref (const char   *ref,
-                             GCancellable *cancellable,
-                             GError      **error)
-{
-  g_autoptr(FlatpakDir) user_dir = NULL;
-  g_autoptr(GPtrArray) system_dirs = NULL;
-  g_autoptr(FlatpakDeploy) deploy = NULL;
-  g_autoptr(GError) my_error = NULL;
-
-  user_dir = flatpak_dir_get_user ();
-  system_dirs = flatpak_dir_get_system_list (cancellable, error);
-  if (system_dirs == NULL)
-    return NULL;
-
-  deploy = flatpak_dir_load_deployed (user_dir, ref, NULL, cancellable, &my_error);
-  if (deploy == NULL &&
-      system_dirs->len > 0 &&
-      g_error_matches (my_error, FLATPAK_ERROR, FLATPAK_ERROR_NOT_INSTALLED))
-    {
-      int i;
-
-      for (i = 0; deploy == NULL && i < system_dirs->len; i++)
-        {
-          FlatpakDir *system_dir = g_ptr_array_index (system_dirs, i);
-
-          g_clear_error (&my_error);
-          deploy = flatpak_dir_load_deployed (system_dir, ref, NULL, cancellable, &my_error);
-        }
-    }
-  if (deploy == NULL)
-    g_propagate_error (error, g_steal_pointer (&my_error));
-
-  return g_steal_pointer (&deploy);
-}
-
-
-static gboolean
-overlay_symlink_tree_dir (int           source_parent_fd,
-                          const char   *source_name,
-                          const char   *source_symlink_prefix,
-                          int           destination_parent_fd,
-                          const char   *destination_name,
-                          GCancellable *cancellable,
-                          GError      **error)
-{
-  gboolean ret = FALSE;
-  int res;
-
-  g_auto(GLnxDirFdIterator) source_iter = { 0 };
-  glnx_fd_close int destination_dfd = -1;
-  struct dirent *dent;
-
-  if (!glnx_dirfd_iterator_init_at (source_parent_fd, source_name, FALSE, &source_iter, error))
-    goto out;
-
-  do
-    res = mkdirat (destination_parent_fd, destination_name, 0777);
-  while (G_UNLIKELY (res == -1 && errno == EINTR));
-  if (res == -1)
-    {
-      if (errno != EEXIST)
-        {
-          glnx_set_error_from_errno (error);
-          goto out;
-        }
-    }
-
-  if (!glnx_opendirat (destination_parent_fd, destination_name, TRUE,
-                       &destination_dfd, error))
-    goto out;
-
-  while (TRUE)
-    {
-
-      if (!glnx_dirfd_iterator_next_dent_ensure_dtype (&source_iter, &dent, cancellable, error))
-        goto out;
-
-      if (dent == NULL)
-        break;
-
-      if (dent->d_type == DT_DIR)
-        {
-          g_autofree gchar *target = g_build_filename ("..", source_symlink_prefix, dent->d_name, NULL);
-          if (!overlay_symlink_tree_dir (source_iter.fd, dent->d_name, target, destination_dfd, dent->d_name,
-                                         cancellable, error))
-            goto out;
-        }
-      else
-        {
-          g_autofree gchar *target = g_build_filename (source_symlink_prefix, dent->d_name, NULL);
-
-          if (unlinkat (destination_dfd, dent->d_name, 0) != 0 && errno != ENOENT)
-            {
-              glnx_set_error_from_errno (error);
-              goto out;
-            }
-
-          if (symlinkat (target, destination_dfd, dent->d_name) != 0)
-            {
-              glnx_set_error_from_errno (error);
-              goto out;
-            }
-        }
-    }
-
-  ret = TRUE;
-out:
-
-  return ret;
-}
-
-gboolean
-flatpak_overlay_symlink_tree (GFile        *source,
-                              GFile        *destination,
-                              const char   *symlink_prefix,
-                              GCancellable *cancellable,
-                              GError      **error)
-{
-  gboolean ret = FALSE;
-
-  if (!flatpak_mkdir_p (destination, cancellable, error))
-    goto out;
-
-  /* The fds are closed by this call */
-  if (!overlay_symlink_tree_dir (AT_FDCWD, flatpak_file_get_path_cached (source),
-                                 symlink_prefix,
-                                 AT_FDCWD, flatpak_file_get_path_cached (destination),
-                                 cancellable, error))
-    goto out;
-
-  ret = TRUE;
-
-out:
-  return ret;
-}
-
-static gboolean
-remove_dangling_symlinks (int           parent_fd,
-                          const char   *name,
-                          GCancellable *cancellable,
-                          GError      **error)
-{
-  gboolean ret = FALSE;
-  struct dirent *dent;
-  g_auto(GLnxDirFdIterator) iter = { 0 };
-
-  if (!glnx_dirfd_iterator_init_at (parent_fd, name, FALSE, &iter, error))
-    goto out;
-
-  while (TRUE)
-    {
-      if (!glnx_dirfd_iterator_next_dent_ensure_dtype (&iter, &dent, cancellable, error))
-        goto out;
-
-      if (dent == NULL)
-        break;
-
-      if (dent->d_type == DT_DIR)
-        {
-          if (!remove_dangling_symlinks (iter.fd, dent->d_name, cancellable, error))
-            goto out;
-        }
-      else if (dent->d_type == DT_LNK)
-        {
-          struct stat stbuf;
-          if (fstatat (iter.fd, dent->d_name, &stbuf, 0) != 0 && errno == ENOENT)
-            {
-              if (unlinkat (iter.fd, dent->d_name, 0) != 0)
-                {
-                  glnx_set_error_from_errno (error);
-                  goto out;
-                }
-            }
-        }
-    }
-
-  ret = TRUE;
-out:
-
-  return ret;
-}
-
-gboolean
-flatpak_remove_dangling_symlinks (GFile        *dir,
-                                  GCancellable *cancellable,
-                                  GError      **error)
-{
-  gboolean ret = FALSE;
-
-  /* The fd is closed by this call */
-  if (!remove_dangling_symlinks (AT_FDCWD, flatpak_file_get_path_cached (dir),
-                                 cancellable, error))
-    goto out;
-
-  ret = TRUE;
-
-out:
-  return ret;
-}
-
-/* Based on g_mkstemp from glib */
-
-gint
-flatpak_mkstempat (int    dir_fd,
-                   gchar *tmpl,
-                   int    flags,
-                   int    mode)
-{
-  char *XXXXXX;
-  int count, fd;
-  static const char letters[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  static const int NLETTERS = sizeof (letters) - 1;
-  glong value;
-  GTimeVal tv;
-  static int counter = 0;
-
-  g_return_val_if_fail (tmpl != NULL, -1);
-
-  /* find the last occurrence of "XXXXXX" */
-  XXXXXX = g_strrstr (tmpl, "XXXXXX");
-
-  if (!XXXXXX || strncmp (XXXXXX, "XXXXXX", 6))
-    {
-      errno = EINVAL;
-      return -1;
-    }
-
-  /* Get some more or less random data.  */
-  g_get_current_time (&tv);
-  value = (tv.tv_usec ^ tv.tv_sec) + counter++;
-
-  for (count = 0; count < 100; value += 7777, ++count)
-    {
-      glong v = value;
-
-      /* Fill in the random bits.  */
-      XXXXXX[0] = letters[v % NLETTERS];
-      v /= NLETTERS;
-      XXXXXX[1] = letters[v % NLETTERS];
-      v /= NLETTERS;
-      XXXXXX[2] = letters[v % NLETTERS];
-      v /= NLETTERS;
-      XXXXXX[3] = letters[v % NLETTERS];
-      v /= NLETTERS;
-      XXXXXX[4] = letters[v % NLETTERS];
-      v /= NLETTERS;
-      XXXXXX[5] = letters[v % NLETTERS];
-
-      fd = openat (dir_fd, tmpl, flags | O_CREAT | O_EXCL, mode);
-
-      if (fd >= 0)
-        return fd;
-      else if (errno != EEXIST)
-        /* Any other error will apply also to other names we might
-         *  try, and there are 2^32 or so of them, so give up now.
-         */
-        return -1;
-    }
-
-  /* We got out of the loop because we ran out of combinations to try.  */
-  errno = EEXIST;
-  return -1;
-}
-
-
-static GHashTable *app_ids;
-
-typedef struct
-{
-  char     *name;
-  GKeyFile *app_info;
-  gboolean  exited;
-  GList    *pending;
-} AppInfo;
-
-static void
-app_info_free (AppInfo *info)
-{
-  g_free (info->name);
-  g_key_file_unref (info->app_info);
-  g_free (info);
-}
-
-static void
-ensure_app_ids (void)
-{
-  if (app_ids == NULL)
-    app_ids = g_hash_table_new_full (g_str_hash, g_str_equal,
-                                     NULL, (GDestroyNotify) app_info_free);
-}
-
-/* Returns NULL on failure, keyfile with name "" if not sandboxed, and full app-info otherwise */
-static GKeyFile *
-parse_app_id_from_fileinfo (int pid)
-{
-  g_autofree char *root_path = NULL;
-  glnx_fd_close int root_fd = -1;
-  glnx_fd_close int info_fd = -1;
-  struct stat stat_buf;
-  g_autoptr(GError) local_error = NULL;
-  g_autoptr(GMappedFile) mapped = NULL;
-  g_autoptr(GKeyFile) metadata = NULL;
-
-  root_path = g_strdup_printf ("/proc/%u/root", pid);
-  root_fd = openat (AT_FDCWD, root_path, O_RDONLY | O_NONBLOCK | O_DIRECTORY | O_CLOEXEC | O_NOCTTY);
-  if (root_fd == -1)
-    {
-      /* Not able to open the root dir shouldn't happen. Probably the app died and
-         *we're failing due to /proc/$pid not existing. In that case fail instead
-         of treating this as privileged. */
-      g_debug ("Unable to open %s", root_path);
-      return NULL;
-    }
-
-  metadata = g_key_file_new ();
-
-  info_fd = openat (root_fd, ".flatpak-info", O_RDONLY | O_CLOEXEC | O_NOCTTY);
-  if (info_fd == -1)
-    {
-      if (errno == ENOENT)
-        {
-          /* No file => on the host */
-          g_key_file_set_string (metadata, FLATPAK_METADATA_GROUP_APPLICATION,
-                                 FLATPAK_METADATA_KEY_NAME, "");
-          return g_steal_pointer (&metadata);
-        }
-
-      return NULL; /* Some weird error => failure */
-    }
-
-  if (fstat (info_fd, &stat_buf) != 0 || !S_ISREG (stat_buf.st_mode))
-    return NULL; /* Some weird fd => failure */
-
-  mapped = g_mapped_file_new_from_fd  (info_fd, FALSE, &local_error);
-  if (mapped == NULL)
-    {
-      g_warning ("Can't map .flatpak-info file: %s", local_error->message);
-      return NULL;
-    }
-
-  if (!g_key_file_load_from_data (metadata,
-                                  g_mapped_file_get_contents (mapped),
-                                  g_mapped_file_get_length (mapped),
-                                  G_KEY_FILE_NONE, &local_error))
-    {
-      g_warning ("Can't load .flatpak-info file: %s", local_error->message);
-      return NULL;
-    }
-
-  return g_steal_pointer (&metadata);
-}
-
-static void
-got_credentials_cb (GObject      *source_object,
-                    GAsyncResult *res,
-                    gpointer      user_data)
-{
-  AppInfo *info = user_data;
-
-  g_autoptr(GDBusMessage) reply = NULL;
-  g_autoptr(GError) error = NULL;
-  GList *l;
-
-  reply = g_dbus_connection_send_message_with_reply_finish (G_DBUS_CONNECTION (source_object),
-                                                            res, &error);
-
-  if (!info->exited && reply != NULL)
-    {
-      GVariant *body = g_dbus_message_get_body (reply);
-      guint32 pid;
-
-      g_variant_get (body, "(u)", &pid);
-
-      info->app_info = parse_app_id_from_fileinfo (pid);
-    }
-
-  for (l = info->pending; l != NULL; l = l->next)
-    {
-      GTask *task = l->data;
-
-      if (info->app_info == NULL)
-        g_task_return_new_error (task, FLATPAK_PORTAL_ERROR, FLATPAK_PORTAL_ERROR_FAILED,
-                                 "Can't find app id");
-      else
-        g_task_return_pointer (task, g_key_file_ref (info->app_info), (GDestroyNotify)g_key_file_unref);
-    }
-
-  g_list_free_full (info->pending, g_object_unref);
-  info->pending = NULL;
-
-  if (info->app_info == NULL)
-    g_hash_table_remove (app_ids, info->name);
-}
-
-void
-flatpak_invocation_lookup_app_info (GDBusMethodInvocation *invocation,
-                                    GCancellable          *cancellable,
-                                    GAsyncReadyCallback    callback,
-                                    gpointer               user_data)
-{
-  GDBusConnection *connection = g_dbus_method_invocation_get_connection (invocation);
-  const gchar *sender = g_dbus_method_invocation_get_sender (invocation);
-
-  g_autoptr(GTask) task = NULL;
-  AppInfo *info;
-
-  task = g_task_new (invocation, cancellable, callback, user_data);
-
-  ensure_app_ids ();
-
-  info = g_hash_table_lookup (app_ids, sender);
-
-  if (info == NULL)
-    {
-      info = g_new0 (AppInfo, 1);
-      info->name = g_strdup (sender);
-      g_hash_table_insert (app_ids, info->name, info);
-    }
-
-  if (info->app_info)
-    {
-      g_task_return_pointer (task, g_key_file_ref (info->app_info), (GDestroyNotify)g_key_file_unref);
-    }
-  else
-    {
-      if (info->pending == NULL)
-        {
-          g_autoptr(GDBusMessage) msg = g_dbus_message_new_method_call ("org.freedesktop.DBus",
-                                                                        "/org/freedesktop/DBus",
-                                                                        "org.freedesktop.DBus",
-                                                                        "GetConnectionUnixProcessID");
-          g_dbus_message_set_body (msg, g_variant_new ("(s)", sender));
-
-          g_dbus_connection_send_message_with_reply (connection, msg,
-                                                     G_DBUS_SEND_MESSAGE_FLAGS_NONE,
-                                                     30000,
-                                                     NULL,
-                                                     cancellable,
-                                                     got_credentials_cb,
-                                                     info);
-        }
-
-      info->pending = g_list_prepend (info->pending, g_object_ref (task));
-    }
-}
-
-GKeyFile *
-flatpak_invocation_lookup_app_info_finish (GDBusMethodInvocation *invocation,
-                                           GAsyncResult          *result,
-                                           GError               **error)
-{
-  return g_task_propagate_pointer (G_TASK (result), error);
-}
-
-static void
-name_owner_changed (GDBusConnection *connection,
-                    const gchar     *sender_name,
-                    const gchar     *object_path,
-                    const gchar     *interface_name,
-                    const gchar     *signal_name,
-                    GVariant        *parameters,
-                    gpointer         user_data)
-{
-  const char *name, *from, *to;
-
-  g_variant_get (parameters, "(sss)", &name, &from, &to);
-
-  ensure_app_ids ();
-
-  if (name[0] == ':' &&
-      strcmp (name, from) == 0 &&
-      strcmp (to, "") == 0)
-    {
-      AppInfo *info = g_hash_table_lookup (app_ids, name);
-
-      if (info != NULL)
-        {
-          info->exited = TRUE;
-          if (info->pending == NULL)
-            g_hash_table_remove (app_ids, name);
-        }
-    }
-}
-
-void
-flatpak_connection_track_name_owners (GDBusConnection *connection)
-{
-  g_dbus_connection_signal_subscribe (connection,
-                                      "org.freedesktop.DBus",
-                                      "org.freedesktop.DBus",
-                                      "NameOwnerChanged",
-                                      "/org/freedesktop/DBus",
-                                      NULL,
-                                      G_DBUS_SIGNAL_FLAGS_NONE,
-                                      name_owner_changed,
-                                      NULL, NULL);
 }
 
 typedef struct
@@ -1926,16 +468,6 @@ flatpak_quote_argv (const char *argv[])
     }
 
   return g_string_free (res, FALSE);
-}
-
-/* This is useful, because it handles escaped characters in uris, and ? arguments at the end of the uri */
-gboolean
-flatpak_file_arg_has_suffix (const char *arg, const char *suffix)
-{
-  g_autoptr(GFile) file = g_file_new_for_commandline_arg (arg);
-  g_autofree char *basename = g_file_get_basename (file);
-
-  return g_str_has_suffix (basename, suffix);
 }
 
 gboolean
@@ -2101,41 +633,6 @@ flatpak_file_get_path_cached (GFile *file)
   while (path == NULL);
 
   return path;
-}
-
-gboolean
-flatpak_openat_noatime (int            dfd,
-                        const char    *name,
-                        int           *ret_fd,
-                        GCancellable  *cancellable,
-                        GError       **error)
-{
-  int fd;
-  int flags = O_RDONLY | O_CLOEXEC;
-
-#ifdef O_NOATIME
-  do
-    fd = openat (dfd, name, flags | O_NOATIME, 0);
-  while (G_UNLIKELY (fd == -1 && errno == EINTR));
-  /* Only the owner or superuser may use O_NOATIME; so we may get
-   * EPERM.  EINVAL may happen if the kernel is really old...
-   */
-  if (fd == -1 && (errno == EPERM || errno == EINVAL))
-#endif
-    do
-      fd = openat (dfd, name, flags, 0);
-    while (G_UNLIKELY (fd == -1 && errno == EINTR));
-
-  if (fd == -1)
-    {
-      glnx_set_error_from_errno (error);
-      return FALSE;
-    }
-  else
-    {
-      *ret_fd = fd;
-      return TRUE;
-    }
 }
 
 gboolean
@@ -2346,2799 +843,9 @@ flatpak_rm_rf (GFile         *dir,
                                cancellable, error);
 }
 
-char *
-flatpak_readlink (const char *path,
-                  GError **error)
-{
-  char buf[PATH_MAX + 1];
-  ssize_t symlink_size;
-
-  symlink_size = readlink (path, buf, sizeof (buf) - 1);
-  if (symlink_size < 0)
-    {
-      glnx_set_error_from_errno (error);
-      return NULL;
-    }
-
-  buf[symlink_size] = 0;
-  return g_strdup (buf);
-}
-
-char *
-flatpak_resolve_link (const char *path,
-                      GError **error)
-{
-  g_autofree char *link = flatpak_readlink (path, error);
-  g_autofree char *dirname = NULL;
-
-  if (link == NULL)
-    return NULL;
-
-  if (g_path_is_absolute (link))
-    return g_steal_pointer (&link);
-
-  dirname = g_path_get_dirname (path);
-  return g_build_filename (dirname, link, NULL);
-}
-
-char *
-flatpak_canonicalize_filename (const char *path)
-{
-  g_autoptr(GFile) file = g_file_new_for_path (path);
-  return g_file_get_path (file);
-}
-
-gboolean flatpak_file_rename (GFile *from,
-                              GFile *to,
-                              GCancellable  *cancellable,
-                              GError       **error)
-{
-  if (g_cancellable_set_error_if_cancelled (cancellable, error))
-    return FALSE;
-
-  if (rename (flatpak_file_get_path_cached (from),
-              flatpak_file_get_path_cached (to)) < 0)
-    {
-      glnx_set_error_from_errno (error);
-      return FALSE;
-    }
-
-  return TRUE;
-}
-
-gboolean
-flatpak_open_in_tmpdir_at (int                tmpdir_fd,
-                           int                mode,
-                           char              *tmpl,
-                           GOutputStream    **out_stream,
-                           GCancellable      *cancellable,
-                           GError           **error)
-{
-  const int max_attempts = 128;
-  int i;
-  int fd;
-
-  /* 128 attempts seems reasonable... */
-  for (i = 0; i < max_attempts; i++)
-    {
-      glnx_gen_temp_name (tmpl);
-
-      do
-        fd = openat (tmpdir_fd, tmpl, O_WRONLY | O_CREAT | O_EXCL, mode);
-      while (fd == -1 && errno == EINTR);
-      if (fd < 0 && errno != EEXIST)
-        {
-          glnx_set_error_from_errno (error);
-          return FALSE;
-        }
-      else if (fd != -1)
-        break;
-    }
-  if (i == max_attempts)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Exhausted attempts to open temporary file");
-      return FALSE;
-    }
-
-  if (out_stream)
-    *out_stream = g_unix_output_stream_new (fd, TRUE);
-  else
-    (void) close (fd);
-
-  return TRUE;
-}
-
-GVariant *
-flatpak_gvariant_new_empty_string_dict (void)
-{
-  g_auto(GVariantBuilder) builder = FLATPAK_VARIANT_BUILDER_INITIALIZER;
-  g_variant_builder_init (&builder, G_VARIANT_TYPE ("a{sv}"));
-  return g_variant_builder_end (&builder);
-}
-
-gboolean
-flatpak_variant_save (GFile        *dest,
-                      GVariant     *variant,
-                      GCancellable *cancellable,
-                      GError      **error)
-{
-  g_autoptr(GOutputStream) out = NULL;
-  gsize bytes_written;
-
-  out = (GOutputStream *) g_file_replace (dest, NULL, FALSE,
-                                          G_FILE_CREATE_REPLACE_DESTINATION,
-                                          cancellable, error);
-  if (out == NULL)
-    return FALSE;
-
-  if (!g_output_stream_write_all (out,
-                                  g_variant_get_data (variant),
-                                  g_variant_get_size (variant),
-                                  &bytes_written,
-                                  cancellable,
-                                  error))
-    return FALSE;
-
-  if (!g_output_stream_close (out, cancellable, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-void
-flatpak_variant_builder_init_from_variant (GVariantBuilder *builder,
-                                           const char      *type,
-                                           GVariant        *variant)
-{
-  gint i, n;
-
-  g_variant_builder_init (builder, G_VARIANT_TYPE (type));
-
-  n = g_variant_n_children (variant);
-  for (i = 0; i < n; i++)
-    {
-      GVariant *child = g_variant_get_child_value (variant, i);
-      g_variant_builder_add_value (builder, child);
-      g_variant_unref (child);
-    }
-}
-
-gboolean
-flatpak_variant_bsearch_str (GVariant   *array,
-                             const char *str,
-                             int        *out_pos)
-{
-  gsize imax, imin;
-  gsize imid;
-  gsize n;
-
-  n = g_variant_n_children (array);
-  if (n == 0)
-    return FALSE;
-
-  imax = n - 1;
-  imin = 0;
-  while (imax >= imin)
-    {
-      g_autoptr(GVariant) child = NULL;
-      g_autoptr(GVariant) cur_v = NULL;
-      const char *cur;
-      int cmp;
-
-      imid = (imin + imax) / 2;
-
-      child = g_variant_get_child_value (array, imid);
-      cur_v = g_variant_get_child_value (child, 0);
-      cur = g_variant_get_data (cur_v);
-
-      cmp = strcmp (cur, str);
-      if (cmp < 0)
-        {
-          imin = imid + 1;
-        }
-      else if (cmp > 0)
-        {
-          if (imid == 0)
-            break;
-          imax = imid - 1;
-        }
-      else
-        {
-          *out_pos = imid;
-          return TRUE;
-        }
-    }
-
-  *out_pos = imid;
-  return FALSE;
-}
-
-/* Find the list of refs which belong to the given @collection_id in @summary.
- * If @collection_id is %NULL, the main refs list from the summary will be
- * returned. If @collection_id doesn’t match any collection IDs in the summary
- * file, %NULL will be returned. */
-static GVariant *
-summary_find_refs_list (GVariant   *summary,
-                        const char *collection_id)
-{
-  g_autoptr(GVariant) refs = NULL;
-  g_autoptr(GVariant) metadata = g_variant_get_child_value (summary, 1);
-  const char *summary_collection_id;
-
-  if (!g_variant_lookup (metadata, "ostree.summary.collection-id", "&s", &summary_collection_id))
-    summary_collection_id = NULL;
-
-  if (collection_id == NULL || g_strcmp0 (collection_id, summary_collection_id) == 0)
-    {
-      refs = g_variant_get_child_value (summary, 0);
-    }
-  else if (collection_id != NULL)
-    {
-      g_autoptr(GVariant) collection_map = NULL;
-
-      collection_map = g_variant_lookup_value (metadata, "ostree.summary.collection-map",
-                                               G_VARIANT_TYPE ("a{sa(s(taya{sv}))}"));
-      if (collection_map != NULL)
-        refs = g_variant_lookup_value (collection_map, collection_id, G_VARIANT_TYPE ("a(s(taya{sv}))"));
-    }
-
-  return g_steal_pointer (&refs);
-}
-
-/* This matches all refs from @collection_id that have ref, followed by '.'  as prefix */
-char **
-flatpak_summary_match_subrefs (GVariant   *summary,
-                               const char *collection_id,
-                               const char *ref)
-{
-  g_autoptr(GVariant) refs = NULL;
-  g_autoptr(GVariant) metadata = g_variant_get_child_value (summary, 1);
-  GPtrArray *res = g_ptr_array_new ();
-  gsize n, i;
-  g_auto(GStrv) parts = NULL;
-  g_autofree char *parts_prefix = NULL;
-  g_autofree char *ref_prefix = NULL;
-  g_autofree char *ref_suffix = NULL;
-
-  /* Work out which refs list to use, based on the @collection_id. */
-  refs = summary_find_refs_list (summary, collection_id);
-
-  if (refs != NULL)
-    {
-      /* Match against the refs. */
-      parts = g_strsplit (ref, "/", 0);
-      parts_prefix = g_strconcat (parts[1], ".", NULL);
-
-      ref_prefix = g_strconcat (parts[0], "/", NULL);
-      ref_suffix = g_strconcat ("/", parts[2], "/", parts[3], NULL);
-
-      n = g_variant_n_children (refs);
-      for (i = 0; i < n; i++)
-        {
-          g_autoptr(GVariant) child = NULL;
-          g_autoptr(GVariant) cur_v = NULL;
-          const char *cur;
-          const char *id_start;
-
-          child = g_variant_get_child_value (refs, i);
-          cur_v = g_variant_get_child_value (child, 0);
-          cur = g_variant_get_data (cur_v);
-
-          /* Must match type */
-          if (!g_str_has_prefix (cur, ref_prefix))
-            continue;
-
-          /* Must match arch & branch */
-          if (!g_str_has_suffix (cur, ref_suffix))
-            continue;
-
-          id_start = strchr (cur, '/');
-          if (id_start == NULL)
-            continue;
-
-          /* But only prefix of id */
-          if (!g_str_has_prefix (id_start + 1, parts_prefix))
-            continue;
-
-          g_ptr_array_add (res, g_strdup (cur));
-        }
-    }
-
-  g_ptr_array_add (res, NULL);
-  return (char **)g_ptr_array_free (res, FALSE);
-}
-
-gboolean
-flatpak_summary_lookup_ref (GVariant    *summary,
-                            const char  *collection_id,
-                            const char  *ref,
-                            char       **out_checksum,
-                            GVariant   **out_variant)
-{
-  g_autoptr(GVariant) refs = NULL;
-  int pos;
-  g_autoptr(GVariant) refdata = NULL;
-  g_autoptr(GVariant) reftargetdata = NULL;
-  guint64 commit_size;
-  g_autoptr(GVariant) commit_csum_v = NULL;
-
-  refs = summary_find_refs_list (summary, collection_id);
-  if (refs == NULL)
-    return FALSE;
-
-  if (!flatpak_variant_bsearch_str (refs, ref, &pos))
-    return FALSE;
-
-  refdata = g_variant_get_child_value (refs, pos);
-  reftargetdata = g_variant_get_child_value (refdata, 1);
-  g_variant_get (reftargetdata, "(t@ay@a{sv})", &commit_size, &commit_csum_v, NULL);
-
-  if (!ostree_validate_structureof_csum_v (commit_csum_v, NULL))
-    return FALSE;
-
-  if (out_checksum)
-    *out_checksum = ostree_checksum_from_bytes_v (commit_csum_v);
-
-  if (out_variant)
-    *out_variant = g_steal_pointer (&reftargetdata);
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_set_title (OstreeRepo *repo,
-                        const char *title,
-                        GError    **error)
-{
-  g_autoptr(GKeyFile) config = NULL;
-
-  config = ostree_repo_copy_config (repo);
-
-  if (title)
-    g_key_file_set_string (config, "flatpak", "title", title);
-  else
-    g_key_file_remove_key (config, "flatpak", "title", NULL);
-
-  if (!ostree_repo_write_config (repo, config, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_set_redirect_url (OstreeRepo *repo,
-                               const char *redirect_url,
-                               GError    **error)
-{
-  g_autoptr(GKeyFile) config = NULL;
-
-  config = ostree_repo_copy_config (repo);
-
-  if (redirect_url)
-    g_key_file_set_string (config, "flatpak", "redirect-url", redirect_url);
-  else
-    g_key_file_remove_key (config, "flatpak", "redirect-url", NULL);
-
-  if (!ostree_repo_write_config (repo, config, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_set_deploy_collection_id (OstreeRepo  *repo,
-                                       gboolean     deploy_collection_id,
-                                       GError     **error)
-{
-  g_autoptr(GKeyFile) config = NULL;
-
-  config = ostree_repo_copy_config (repo);
-  g_key_file_set_boolean (config, "flatpak", "deploy-collection-id", deploy_collection_id);
-  return ostree_repo_write_config (repo, config, error);
-}
-
-gboolean
-flatpak_repo_set_gpg_keys (OstreeRepo *repo,
-                           GBytes *bytes,
-                           GError    **error)
-{
-  g_autoptr(GKeyFile) config = NULL;
-  g_autofree char *value_base64 = NULL;
-
-  config = ostree_repo_copy_config (repo);
-
-  value_base64 = g_base64_encode (g_bytes_get_data (bytes, NULL), g_bytes_get_size (bytes));
-
-  g_key_file_set_string (config, "flatpak", "gpg-keys", value_base64);
-
-  if (!ostree_repo_write_config (repo, config, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_set_default_branch (OstreeRepo *repo,
-                                 const char *branch,
-                                 GError    **error)
-{
-  g_autoptr(GKeyFile) config = NULL;
-
-  config = ostree_repo_copy_config (repo);
-
-  if (branch)
-    g_key_file_set_string (config, "flatpak", "default-branch", branch);
-  else
-    g_key_file_remove_key (config, "flatpak", "default-branch", NULL);
-
-  if (!ostree_repo_write_config (repo, config, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_set_collection_id (OstreeRepo  *repo,
-                                const char  *collection_id,
-                                GError     **error)
-{
-#ifdef FLATPAK_ENABLE_P2P
-  g_autoptr(GKeyFile) config = NULL;
-
-  config = ostree_repo_copy_config (repo);
-  if (!ostree_repo_set_collection_id (repo, collection_id, error))
-    return FALSE;
-
-  if (!ostree_repo_write_config (repo, config, error))
-    return FALSE;
-#endif  /* FLATPAK_ENABLE_P2P */
-
-  return TRUE;
-}
-
-GVariant *
-flatpak_commit_get_extra_data_sources (GVariant *commitv,
-                                       GError      **error)
-{
-  g_autoptr(GVariant) commit_metadata = NULL;
-  g_autoptr(GVariant) extra_data_sources = NULL;
-
-  commit_metadata = g_variant_get_child_value (commitv, 0);
-  extra_data_sources = g_variant_lookup_value (commit_metadata,
-                                               "xa.extra-data-sources",
-                                               G_VARIANT_TYPE ("a(ayttays)"));
-
-  if (extra_data_sources == NULL)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND,
-                   _("No extra data sources"));
-      return NULL;
-    }
-
-  return g_steal_pointer (&extra_data_sources);
-}
-
-
-GVariant *
-flatpak_repo_get_extra_data_sources (OstreeRepo   *repo,
-                                     const char   *rev,
-                                     GCancellable *cancellable,
-                                     GError      **error)
-{
-  g_autoptr(GVariant) commitv = NULL;
-
-  if (!ostree_repo_load_variant (repo,
-                                 OSTREE_OBJECT_TYPE_COMMIT,
-                                 rev, &commitv, error))
-    return NULL;
-
-  return flatpak_commit_get_extra_data_sources (commitv, error);
-}
-
-void
-flatpak_repo_parse_extra_data_sources (GVariant *extra_data_sources,
-                                       int index,
-                                       const char **name,
-                                       guint64 *download_size,
-                                       guint64 *installed_size,
-                                       const guchar **sha256,
-                                       const char **uri)
-{
-  g_autoptr(GVariant) sha256_v = NULL;
-  g_variant_get_child (extra_data_sources, index, "(^aytt@ay&s)",
-                       name,
-                       download_size,
-                       installed_size,
-                       &sha256_v,
-                       uri);
-
-  if (download_size)
-    *download_size = GUINT64_FROM_BE (*download_size);
-
-  if (installed_size)
-    *installed_size = GUINT64_FROM_BE (*installed_size);
-
-  if (sha256)
-    *sha256 = ostree_checksum_bytes_peek (sha256_v);
-}
 
 #define OSTREE_GIO_FAST_QUERYINFO ("standard::name,standard::type,standard::size,standard::is-symlink,standard::symlink-target," \
                                    "unix::device,unix::inode,unix::mode,unix::uid,unix::gid,unix::rdev")
-
-static gboolean
-_flatpak_repo_collect_sizes (OstreeRepo   *repo,
-                             GFile        *file,
-                             GFileInfo    *file_info,
-                             guint64      *installed_size,
-                             guint64      *download_size,
-                             GCancellable *cancellable,
-                             GError      **error)
-{
-  g_autoptr(GFileEnumerator) dir_enum = NULL;
-  GFileInfo *child_info_tmp;
-  g_autoptr(GError) temp_error = NULL;
-
-  if (file_info != NULL && g_file_info_get_file_type (file_info) == G_FILE_TYPE_REGULAR)
-    {
-      const char *checksum = ostree_repo_file_get_checksum (OSTREE_REPO_FILE (file));
-      guint64 obj_size;
-      guint64 file_size = g_file_info_get_size (file_info);
-
-      if (installed_size)
-        *installed_size += ((file_size + 511) / 512) * 512;
-
-      if (download_size)
-        {
-          g_autoptr(GInputStream) input = NULL;
-          GInputStream *base_input;
-          g_autoptr(GError) local_error = NULL;
-
-          if (!ostree_repo_query_object_storage_size (repo,
-                                                      OSTREE_OBJECT_TYPE_FILE, checksum,
-                                                      &obj_size, cancellable, &local_error))
-            {
-              int fd;
-              struct stat stbuf;
-
-              /* Ostree does not look at the staging directory when querying storage
-                 size, so may return a NOT_FOUND error here. We work around this
-                 by loading the object and walking back until we find the original
-                 fd which we can fstat(). */
-              if (!g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
-                return FALSE;
-
-              if (!ostree_repo_load_file (repo, checksum,  &input, NULL, NULL, NULL, error))
-                return FALSE;
-
-              base_input = input;
-              while (G_IS_FILTER_INPUT_STREAM (base_input))
-                base_input = g_filter_input_stream_get_base_stream (G_FILTER_INPUT_STREAM (base_input));
-
-              if (!G_IS_UNIX_INPUT_STREAM (base_input))
-                return flatpak_fail (error, "Unable to find size of commit %s, not an unix stream\n", checksum);
-
-              fd = g_unix_input_stream_get_fd (G_UNIX_INPUT_STREAM (base_input));
-
-              if (fstat (fd, &stbuf) != 0)
-                return glnx_throw_errno_prefix (error, "Can't find commit size: ");
-
-              obj_size = stbuf.st_size;
-            }
-
-          *download_size += obj_size;
-        }
-    }
-
-  if (file_info == NULL || g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
-    {
-      dir_enum = g_file_enumerate_children (file, OSTREE_GIO_FAST_QUERYINFO,
-                                            G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                            cancellable, error);
-      if (!dir_enum)
-        return FALSE;
-
-
-      while ((child_info_tmp = g_file_enumerator_next_file (dir_enum, cancellable, &temp_error)))
-        {
-          g_autoptr(GFileInfo) child_info = child_info_tmp;
-          const char *name = g_file_info_get_name (child_info);
-          g_autoptr(GFile) child = g_file_get_child (file, name);
-
-          if (!_flatpak_repo_collect_sizes (repo, child, child_info, installed_size, download_size, cancellable, error))
-            return FALSE;
-        }
-    }
-
-  return TRUE;
-}
-
-gboolean
-flatpak_repo_collect_sizes (OstreeRepo   *repo,
-                            GFile        *root,
-                            guint64      *installed_size,
-                            guint64      *download_size,
-                            GCancellable *cancellable,
-                            GError      **error)
-{
-  return _flatpak_repo_collect_sizes (repo, root, NULL, installed_size, download_size, cancellable, error);
-}
-
-
-static void
-flatpak_repo_collect_extra_data_sizes (OstreeRepo   *repo,
-                                       const char   *rev,
-                                       guint64      *installed_size,
-                                       guint64      *download_size)
-{
-  g_autoptr(GVariant) extra_data_sources = NULL;
-  gsize n_extra_data;
-  int i;
-
-  extra_data_sources = flatpak_repo_get_extra_data_sources (repo, rev, NULL, NULL);
-  if (extra_data_sources == NULL)
-    return;
-
-  n_extra_data = g_variant_n_children (extra_data_sources);
-  if (n_extra_data == 0)
-    return;
-
-  for (i = 0; i < n_extra_data; i++)
-    {
-      guint64 extra_download_size;
-      guint64 extra_installed_size;
-
-      flatpak_repo_parse_extra_data_sources (extra_data_sources, i,
-                                             NULL,
-                                             &extra_download_size,
-                                             &extra_installed_size,
-                                             NULL, NULL);
-      if (installed_size)
-        *installed_size += extra_installed_size;
-      if (download_size)
-        *download_size += extra_download_size;
-    }
-}
-
-/* Loads a summary file from a local repo */
-GVariant *
-flatpak_repo_load_summary (OstreeRepo *repo,
-                           GError **error)
-{
-  glnx_fd_close int fd = -1;
-  g_autoptr(GMappedFile) mfile = NULL;
-  g_autoptr(GBytes) bytes = NULL;
-
-  fd = openat (ostree_repo_get_dfd (repo), "summary", O_RDONLY | O_CLOEXEC);
-  if (fd < 0)
-    {
-      glnx_set_error_from_errno (error);
-      return NULL;
-    }
-
-  mfile = g_mapped_file_new_from_fd (fd, FALSE, error);
-  if (!mfile)
-    return NULL;
-
-  bytes = g_mapped_file_get_bytes (mfile);
-
-  return g_variant_ref_sink (g_variant_new_from_bytes (OSTREE_SUMMARY_GVARIANT_FORMAT, bytes, TRUE));
-}
-
-typedef struct {
-  guint64 installed_size;
-  guint64 download_size;
-  char *metadata_contents;
-} CommitData;
-
-static void
-commit_data_free (gpointer data)
-{
-  CommitData *rev_data = data;
-  g_free (rev_data->metadata_contents);
-  g_free (rev_data);
-}
-
-/* For all the refs listed in @cache_v (an xa.cache value) which exist in the
- * @summary, insert their data into @commit_data_cache if it isn’t already there. */
-static void
-populate_commit_data_cache (GVariant   *metadata,
-                            GVariant   *summary,
-                            GHashTable *commit_data_cache  /* (element-type utf8 CommitData) */)
-{
-  g_autoptr(GVariant) cache_v = NULL;
-  g_autoptr(GVariant) cache = NULL;
-  gsize n, i;
-  const char *old_collection_id;
-
-#if FLATPAK_ENABLE_P2P
-  if (!g_variant_lookup (metadata, "ostree.summary.collection-id", "&s", &old_collection_id))
-    old_collection_id = NULL;
-#else  /* if !FLATPAK_ENABLE_P2P */
-  old_collection_id = NULL;
-#endif  /* !FLATPAK_ENABLE_P2P */
-
-  cache_v = g_variant_lookup_value (metadata, "xa.cache", NULL);
-
-  if (cache_v == NULL)
-    return;
-
-  cache = g_variant_get_child_value (cache_v, 0);
-
-  n = g_variant_n_children (cache);
-  for (i = 0; i < n; i++)
-    {
-      g_autoptr(GVariant) old_element = g_variant_get_child_value (cache, i);
-      g_autoptr(GVariant) old_ref_v = g_variant_get_child_value (old_element, 0);
-      const char *old_ref = g_variant_get_string (old_ref_v, NULL);
-      g_autofree char *old_rev = NULL;
-      g_autoptr(GVariant) old_commit_data_v = g_variant_get_child_value (old_element, 1);
-      CommitData *old_rev_data;
-
-      if (flatpak_summary_lookup_ref (summary, old_collection_id, old_ref, &old_rev, NULL))
-        {
-          guint64 old_installed_size, old_download_size;
-          g_autofree char *old_metadata = NULL;
-
-          /* See if we already have the info on this revision */
-          if (g_hash_table_lookup (commit_data_cache, old_rev))
-            continue;
-
-          g_variant_get_child (old_commit_data_v, 0, "t", &old_installed_size);
-          old_installed_size = GUINT64_FROM_BE (old_installed_size);
-          g_variant_get_child (old_commit_data_v, 1, "t", &old_download_size);
-          old_download_size = GUINT64_FROM_BE (old_download_size);
-          g_variant_get_child (old_commit_data_v, 2, "s", &old_metadata);
-
-          old_rev_data = g_new (CommitData, 1);
-          old_rev_data->installed_size = old_installed_size;
-          old_rev_data->download_size = old_download_size;
-          old_rev_data->metadata_contents = g_steal_pointer (&old_metadata);
-
-          g_hash_table_insert (commit_data_cache, g_steal_pointer (&old_rev), old_rev_data);
-        }
-    }
-}
-
-/* Update the metadata in the summary file for @repo, and then re-sign the file.
- * If the repo has a collection ID set, additionally store the metadata on a
- * contentless commit in a well-known branch, which is the preferred way of
- * broadcasting per-repo metadata (putting it in the summary file is deprecated,
- * but kept for backwards compatibility).
- *
- * Note that there are two keys for the collection ID: collection-id, and
- * xa.collection-id. If a client does not currently have a collection ID configured
- * for this remote, it will *only* update its configuration from xa.collection-id.
- * This allows phased deployment of collection-based repositories. Clients will
- * only update their configuration from an unset to a set collection ID once
- * (otherwise the security properties of collection IDs are broken). */
-gboolean
-flatpak_repo_update (OstreeRepo   *repo,
-                     const char  **gpg_key_ids,
-                     const char   *gpg_homedir,
-                     GCancellable *cancellable,
-                     GError      **error)
-{
-  GVariantBuilder builder;
-  GVariantBuilder ref_data_builder;
-  GKeyFile *config;
-  g_autofree char *title = NULL;
-  g_autofree char *redirect_url = NULL;
-  g_autofree char *default_branch = NULL;
-  g_autofree char *gpg_keys = NULL;
-  g_autoptr(GVariant) old_summary = NULL;
-  g_autoptr(GVariant) new_summary = NULL;
-  g_autoptr(GHashTable) refs = NULL;
-  const char *prefixes[] = { "appstream", "app", "runtime", NULL };
-  const char **prefix;
-  g_autoptr(GList) ordered_keys = NULL;
-  GList *l = NULL;
-  g_autoptr(GHashTable) commit_data_cache = NULL;
-  const char *collection_id;
-  g_autofree char *old_ostree_metadata_checksum = NULL;
-  g_autoptr(GVariant) old_ostree_metadata_v = NULL;
-  gboolean deploy_collection_id = FALSE;
-
-  g_variant_builder_init (&builder, G_VARIANT_TYPE_VARDICT);
-
-  config = ostree_repo_get_config (repo);
-
-  if (config)
-    {
-      title = g_key_file_get_string (config, "flatpak", "title", NULL);
-      default_branch = g_key_file_get_string (config, "flatpak", "default-branch", NULL);
-      gpg_keys = g_key_file_get_string (config, "flatpak", "gpg-keys", NULL);
-      redirect_url = g_key_file_get_string (config, "flatpak", "redirect-url", NULL);
-      deploy_collection_id = g_key_file_get_boolean (config, "flatpak", "deploy-collection-id", NULL);
-    }
-
-#ifdef FLATPAK_ENABLE_P2P
-  collection_id = ostree_repo_get_collection_id (repo);
-#else  /* if !FLATPAK_ENABLE_P2P */
-  collection_id = NULL;
-#endif  /* FLATPAK_ENABLE_P2P */
-
-  if (title)
-    g_variant_builder_add (&builder, "{sv}", "xa.title",
-                           g_variant_new_string (title));
-
-  if (redirect_url)
-    g_variant_builder_add (&builder, "{sv}", "xa.redirect-url",
-                           g_variant_new_string (redirect_url));
-
-  if (default_branch)
-    g_variant_builder_add (&builder, "{sv}", "xa.default-branch",
-                           g_variant_new_string (default_branch));
-
-  if (deploy_collection_id && collection_id != NULL)
-    g_variant_builder_add (&builder, "{sv}", "xa.collection-id",
-                           g_variant_new_string (collection_id));
-  else if (deploy_collection_id)
-    g_debug ("Ignoring deploy-collection-id=true because no collection ID is set.");
-
-  if (gpg_keys)
-    {
-      guchar *decoded;
-      gsize decoded_len;
-
-      gpg_keys = g_strstrip (gpg_keys);
-      decoded = g_base64_decode (gpg_keys, &decoded_len);
-
-      g_variant_builder_add (&builder, "{sv}", "xa.gpg-keys",
-                             g_variant_new_from_data (G_VARIANT_TYPE ("ay"), decoded, decoded_len,
-                                                      TRUE, (GDestroyNotify)g_free, decoded));
-    }
-
-  g_variant_builder_init (&ref_data_builder, G_VARIANT_TYPE ("a{s(tts)}"));
-
-  /* Only operate on flatpak relevant refs */
-  refs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
-  for (prefix = prefixes; *prefix != NULL; prefix++)
-    {
-      g_autoptr(GHashTable) prefix_refs = NULL;
-      GHashTableIter hashiter;
-      gpointer key, value;
-
-      if (!ostree_repo_list_refs_ext (repo, *prefix, &prefix_refs,
-                                      OSTREE_REPO_LIST_REFS_EXT_NONE,
-                                      cancellable, error))
-        return FALSE;
-
-      /* Merge the prefix refs to the full refs table */
-      g_hash_table_iter_init (&hashiter, prefix_refs);
-      while (g_hash_table_iter_next (&hashiter, &key, &value))
-        {
-          char *ref = g_strdup (key);
-          char *rev = g_strdup (value);
-          g_hash_table_replace (refs, ref, rev);
-        }
-    }
-
-  commit_data_cache = g_hash_table_new_full (g_str_hash, g_str_equal,
-                                             g_free, commit_data_free);
-
-  old_summary = flatpak_repo_load_summary (repo, NULL);
-
-#ifdef FLATPAK_ENABLE_P2P
-  if (!ostree_repo_resolve_rev (repo, OSTREE_REPO_METADATA_REF,
-                                TRUE, &old_ostree_metadata_checksum, error))
-    return FALSE;
-#endif  /* FLATPAK_ENABLE_P2P */
-
-  if (old_summary != NULL &&
-      old_ostree_metadata_checksum != NULL &&
-      ostree_repo_load_commit (repo, old_ostree_metadata_checksum, &old_ostree_metadata_v, NULL, NULL))
-    {
-      g_autoptr(GVariant) metadata = g_variant_get_child_value (old_ostree_metadata_v, 0);
-
-      populate_commit_data_cache (metadata, old_summary, commit_data_cache);
-    }
-  else if (old_summary != NULL)
-    {
-      g_autoptr(GVariant) extensions = g_variant_get_child_value (old_summary, 1);
-
-      populate_commit_data_cache (extensions, old_summary, commit_data_cache);
-    }
-
-  ordered_keys = g_hash_table_get_keys (refs);
-  ordered_keys = g_list_sort (ordered_keys, (GCompareFunc) strcmp);
-  for (l = ordered_keys; l; l = l->next)
-    {
-      const char *ref = l->data;
-      const char *rev = g_hash_table_lookup (refs, ref);
-      g_autoptr(GFile) root = NULL;
-      g_autoptr(GFile) metadata = NULL;
-      guint64 installed_size = 0;
-      guint64 download_size = 0;
-      g_autofree char *metadata_contents = NULL;
-      g_autofree char *commit = NULL;
-      g_autoptr(GVariant) commit_v = NULL;
-      g_autoptr(GVariant) commit_metadata = NULL;
-      CommitData *rev_data;
-
-      /* See if we already have the info on this revision */
-      if (g_hash_table_lookup (commit_data_cache, rev))
-        continue;
-
-      if (!ostree_repo_read_commit (repo, rev, &root, &commit, NULL, error))
-        return FALSE;
-
-      if (!ostree_repo_load_commit (repo, commit, &commit_v, NULL, error))
-        return FALSE;
-
-      commit_metadata = g_variant_get_child_value (commit_v, 0);
-      if (!g_variant_lookup (commit_metadata, "xa.metadata", "s", &metadata_contents))
-        {
-          metadata = g_file_get_child (root, "metadata");
-          if (!g_file_load_contents (metadata, cancellable, &metadata_contents, NULL, NULL, NULL))
-            metadata_contents = g_strdup ("");
-        }
-
-      if (g_variant_lookup (commit_metadata, "xa.installed-size", "t", &installed_size) &&
-          g_variant_lookup (commit_metadata, "xa.download-size", "t", &download_size))
-        {
-          installed_size = GUINT64_FROM_BE (installed_size);
-          download_size = GUINT64_FROM_BE (download_size);
-        }
-      else
-        {
-          if (!flatpak_repo_collect_sizes (repo, root, &installed_size, &download_size, cancellable, error))
-            return FALSE;
-        }
-
-      flatpak_repo_collect_extra_data_sizes (repo, rev, &installed_size, &download_size);
-
-      rev_data = g_new (CommitData, 1);
-      rev_data->installed_size = installed_size;
-      rev_data->download_size = download_size;
-      rev_data->metadata_contents = g_strdup (metadata_contents);
-
-      g_hash_table_insert (commit_data_cache, g_strdup (rev), rev_data);
-    }
-
-  for (l = ordered_keys; l; l = l->next)
-    {
-      const char *ref = l->data;
-      const char *rev = g_hash_table_lookup (refs, ref);
-      const CommitData *rev_data = g_hash_table_lookup (commit_data_cache,
-                                                        rev);
-
-      g_variant_builder_add (&ref_data_builder, "{s(tts)}",
-                             ref,
-                             GUINT64_TO_BE (rev_data->installed_size),
-                             GUINT64_TO_BE (rev_data->download_size),
-                             rev_data->metadata_contents);
-    }
-
-  /* Note: xa.cache doesn’t need to support collection IDs for the refs listed
-   * in it, because the xa.cache metadata is stored on the ostree-metadata ref,
-   * which is itself strongly bound to a collection ID — so that collection ID
-   * is bound to all the refs in xa.cache. If a client is using the xa.cache
-   * data from a summary file (rather than an ostree-metadata branch), they are
-   * too old to care about collection IDs anyway. */
-  g_variant_builder_add (&builder, "{sv}", "xa.cache",
-                         g_variant_new_variant (g_variant_builder_end (&ref_data_builder)));
-
-  new_summary = g_variant_ref_sink (g_variant_builder_end (&builder));
-
-  /* Write out a new metadata commit for the repository. */
-  if (collection_id != NULL)
-    {
-#ifdef FLATPAK_ENABLE_P2P
-      OstreeCollectionRef collection_ref = { (gchar *) collection_id, (gchar *) OSTREE_REPO_METADATA_REF };
-      g_autofree gchar *new_ostree_metadata_checksum = NULL;
-      g_autoptr(OstreeMutableTree) mtree = NULL;
-      g_autoptr(OstreeRepoFile) repo_file = NULL;
-      g_autoptr(GVariantDict) new_summary_commit_dict = NULL;
-      g_autoptr(GVariant) new_summary_commit = NULL;
-
-      /* Add bindings to the metadata. */
-      new_summary_commit_dict = g_variant_dict_new (new_summary);
-      g_variant_dict_insert (new_summary_commit_dict, "ostree.collection-binding",
-                             "s", collection_ref.collection_id);
-      g_variant_dict_insert_value (new_summary_commit_dict, "ostree.ref-binding",
-                                   g_variant_new_strv ((const gchar * const *) &collection_ref.ref_name, 1));
-      new_summary_commit = g_variant_dict_end (new_summary_commit_dict);
-
-      if (!ostree_repo_prepare_transaction (repo, NULL, cancellable, error))
-        goto out;
-
-      mtree = ostree_mutable_tree_new ();
-      if (!ostree_repo_write_dfd_to_mtree (repo, AT_FDCWD, ".", mtree, NULL, NULL, error))
-        goto out;
-      if (!ostree_repo_write_mtree (repo, mtree, (GFile **) &repo_file, NULL, error))
-        goto out;
-
-      if (!ostree_repo_write_commit (repo, old_ostree_metadata_checksum,
-                                     NULL  /* subject */, NULL  /* body */,
-                                     new_summary_commit, repo_file, &new_ostree_metadata_checksum,
-                                     NULL, error))
-        goto out;
-
-      if (gpg_key_ids != NULL)
-        {
-          const char * const *iter;
-
-          for (iter = gpg_key_ids; iter != NULL && *iter != NULL; iter++)
-            {
-              const char *key_id = *iter;
-
-              if (!ostree_repo_sign_commit (repo,
-                                            new_ostree_metadata_checksum,
-                                            key_id,
-                                            gpg_homedir,
-                                            cancellable,
-                                            error))
-                goto out;
-            }
-        }
-
-      ostree_repo_transaction_set_collection_ref (repo, &collection_ref,
-                                                  new_ostree_metadata_checksum);
-
-      if (!ostree_repo_commit_transaction (repo, NULL, cancellable, error))
-        goto out;
-#else  /* if !FLATPAK_ENABLE_P2P */
-      g_assert_not_reached ();
-      goto out;
-#endif  /* FLATPAK_ENABLE_P2P */
-    }
-
-  /* Regenerate and re-sign the summary file. */
-  if (!ostree_repo_regenerate_summary (repo, new_summary, cancellable, error))
-    return FALSE;
-
-  if (gpg_key_ids)
-    {
-      if (!ostree_repo_add_gpg_signature_summary (repo,
-                                                  gpg_key_ids,
-                                                  gpg_homedir,
-                                                  cancellable,
-                                                  error))
-        return FALSE;
-    }
-
-  return TRUE;
-
-out:
-  if (repo != NULL)
-    ostree_repo_abort_transaction (repo, cancellable, NULL);
-  return FALSE;
-}
-
-gboolean
-flatpak_mtree_create_root (OstreeRepo        *repo,
-                           OstreeMutableTree *mtree,
-                           GCancellable      *cancellable,
-                           GError           **error)
-{
-  g_autoptr(GVariant) dirmeta = NULL;
-  g_autoptr(GFileInfo) file_info = g_file_info_new ();
-  g_autofree guchar *csum = NULL;
-  g_autofree char *checksum = NULL;
-
-  g_file_info_set_name (file_info, "/");
-  g_file_info_set_file_type (file_info, G_FILE_TYPE_DIRECTORY);
-  g_file_info_set_attribute_uint32 (file_info, "unix::uid", 0);
-  g_file_info_set_attribute_uint32 (file_info, "unix::gid", 0);
-  g_file_info_set_attribute_uint32 (file_info, "unix::mode", 040755);
-
-  dirmeta = ostree_create_directory_metadata (file_info, NULL);
-  if (!ostree_repo_write_metadata (repo, OSTREE_OBJECT_TYPE_DIR_META, NULL,
-                                   dirmeta, &csum, cancellable, error))
-    return FALSE;
-
-  checksum = ostree_checksum_from_bytes (csum);
-  ostree_mutable_tree_set_metadata_checksum (mtree, checksum);
-
-  return TRUE;
-}
-
-static OstreeRepoCommitFilterResult
-commit_filter (OstreeRepo *repo,
-               const char *path,
-               GFileInfo  *file_info,
-               gpointer    user_data)
-{
-  guint current_mode;
-
-  /* No user info */
-  g_file_info_set_attribute_uint32 (file_info, "unix::uid", 0);
-  g_file_info_set_attribute_uint32 (file_info, "unix::gid", 0);
-
-  /* No setuid */
-  current_mode = g_file_info_get_attribute_uint32 (file_info, "unix::mode");
-  g_file_info_set_attribute_uint32 (file_info, "unix::mode", current_mode & ~07000);
-
-  return OSTREE_REPO_COMMIT_FILTER_ALLOW;
-}
-
-static gboolean
-validate_component (FlatpakXml *component,
-                    const char *ref,
-                    const char *id,
-                    char      **tags,
-                    const char *runtime,
-                    const char *sdk)
-{
-  FlatpakXml *bundle, *text, *prev, *id_node, *id_text_node, *metadata, *value;
-  g_autofree char *id_text = NULL;
-  int i;
-
-  if (g_strcmp0 (component->element_name, "component") != 0)
-    return FALSE;
-
-  id_node = flatpak_xml_find (component, "id", NULL);
-  if (id_node == NULL)
-    return FALSE;
-
-  id_text_node = flatpak_xml_find (id_node, NULL, NULL);
-  if (id_text_node == NULL || id_text_node->text == NULL)
-    return FALSE;
-
-  id_text = g_strstrip (g_strdup (id_text_node->text));
-
-  /* Drop .desktop file suffix (unless the actual app id ends with .desktop) */
-  if (g_str_has_suffix (id_text, ".desktop") &&
-      !g_str_has_suffix (id, ".desktop"))
-    id_text[strlen(id_text)-strlen(".desktop")] = 0;
-
-  if (!g_str_has_prefix (id_text, id))
-    {
-      g_warning ("Invalid id %s", id_text);
-      return FALSE;
-    }
-
-  while ((bundle = flatpak_xml_find (component, "bundle", &prev)) != NULL)
-    flatpak_xml_free (flatpak_xml_unlink (component, bundle));
-
-  bundle = flatpak_xml_new ("bundle");
-  bundle->attribute_names = g_new0 (char *, 2 * 4);
-  bundle->attribute_values = g_new0 (char *, 2 * 4);
-  bundle->attribute_names[0] = g_strdup ("type");
-  bundle->attribute_values[0] = g_strdup ("flatpak");
-
-  i = 1;
-  if (runtime && !g_str_has_prefix (runtime, "runtime/"))
-    {
-      bundle->attribute_names[i] = g_strdup ("runtime");
-      bundle->attribute_values[i] = g_strdup (runtime);
-      i++;
-    }
-
-  if (sdk)
-    {
-      bundle->attribute_names[i] = g_strdup ("sdk");
-      bundle->attribute_values[i] = g_strdup (sdk);
-      i++;
-    }
-
-  text = flatpak_xml_new (NULL);
-  text->text = g_strdup (ref);
-  flatpak_xml_add (bundle, text);
-
-  flatpak_xml_add (component, flatpak_xml_new_text ("  "));
-  flatpak_xml_add (component, bundle);
-  flatpak_xml_add (component, flatpak_xml_new_text ("\n  "));
-
-  if (tags != NULL && tags[0] != NULL)
-    {
-      metadata = flatpak_xml_find (component, "metadata", NULL);
-      if (metadata == NULL)
-        {
-          metadata = flatpak_xml_new ("metadata");
-          metadata->attribute_names = g_new0 (char *, 1);
-          metadata->attribute_values = g_new0 (char *, 1);
-
-          flatpak_xml_add (component, flatpak_xml_new_text ("  "));
-          flatpak_xml_add (component, metadata);
-          flatpak_xml_add (component, flatpak_xml_new_text ("\n  "));
-        }
-
-      value = flatpak_xml_new ("value");
-      value->attribute_names = g_new0 (char *, 2);
-      value->attribute_values = g_new0 (char *, 2);
-      value->attribute_names[0] = g_strdup ("key");
-      value->attribute_values[0] = g_strdup ("X-Flatpak-Tags");
-      flatpak_xml_add (metadata, flatpak_xml_new_text ("\n       "));
-      flatpak_xml_add (metadata, value);
-      flatpak_xml_add (metadata, flatpak_xml_new_text ("\n    "));
-
-      text = flatpak_xml_new (NULL);
-      text->text = g_strjoinv (",", tags);
-      flatpak_xml_add (value, text);
-
-    }
-
-  return TRUE;
-}
-
-gboolean
-flatpak_appstream_xml_migrate (FlatpakXml *source,
-                               FlatpakXml *dest,
-                               const char *ref,
-                               const char *id,
-                               GKeyFile   *metadata)
-{
-  FlatpakXml *source_components;
-  FlatpakXml *dest_components;
-  FlatpakXml *component;
-  FlatpakXml *prev_component;
-  gboolean migrated = FALSE;
-
-  g_auto(GStrv) tags = NULL;
-  g_autofree const char *runtime = NULL;
-  g_autofree const char *sdk = NULL;
-  const char *group;
-
-  if (source->first_child == NULL ||
-      source->first_child->next_sibling != NULL ||
-      g_strcmp0 (source->first_child->element_name, "components") != 0)
-    return FALSE;
-
-  if (g_str_has_prefix (ref, "app/"))
-    group = FLATPAK_METADATA_GROUP_APPLICATION;
-  else
-    group = FLATPAK_METADATA_GROUP_RUNTIME;
-
-  tags = g_key_file_get_string_list (metadata, group, FLATPAK_METADATA_KEY_TAGS,
-                                     NULL, NULL);
-  runtime = g_key_file_get_string (metadata, group,
-                                   FLATPAK_METADATA_KEY_RUNTIME, NULL);
-  sdk = g_key_file_get_string (metadata, group, FLATPAK_METADATA_KEY_SDK, NULL);
-
-  source_components = source->first_child;
-  dest_components = dest->first_child;
-
-  component = source_components->first_child;
-  prev_component = NULL;
-  while (component != NULL)
-    {
-      FlatpakXml *next = component->next_sibling;
-
-      if (validate_component (component, ref, id, tags, runtime, sdk))
-        {
-          flatpak_xml_add (dest_components,
-                           flatpak_xml_unlink (component, prev_component));
-          migrated = TRUE;
-        }
-      else
-        {
-          prev_component = component;
-        }
-
-      component = next;
-    }
-
-  return migrated;
-}
-
-static gboolean
-copy_icon (const char *id,
-           GFile      *root,
-           GFile      *dest,
-           const char *size,
-           GError    **error)
-{
-  g_autofree char *icon_name = g_strconcat (id, ".png", NULL);
-
-  g_autoptr(GFile) icons_dir =
-    g_file_resolve_relative_path (root,
-                                  "files/share/app-info/icons/flatpak");
-  g_autoptr(GFile) size_dir = g_file_get_child (icons_dir, size);
-  g_autoptr(GFile) icon_file = g_file_get_child (size_dir, icon_name);
-  g_autoptr(GFile) dest_dir = g_file_get_child (dest, "icons");
-  g_autoptr(GFile) dest_size_dir = g_file_get_child (dest_dir, size);
-  g_autoptr(GFile) dest_file = g_file_get_child (dest_size_dir, icon_name);
-  g_autoptr(GInputStream) in = NULL;
-  g_autoptr(GOutputStream) out = NULL;
-  g_autoptr(GError) my_error = NULL;
-  gssize n_bytes_written;
-
-  in = (GInputStream *) g_file_read (icon_file, NULL, &my_error);
-  if (!in)
-    {
-      if (g_error_matches (my_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
-        {
-          g_debug ("No icon at size %s", size);
-          return TRUE;
-        }
-
-      g_propagate_error (error, g_steal_pointer (&my_error));
-      return FALSE;
-    }
-
-  if (!flatpak_mkdir_p (dest_size_dir, NULL, error))
-    return FALSE;
-
-  out = (GOutputStream *) g_file_replace (dest_file, NULL, FALSE,
-                                          G_FILE_CREATE_REPLACE_DESTINATION,
-                                          NULL, error);
-  if (!out)
-    return FALSE;
-
-  n_bytes_written = g_output_stream_splice (out, in,
-                                            G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
-                                            NULL, error);
-  if (n_bytes_written < 0)
-    return FALSE;
-
-  return TRUE;
-}
-
-static gboolean
-extract_appstream (OstreeRepo   *repo,
-                   FlatpakXml   *appstream_root,
-                   const char   *ref,
-                   const char   *id,
-                   GFile        *dest,
-                   GCancellable *cancellable,
-                   GError      **error)
-{
-  g_autoptr(GFile) root = NULL;
-  g_autoptr(GFile) xmls_dir = NULL;
-  g_autoptr(GFile) appstream_file = NULL;
-  g_autoptr(GFile) metadata = NULL;
-  g_autofree char *appstream_basename = NULL;
-  g_autoptr(GInputStream) in = NULL;
-  g_autoptr(FlatpakXml) xml_root = NULL;
-  g_autoptr(GKeyFile) keyfile = NULL;
-
-  if (!ostree_repo_read_commit (repo, ref, &root, NULL, NULL, error))
-    return FALSE;
-
-  keyfile = g_key_file_new ();
-  metadata = g_file_get_child (root, "metadata");
-  if (g_file_query_exists (metadata, cancellable))
-    {
-      g_autofree char *content = NULL;
-      gsize len;
-
-      if (!g_file_load_contents (metadata, cancellable, &content, &len, NULL, error))
-        return FALSE;
-
-      if (!g_key_file_load_from_data (keyfile, content, len, G_KEY_FILE_NONE, error))
-        return FALSE;
-    }
-
-  xmls_dir = g_file_resolve_relative_path (root, "files/share/app-info/xmls");
-  appstream_basename = g_strconcat (id, ".xml.gz", NULL);
-  appstream_file = g_file_get_child (xmls_dir, appstream_basename);
-
-  in = (GInputStream *) g_file_read (appstream_file, cancellable, error);
-  if (!in)
-    return FALSE;
-
-  xml_root = flatpak_xml_parse (in, TRUE, cancellable, error);
-  if (xml_root == NULL)
-    return FALSE;
-
-  if (flatpak_appstream_xml_migrate (xml_root, appstream_root,
-                                     ref, id, keyfile))
-    {
-      g_autoptr(GError) my_error = NULL;
-      FlatpakXml *components = appstream_root->first_child;
-      FlatpakXml *component = components->first_child;
-
-      while (component != NULL)
-        {
-          FlatpakXml *component_id, *component_id_text_node;
-          g_autofree char *component_id_text = NULL;
-
-          if (g_strcmp0 (component->element_name, "component") != 0)
-            {
-              component = component->next_sibling;
-              continue;
-            }
-
-          component_id = flatpak_xml_find (component, "id", NULL);
-          component_id_text_node = flatpak_xml_find (component_id, NULL, NULL);
-
-          component_id_text = g_strstrip (g_strdup (component_id_text_node->text));
-          if (!g_str_has_prefix (component_id_text, id) ||
-              !g_str_has_suffix (component_id_text, ".desktop"))
-            {
-              component = component->next_sibling;
-              continue;
-            }
-
-          g_print ("Extracting icons for component %s\n", component_id_text);
-          component_id_text[strlen (component_id_text) - strlen (".desktop")] = 0;
-
-          if (!copy_icon (component_id_text, root, dest, "64x64", &my_error))
-            {
-              g_print ("Error copying 64x64 icon: %s\n", my_error->message);
-              g_clear_error (&my_error);
-            }
-          if (!copy_icon (component_id_text, root, dest, "128x128", &my_error))
-            {
-              g_print ("Error copying 128x128 icon: %s\n", my_error->message);
-              g_clear_error (&my_error);
-            }
-
-          /* We updated icons for our component, so we're done */
-          break;
-        }
-    }
-
-  return TRUE;
-}
-
-FlatpakXml *
-flatpak_appstream_xml_new (void)
-{
-  FlatpakXml *appstream_root = NULL;
-  FlatpakXml *appstream_components;
-
-  appstream_root = flatpak_xml_new ("root");
-  appstream_components = flatpak_xml_new ("components");
-  flatpak_xml_add (appstream_root, appstream_components);
-  flatpak_xml_add (appstream_components, flatpak_xml_new_text ("\n  "));
-
-  appstream_components->attribute_names = g_new0 (char *, 3);
-  appstream_components->attribute_values = g_new0 (char *, 3);
-  appstream_components->attribute_names[0] = g_strdup ("version");
-  appstream_components->attribute_values[0] = g_strdup ("0.8");
-  appstream_components->attribute_names[1] = g_strdup ("origin");
-  appstream_components->attribute_values[1] = g_strdup ("flatpak");
-
-  return appstream_root;
-}
-
-GBytes *
-flatpak_appstream_xml_root_to_data (FlatpakXml *appstream_root,
-                                    GError    **error)
-{
-  g_autoptr(GString) xml = NULL;
-  g_autoptr(GZlibCompressor) compressor = NULL;
-  g_autoptr(GOutputStream) out2 = NULL;
-  g_autoptr(GOutputStream) out = NULL;
-
-  flatpak_xml_add (appstream_root->first_child, flatpak_xml_new_text ("\n"));
-
-  xml = g_string_new ("");
-  flatpak_xml_to_string (appstream_root, xml);
-
-  compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP, -1);
-  out = g_memory_output_stream_new_resizable ();
-  out2 = g_converter_output_stream_new (out, G_CONVERTER (compressor));
-  if (!g_output_stream_write_all (out2, xml->str, xml->len,
-                                  NULL, NULL, error))
-    return NULL;
-  if (!g_output_stream_close (out2, NULL, error))
-    return NULL;
-
-  return g_memory_output_stream_steal_as_bytes (G_MEMORY_OUTPUT_STREAM (out));
-}
-
-gboolean
-flatpak_repo_generate_appstream (OstreeRepo   *repo,
-                                 const char  **gpg_key_ids,
-                                 const char   *gpg_homedir,
-                                 guint64       timestamp,
-                                 GCancellable *cancellable,
-                                 GError      **error)
-{
-  g_autoptr(GHashTable) all_refs = NULL;
-  g_autoptr(GHashTable) arches = NULL;  /* (element-type utf8 utf8) */
-  GHashTableIter iter;
-  gpointer key;
-  gboolean skip_commit = FALSE;
-  const char *collection_id;
-
-  arches = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
-
-#ifdef FLATPAK_ENABLE_P2P
-  collection_id = ostree_repo_get_collection_id (repo);
-#else  /* if !FLATPAK_ENABLE_P2P */
-  collection_id = NULL;
-#endif  /* !FLATPAK_ENABLE_P2P */
-
-  if (!ostree_repo_list_refs (repo,
-                              NULL,
-                              &all_refs,
-                              cancellable,
-                              error))
-    return FALSE;
-
-  g_hash_table_iter_init (&iter, all_refs);
-  while (g_hash_table_iter_next (&iter, &key, NULL))
-    {
-      const char *ref = key;
-      const char *arch;
-      g_auto(GStrv) split = NULL;
-
-      split = flatpak_decompose_ref (ref, NULL);
-      if (!split)
-        continue;
-
-      arch = split[2];
-      if (!g_hash_table_contains (arches, arch))
-        g_hash_table_add (arches, g_strdup (arch));
-    }
-
-  g_hash_table_iter_init (&iter, arches);
-  while (g_hash_table_iter_next (&iter, &key, NULL))
-    {
-      GHashTableIter iter2;
-      const char *arch = key;
-      g_autofree char *tmpdir = g_strdup ("/tmp/flatpak-appstream-XXXXXX");
-      g_autoptr(FlatpakTempDir) tmpdir_file = NULL;
-      g_autoptr(GFile) appstream_file = NULL;
-      g_autoptr(GFile) root = NULL;
-      g_autoptr(OstreeMutableTree) mtree = NULL;
-      g_autofree char *commit_checksum = NULL;
-      OstreeRepoTransactionStats stats;
-      g_autoptr(OstreeRepoCommitModifier) modifier = NULL;
-      g_autofree char *parent = NULL;
-      g_autofree char *branch = NULL;
-      g_autoptr(FlatpakXml) appstream_root = NULL;
-      g_autoptr(GBytes) xml_data = NULL;
-
-      if (g_mkdtemp_full (tmpdir, 0755) == NULL)
-        return flatpak_fail (error, "Can't create temporary directory");
-
-      tmpdir_file = g_file_new_for_path (tmpdir);
-
-      appstream_root = flatpak_appstream_xml_new ();
-
-      g_hash_table_iter_init (&iter2, all_refs);
-      while (g_hash_table_iter_next (&iter2, &key, NULL))
-        {
-          const char *ref = key;
-          g_auto(GStrv) split = NULL;
-          g_autoptr(GError) my_error = NULL;
-
-          split = flatpak_decompose_ref (ref, NULL);
-          if (!split)
-            continue;
-
-          if (strcmp (split[2], arch) != 0)
-            continue;
-
-          if (!extract_appstream (repo, appstream_root,
-                                  ref, split[1], tmpdir_file,
-                                  cancellable, &my_error))
-            {
-              if (g_str_has_prefix (ref, "app/"))
-                g_print ("No appstream data for %s: %s\n", ref, my_error->message);
-              continue;
-            }
-        }
-
-      xml_data = flatpak_appstream_xml_root_to_data (appstream_root, error);
-      if (xml_data == NULL)
-        return FALSE;
-
-      appstream_file = g_file_get_child (tmpdir_file, "appstream.xml.gz");
-
-      if (!g_file_replace_contents (appstream_file,
-                                    g_bytes_get_data (xml_data, NULL),
-                                    g_bytes_get_size (xml_data),
-                                    NULL,
-                                    FALSE,
-                                    G_FILE_CREATE_NONE,
-                                    NULL,
-                                    cancellable,
-                                    error))
-        return FALSE;
-
-      if (!ostree_repo_prepare_transaction (repo, NULL, cancellable, error))
-        return FALSE;
-
-      branch = g_strdup_printf ("appstream/%s", arch);
-
-      if (!ostree_repo_resolve_rev (repo, branch, TRUE, &parent, error))
-        goto out;
-
-      mtree = ostree_mutable_tree_new ();
-
-      modifier = ostree_repo_commit_modifier_new (OSTREE_REPO_COMMIT_MODIFIER_FLAGS_SKIP_XATTRS,
-                                                  (OstreeRepoCommitFilter) commit_filter, NULL, NULL);
-
-      if (!ostree_repo_write_directory_to_mtree (repo, G_FILE (tmpdir_file), mtree, modifier, cancellable, error))
-        goto out;
-
-      if (!ostree_repo_write_mtree (repo, mtree, &root, cancellable, error))
-        goto out;
-
-
-      /* No need to commit if nothing changed */
-      if (parent)
-        {
-          g_autoptr(GFile) parent_root;
-
-          if (!ostree_repo_read_commit (repo, parent, &parent_root, NULL, cancellable, error))
-            goto out;
-
-          if (g_file_equal (root, parent_root))
-            skip_commit = TRUE;
-        }
-
-      if (!skip_commit)
-        {
-          g_autoptr(GVariantDict) metadata_dict = NULL;
-          g_autoptr(GVariant) metadata = NULL;
-
-          /* Add bindings to the metadata. Do this even if P2P support is not
-           * enabled, as it might be enable for other flatpak builds. */
-          metadata_dict = g_variant_dict_new (NULL);
-          g_variant_dict_insert (metadata_dict, "ostree.collection-binding",
-                                 "s", (collection_id != NULL) ? collection_id : "");
-          g_variant_dict_insert_value (metadata_dict, "ostree.ref-binding",
-                                       g_variant_new_strv ((const gchar * const *) &branch, 1));
-          metadata = g_variant_dict_end (metadata_dict);
-
-          if (timestamp > 0)
-            {
-              if (!ostree_repo_write_commit_with_time (repo, parent, "Update", NULL, metadata,
-                                                       OSTREE_REPO_FILE (root),
-                                                       timestamp,
-                                                       &commit_checksum,
-                                                       cancellable, error))
-                goto out;
-            }
-          else
-            {
-              if (!ostree_repo_write_commit (repo, parent, "Update", NULL, metadata,
-                                             OSTREE_REPO_FILE (root),
-                                             &commit_checksum, cancellable, error))
-                goto out;
-            }
-
-          if (gpg_key_ids)
-            {
-              int i;
-
-              for (i = 0; gpg_key_ids[i] != NULL; i++)
-                {
-                  const char *keyid = gpg_key_ids[i];
-
-                  if (!ostree_repo_sign_commit (repo,
-                                                commit_checksum,
-                                                keyid,
-                                                gpg_homedir,
-                                                cancellable,
-                                                error))
-                    goto out;
-                }
-            }
-
-#ifdef FLATPAK_ENABLE_P2P
-          if (collection_id != NULL)
-            {
-              const OstreeCollectionRef collection_ref = { (char *) collection_id, branch };
-              ostree_repo_transaction_set_collection_ref (repo, &collection_ref, commit_checksum);
-            }
-          else
-#endif  /* FLATPAK_ENABLE_P2P */
-            {
-              ostree_repo_transaction_set_ref (repo, NULL, branch, commit_checksum);
-            }
-
-          if (!ostree_repo_commit_transaction (repo, &stats, cancellable, error))
-            goto out;
-        }
-      else
-        {
-          ostree_repo_abort_transaction (repo, cancellable, NULL);
-        }
-    }
-
-  return TRUE;
-
-out:
-  ostree_repo_abort_transaction (repo, cancellable, NULL);
-  return FALSE;
-}
-
-void
-flatpak_extension_free (FlatpakExtension *extension)
-{
-  g_free (extension->id);
-  g_free (extension->installed_id);
-  g_free (extension->ref);
-  g_free (extension->directory);
-  g_free (extension->files_path);
-  g_free (extension->add_ld_path);
-  g_free (extension->subdir_suffix);
-  g_strfreev (extension->merge_dirs);
-  g_free (extension);
-}
-
-static int
-flatpak_extension_compare (gconstpointer  _a,
-                           gconstpointer  _b)
-{
-  const FlatpakExtension *a = _a;
-  const FlatpakExtension *b = _b;
-
-  return b->priority - a->priority;
-}
-
-static FlatpakExtension *
-flatpak_extension_new (const char *id,
-                       const char *extension,
-                       const char *ref,
-                       const char *directory,
-                       const char *add_ld_path,
-                       const char *subdir_suffix,
-                       char **merge_dirs,
-                       GFile *files,
-                       gboolean is_unmaintained)
-{
-  FlatpakExtension *ext = g_new0 (FlatpakExtension, 1);
-
-  ext->id = g_strdup (id);
-  ext->installed_id = g_strdup (extension);
-  ext->ref = g_strdup (ref);
-  ext->directory = g_strdup (directory);
-  ext->files_path = g_file_get_path (files);
-  ext->add_ld_path = g_strdup (add_ld_path);
-  ext->subdir_suffix = g_strdup (subdir_suffix);
-  ext->merge_dirs = g_strdupv (merge_dirs);
-  ext->is_unmaintained = is_unmaintained;
-
-  if (is_unmaintained)
-    ext->priority = 1000;
-  else
-    {
-      g_autoptr(GKeyFile) keyfile = g_key_file_new ();
-      g_autofree char *metadata_path = g_build_filename (ext->files_path, "../metadata", NULL);
-
-      if (g_key_file_load_from_file (keyfile, metadata_path, G_KEY_FILE_NONE, NULL))
-        ext->priority = g_key_file_get_integer (keyfile,
-                                                FLATPAK_METADATA_GROUP_EXTENSION_OF,
-                                                FLATPAK_METADATA_KEY_PRIORITY,
-                                                NULL);
-    }
-
-  return ext;
-}
-
-gboolean
-flatpak_extension_matches_reason (const char *extension_id,
-                                  const char *reason,
-                                  gboolean default_value)
-{
-  const char *extension_basename;
-
-  if (reason == NULL || *reason == 0)
-    return default_value;
-
-  extension_basename = strrchr (extension_id, '.');
-  if (extension_basename == NULL)
-    return FALSE;
-  extension_basename += 1;
-
-  if (strcmp (reason, "active-gl-driver") == 0)
-    {
-      /* handled below */
-      const char **gl_drivers = flatpak_get_gl_drivers ();
-      int i;
-
-      for (i = 0; gl_drivers[i] != NULL; i++)
-        {
-          if (strcmp (gl_drivers[i], extension_basename) == 0)
-            return TRUE;
-        }
-
-      return FALSE;
-    }
-
-  return FALSE;
-}
-
-static GList *
-add_extension (GKeyFile   *metakey,
-               const char *group,
-               const char *extension,
-               const char *arch,
-               const char *branch,
-               GList *res)
-{
-  FlatpakExtension *ext;
-  g_autofree char *directory = g_key_file_get_string (metakey, group,
-                                                      FLATPAK_METADATA_KEY_DIRECTORY,
-                                                      NULL);
-  g_autofree char *add_ld_path = g_key_file_get_string (metakey, group,
-                                                        FLATPAK_METADATA_KEY_ADD_LD_PATH,
-                                                        NULL);
-  g_auto(GStrv) merge_dirs = g_key_file_get_string_list (metakey, group,
-                                                         FLATPAK_METADATA_KEY_MERGE_DIRS,
-                                                         NULL, NULL);
-  g_autofree char *enable_if = g_key_file_get_string (metakey, group,
-                                                      FLATPAK_METADATA_KEY_ENABLE_IF,
-                                                      NULL);
-  g_autofree char *subdir_suffix = g_key_file_get_string (metakey, group,
-                                                          FLATPAK_METADATA_KEY_SUBDIRECTORY_SUFFIX,
-                                                          NULL);
-  g_autofree char *ref = NULL;
-  gboolean is_unmaintained = FALSE;
-  g_autoptr(GFile) files = NULL;
-
-  if (directory == NULL)
-    return res;
-
-  ref = g_build_filename ("runtime", extension, arch, branch, NULL);
-
-  files = flatpak_find_unmaintained_extension_dir_if_exists (extension, arch, branch, NULL);
-
-  if (files == NULL)
-    files = flatpak_find_files_dir_for_ref (ref, NULL, NULL);
-  else
-    is_unmaintained = TRUE;
-
-  /* Prefer a full extension (org.freedesktop.Locale) over subdirectory ones (org.freedesktop.Locale.sv) */
-  if (files != NULL)
-    {
-      if (flatpak_extension_matches_reason (extension, enable_if, TRUE))
-        {
-          ext = flatpak_extension_new (extension, extension, ref, directory, add_ld_path, subdir_suffix, merge_dirs, files, is_unmaintained);
-          res = g_list_prepend (res, ext);
-        }
-    }
-  else if (g_key_file_get_boolean (metakey, group,
-                                   FLATPAK_METADATA_KEY_SUBDIRECTORIES, NULL))
-    {
-      g_autofree char *prefix = g_strconcat (extension, ".", NULL);
-      g_auto(GStrv) refs = NULL;
-      g_auto(GStrv) unmaintained_refs = NULL;
-      int j;
-
-      refs = flatpak_list_deployed_refs ("runtime", prefix, arch, branch,
-                                         NULL, NULL);
-      for (j = 0; refs != NULL && refs[j] != NULL; j++)
-        {
-          g_autofree char *extended_dir = g_build_filename (directory, refs[j] + strlen (prefix), NULL);
-          g_autofree char *dir_ref = g_build_filename ("runtime", refs[j], arch, branch, NULL);
-          g_autoptr(GFile) subdir_files = flatpak_find_files_dir_for_ref (dir_ref, NULL, NULL);
-
-          if (subdir_files && flatpak_extension_matches_reason (refs[j], enable_if, TRUE))
-            {
-              ext = flatpak_extension_new (extension, refs[j], dir_ref, extended_dir, add_ld_path, subdir_suffix, merge_dirs, subdir_files, FALSE);
-              ext->needs_tmpfs = TRUE;
-              res = g_list_prepend (res, ext);
-            }
-        }
-
-      unmaintained_refs = flatpak_list_unmaintained_refs (prefix, arch, branch,
-                                                          NULL, NULL);
-      for (j = 0; unmaintained_refs != NULL && unmaintained_refs[j] != NULL; j++)
-        {
-          g_autofree char *extended_dir = g_build_filename (directory, unmaintained_refs[j] + strlen (prefix), NULL);
-          g_autofree char *dir_ref = g_build_filename ("runtime", unmaintained_refs[j], arch, branch, NULL);
-          g_autoptr(GFile) subdir_files = flatpak_find_unmaintained_extension_dir_if_exists (unmaintained_refs[j], arch, branch, NULL);
-
-          if (subdir_files && flatpak_extension_matches_reason (unmaintained_refs[j], enable_if, TRUE))
-            {
-              ext = flatpak_extension_new (extension, unmaintained_refs[j], dir_ref, extended_dir, add_ld_path, subdir_suffix, merge_dirs, subdir_files, TRUE);
-              ext->needs_tmpfs = TRUE;
-              res = g_list_prepend (res, ext);
-            }
-        }
-    }
-
-  return res;
-}
-
-
-GList *
-flatpak_list_extensions (GKeyFile   *metakey,
-                         const char *arch,
-                         const char *default_branch)
-{
-  g_auto(GStrv) groups = NULL;
-  int i, j;
-  GList *res;
-
-  res = NULL;
-
-  if (arch == NULL)
-    arch = flatpak_get_arch ();
-
-  groups = g_key_file_get_groups (metakey, NULL);
-  for (i = 0; groups[i] != NULL; i++)
-    {
-      char *extension;
-
-      if (g_str_has_prefix (groups[i], FLATPAK_METADATA_GROUP_PREFIX_EXTENSION) &&
-          *(extension = (groups[i] + strlen (FLATPAK_METADATA_GROUP_PREFIX_EXTENSION))) != 0)
-        {
-          g_autofree char *version = g_key_file_get_string (metakey, groups[i],
-                                                            FLATPAK_METADATA_KEY_VERSION,
-                                                            NULL);
-          g_auto(GStrv) versions = g_key_file_get_string_list (metakey, groups[i],
-                                                               FLATPAK_METADATA_KEY_VERSIONS,
-                                                               NULL, NULL);
-          const char *default_branches[] = { default_branch, NULL};
-          const char **branches;
-
-          if (versions)
-            branches = (const char **)versions;
-          else
-            {
-              if (version)
-                default_branches[0] = version;
-              branches = default_branches;
-            }
-
-          for (j = 0; branches[j] != NULL; j++)
-            res = add_extension (metakey, groups[i], extension, arch, branches[j], res);
-        }
-    }
-
-  return g_list_sort (g_list_reverse (res), flatpak_extension_compare);
-}
-
-typedef struct
-{
-  FlatpakXml *current;
-} XmlData;
-
-FlatpakXml *
-flatpak_xml_new (const gchar *element_name)
-{
-  FlatpakXml *node = g_new0 (FlatpakXml, 1);
-
-  node->element_name = g_strdup (element_name);
-  return node;
-}
-
-FlatpakXml *
-flatpak_xml_new_text (const gchar *text)
-{
-  FlatpakXml *node = g_new0 (FlatpakXml, 1);
-
-  node->text = g_strdup (text);
-  return node;
-}
-
-void
-flatpak_xml_add (FlatpakXml *parent, FlatpakXml *node)
-{
-  node->parent = parent;
-
-  if (parent->first_child == NULL)
-    parent->first_child = node;
-  else
-    parent->last_child->next_sibling = node;
-  parent->last_child = node;
-}
-
-static void
-xml_start_element (GMarkupParseContext *context,
-                   const gchar         *element_name,
-                   const gchar        **attribute_names,
-                   const gchar        **attribute_values,
-                   gpointer             user_data,
-                   GError             **error)
-{
-  XmlData *data = user_data;
-  FlatpakXml *node;
-
-  node = flatpak_xml_new (element_name);
-  node->attribute_names = g_strdupv ((char **) attribute_names);
-  node->attribute_values = g_strdupv ((char **) attribute_values);
-
-  flatpak_xml_add (data->current, node);
-  data->current = node;
-}
-
-static void
-xml_end_element (GMarkupParseContext *context,
-                 const gchar         *element_name,
-                 gpointer             user_data,
-                 GError             **error)
-{
-  XmlData *data = user_data;
-
-  data->current = data->current->parent;
-}
-
-static void
-xml_text (GMarkupParseContext *context,
-          const gchar         *text,
-          gsize                text_len,
-          gpointer             user_data,
-          GError             **error)
-{
-  XmlData *data = user_data;
-  FlatpakXml *node;
-
-  node = flatpak_xml_new (NULL);
-  node->text = g_strndup (text, text_len);
-  flatpak_xml_add (data->current, node);
-}
-
-static void
-xml_passthrough (GMarkupParseContext *context,
-                 const gchar         *passthrough_text,
-                 gsize                text_len,
-                 gpointer             user_data,
-                 GError             **error)
-{
-}
-
-static GMarkupParser xml_parser = {
-  xml_start_element,
-  xml_end_element,
-  xml_text,
-  xml_passthrough,
-  NULL
-};
-
-void
-flatpak_xml_free (FlatpakXml *node)
-{
-  FlatpakXml *child;
-
-  if (node == NULL)
-    return;
-
-  child = node->first_child;
-  while (child != NULL)
-    {
-      FlatpakXml *next = child->next_sibling;
-      flatpak_xml_free (child);
-      child = next;
-    }
-
-  g_free (node->element_name);
-  g_free (node->text);
-  g_strfreev (node->attribute_names);
-  g_strfreev (node->attribute_values);
-  g_free (node);
-}
-
-
-void
-flatpak_xml_to_string (FlatpakXml *node, GString *res)
-{
-  int i;
-  FlatpakXml *child;
-
-  if (node->parent == NULL)
-    g_string_append (res, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-
-  if (node->element_name)
-    {
-      if (node->parent != NULL)
-        {
-          g_string_append (res, "<");
-          g_string_append (res, node->element_name);
-          if (node->attribute_names)
-            {
-              for (i = 0; node->attribute_names[i] != NULL; i++)
-                {
-                  g_string_append_printf (res, " %s=\"%s\"",
-                                          node->attribute_names[i],
-                                          node->attribute_values[i]);
-                }
-            }
-          if (node->first_child == NULL)
-            g_string_append (res, "/>");
-          else
-            g_string_append (res, ">");
-        }
-
-      child = node->first_child;
-      while (child != NULL)
-        {
-          flatpak_xml_to_string (child, res);
-          child = child->next_sibling;
-        }
-      if (node->parent != NULL)
-        {
-          if (node->first_child != NULL)
-            g_string_append_printf (res, "</%s>", node->element_name);
-        }
-
-    }
-  else if (node->text)
-    {
-      g_autofree char *escaped = g_markup_escape_text (node->text, -1);
-      g_string_append (res, escaped);
-    }
-}
-
-FlatpakXml *
-flatpak_xml_unlink (FlatpakXml *node,
-                    FlatpakXml *prev_sibling)
-{
-  FlatpakXml *parent = node->parent;
-
-  if (parent == NULL)
-    return node;
-
-  if (parent->first_child == node)
-    parent->first_child = node->next_sibling;
-
-  if (parent->last_child == node)
-    parent->last_child = prev_sibling;
-
-  if (prev_sibling)
-    prev_sibling->next_sibling = node->next_sibling;
-
-  node->parent = NULL;
-  node->next_sibling = NULL;
-
-  return node;
-}
-
-FlatpakXml *
-flatpak_xml_find (FlatpakXml  *node,
-                  const char  *type,
-                  FlatpakXml **prev_child_out)
-{
-  FlatpakXml *child = NULL;
-  FlatpakXml *prev_child = NULL;
-
-  child = node->first_child;
-  prev_child = NULL;
-  while (child != NULL)
-    {
-      FlatpakXml *next = child->next_sibling;
-
-      if (g_strcmp0 (child->element_name, type) == 0)
-        {
-          if (prev_child_out)
-            *prev_child_out = prev_child;
-          return child;
-        }
-
-      prev_child = child;
-      child = next;
-    }
-
-  return NULL;
-}
-
-
-FlatpakXml *
-flatpak_xml_parse (GInputStream *in,
-                   gboolean      compressed,
-                   GCancellable *cancellable,
-                   GError      **error)
-{
-  g_autoptr(GInputStream) real_in = NULL;
-  g_autoptr(FlatpakXml) xml_root = NULL;
-  XmlData data = { 0 };
-  char buffer[32 * 1024];
-  gssize len;
-  g_autoptr(GMarkupParseContext) ctx = NULL;
-
-  if (compressed)
-    {
-      g_autoptr(GZlibDecompressor) decompressor = NULL;
-      decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP);
-      real_in = g_converter_input_stream_new (in, G_CONVERTER (decompressor));
-    }
-  else
-    {
-      real_in = g_object_ref (in);
-    }
-
-  xml_root = flatpak_xml_new ("root");
-  data.current = xml_root;
-
-  ctx = g_markup_parse_context_new (&xml_parser,
-                                    G_MARKUP_PREFIX_ERROR_POSITION,
-                                    &data,
-                                    NULL);
-
-  while ((len = g_input_stream_read (real_in, buffer, sizeof (buffer),
-                                     cancellable, error)) > 0)
-    {
-      if (!g_markup_parse_context_parse (ctx, buffer, len, error))
-        return NULL;
-    }
-
-  if (len < 0)
-    return NULL;
-
-  return g_steal_pointer (&xml_root);
-}
-
-#define OSTREE_STATIC_DELTA_META_ENTRY_FORMAT "(uayttay)"
-#define OSTREE_STATIC_DELTA_FALLBACK_FORMAT "(yaytt)"
-#define OSTREE_STATIC_DELTA_SUPERBLOCK_FORMAT "(a{sv}tayay" OSTREE_COMMIT_GVARIANT_STRING "aya" OSTREE_STATIC_DELTA_META_ENTRY_FORMAT "a" OSTREE_STATIC_DELTA_FALLBACK_FORMAT ")"
-
-static inline guint64
-maybe_swap_endian_u64 (gboolean swap,
-                       guint64  v)
-{
-  if (!swap)
-    return v;
-  return GUINT64_SWAP_LE_BE (v);
-}
-
-static guint64
-flatpak_bundle_get_installed_size (GVariant *bundle, gboolean byte_swap)
-{
-  guint64 total_usize = 0;
-  g_autoptr(GVariant) meta_entries = NULL;
-  guint i, n_parts;
-
-  g_variant_get_child (bundle, 6, "@a" OSTREE_STATIC_DELTA_META_ENTRY_FORMAT, &meta_entries);
-  n_parts = g_variant_n_children (meta_entries);
-  g_print ("Number of parts: %u\n", n_parts);
-
-  for (i = 0; i < n_parts; i++)
-    {
-      guint32 version;
-      guint64 size, usize;
-      g_autoptr(GVariant) objects = NULL;
-
-      g_variant_get_child (meta_entries, i, "(u@aytt@ay)",
-                           &version, NULL, &size, &usize, &objects);
-
-      total_usize += maybe_swap_endian_u64 (byte_swap, usize);
-    }
-
-  return total_usize;
-}
-
-GVariant *
-flatpak_bundle_load (GFile   *file,
-                     char   **commit,
-                     char   **ref,
-                     char   **origin,
-                     char   **runtime_repo,
-                     char   **app_metadata,
-                     guint64 *installed_size,
-                     GBytes **gpg_keys,
-                     char   **collection_id,
-                     GError **error)
-{
-  g_autoptr(GVariant) delta = NULL;
-  g_autoptr(GVariant) metadata = NULL;
-  g_autoptr(GBytes) bytes = NULL;
-  g_autoptr(GBytes) copy = NULL;
-  g_autoptr(GVariant) to_csum_v = NULL;
-  guint8 endianness_char;
-  gboolean byte_swap = FALSE;
-
-  GMappedFile *mfile = g_mapped_file_new (flatpak_file_get_path_cached (file), FALSE, error);
-
-  if (mfile == NULL)
-    return NULL;
-
-  bytes = g_mapped_file_get_bytes (mfile);
-  g_mapped_file_unref (mfile);
-
-  delta = g_variant_new_from_bytes (G_VARIANT_TYPE (OSTREE_STATIC_DELTA_SUPERBLOCK_FORMAT), bytes, FALSE);
-  g_variant_ref_sink (delta);
-
-  to_csum_v = g_variant_get_child_value (delta, 3);
-  if (!ostree_validate_structureof_csum_v (to_csum_v, error))
-    return NULL;
-
-  metadata = g_variant_get_child_value (delta, 0);
-
-  if (g_variant_lookup (metadata, "ostree.endianness", "y", &endianness_char))
-    {
-      int file_byte_order = G_BYTE_ORDER;
-      switch (endianness_char)
-        {
-        case 'l':
-          file_byte_order = G_LITTLE_ENDIAN;
-          break;
-
-        case 'B':
-          file_byte_order = G_BIG_ENDIAN;
-          break;
-
-        default:
-          break;
-        }
-      byte_swap = (G_BYTE_ORDER != file_byte_order);
-    }
-
-  if (commit)
-    *commit = ostree_checksum_from_bytes_v (to_csum_v);
-
-  if (installed_size)
-    *installed_size = flatpak_bundle_get_installed_size (delta, byte_swap);
-
-  if (ref != NULL)
-    {
-      if (!g_variant_lookup (metadata, "ref", "s", ref))
-        {
-          flatpak_fail (error, "Invalid bundle, no ref in metadata");
-          return NULL;
-        }
-    }
-
-  if (origin != NULL)
-    {
-      if (!g_variant_lookup (metadata, "origin", "s", origin))
-        *origin = NULL;
-    }
-
-  if (runtime_repo != NULL)
-    {
-      if (!g_variant_lookup (metadata, "runtime-repo", "s", runtime_repo))
-        *runtime_repo = NULL;
-    }
-
-  if (collection_id != NULL)
-    {
-#ifdef FLATPAK_ENABLE_P2P
-      if (!g_variant_lookup (metadata, "collection-id", "s", collection_id))
-        *collection_id = NULL;
-#else  /* if !FLATPAK_ENABLE_P2P */
-      *collection_id = NULL;
-#endif  /* !FLATPAK_ENABLE_P2P */
-    }
-
-  if (app_metadata != NULL)
-    {
-      if (!g_variant_lookup (metadata, "metadata", "s", app_metadata))
-        *app_metadata = NULL;
-    }
-
-  if (gpg_keys != NULL)
-    {
-      g_autoptr(GVariant) gpg_value = g_variant_lookup_value (metadata, "gpg-keys",
-                                                              G_VARIANT_TYPE ("ay"));
-      if (gpg_value)
-        {
-          gsize n_elements;
-          const char *data = g_variant_get_fixed_array (gpg_value, &n_elements, 1);
-          *gpg_keys = g_bytes_new (data, n_elements);
-        }
-      else
-        {
-          *gpg_keys = NULL;
-        }
-    }
-
-  /* Make a copy of the data so we can return it after freeing the file */
-  copy = g_bytes_new (g_variant_get_data (metadata),
-                      g_variant_get_size (metadata));
-  return g_variant_ref_sink (g_variant_new_from_bytes (g_variant_get_type (metadata),
-                                                       copy,
-                                                       FALSE));
-}
-
-gboolean
-flatpak_pull_from_bundle (OstreeRepo   *repo,
-                          GFile        *file,
-                          const char   *remote,
-                          const char   *ref,
-                          gboolean      require_gpg_signature,
-                          GCancellable *cancellable,
-                          GError      **error)
-{
-  g_autofree char *metadata_contents = NULL;
-  g_autofree char *to_checksum = NULL;
-
-  g_autoptr(GFile) root = NULL;
-  g_autoptr(GFile) metadata_file = NULL;
-  g_autoptr(GInputStream) in = NULL;
-  g_autoptr(OstreeGpgVerifyResult) gpg_result = NULL;
-  g_autoptr(GError) my_error = NULL;
-  g_autoptr(GVariant) metadata = NULL;
-  gboolean metadata_valid;
-  g_autofree char *remote_collection_id = NULL;
-  g_autofree char *collection_id = NULL;
-
-  metadata = flatpak_bundle_load (file, &to_checksum, NULL, NULL, NULL, &metadata_contents, NULL, NULL, &collection_id, error);
-  if (metadata == NULL)
-    return FALSE;
-
-#ifdef FLATPAK_ENABLE_P2P
-  if (!ostree_repo_get_remote_option (repo, remote, "collection-id", NULL,
-                                      &remote_collection_id, NULL))
-    remote_collection_id = NULL;
-#endif  /* FLATPAK_ENABLE_P2P */
-
-  if (remote_collection_id != NULL && collection_id != NULL &&
-      strcmp (remote_collection_id, collection_id) != 0)
-    return flatpak_fail (error, "Collection ‘%s’ of bundle doesn’t match collection ‘%s’ of remote",
-                         collection_id, remote_collection_id);
-
-  if (!ostree_repo_prepare_transaction (repo, NULL, cancellable, error))
-    return FALSE;
-
-  /* Don’t need to set the collection ID here, since the remote binds this ref to the collection. */
-  ostree_repo_transaction_set_ref (repo, remote, ref, to_checksum);
-
-  if (!ostree_repo_static_delta_execute_offline (repo,
-                                                 file,
-                                                 FALSE,
-                                                 cancellable,
-                                                 error))
-    return FALSE;
-
-  gpg_result = ostree_repo_verify_commit_ext (repo, to_checksum,
-                                              NULL, NULL, cancellable, &my_error);
-  if (gpg_result == NULL)
-    {
-      /* no gpg signature, we ignore this *if* there is no gpg key
-       * specified in the bundle or by the user */
-      if (g_error_matches (my_error, OSTREE_GPG_ERROR, OSTREE_GPG_ERROR_NO_SIGNATURE) &&
-          !require_gpg_signature)
-        {
-          g_clear_error (&my_error);
-        }
-      else
-        {
-          g_propagate_error (error, g_steal_pointer (&my_error));
-          return FALSE;
-        }
-    }
-  else
-    {
-      /* If there is no valid gpg signature we fail, unless there is no gpg
-         key specified (on the command line or in the file) because then we
-         trust the source bundle. */
-      if (ostree_gpg_verify_result_count_valid (gpg_result) == 0  &&
-          require_gpg_signature)
-        return flatpak_fail (error, "GPG signatures found, but none are in trusted keyring");
-    }
-
-  if (!ostree_repo_read_commit (repo, to_checksum, &root, NULL, NULL, error))
-    return FALSE;
-
-  if (!ostree_repo_commit_transaction (repo, NULL, cancellable, error))
-    return FALSE;
-
-  /* We ensure that the actual installed metadata matches the one in the
-     header, because you may have made decisions on whether to install it or not
-     based on that data. */
-  metadata_file = g_file_resolve_relative_path (root, "metadata");
-  in = (GInputStream *) g_file_read (metadata_file, cancellable, NULL);
-  if (in != NULL)
-    {
-      g_autoptr(GMemoryOutputStream) data_stream = (GMemoryOutputStream *) g_memory_output_stream_new_resizable ();
-
-      if (g_output_stream_splice (G_OUTPUT_STREAM (data_stream), in,
-                                  G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
-                                  cancellable, error) < 0)
-        return FALSE;
-
-      /* Null terminate */
-      g_output_stream_write (G_OUTPUT_STREAM (data_stream), "\0", 1, NULL, NULL);
-
-      metadata_valid =
-        metadata_contents != NULL &&
-        strcmp (metadata_contents, g_memory_output_stream_get_data (data_stream)) == 0;
-    }
-  else
-    {
-      metadata_valid = (metadata_contents == NULL);
-    }
-
-  if (!metadata_valid)
-    {
-      /* Immediately remove this broken commit */
-      ostree_repo_set_ref_immediate (repo, remote, ref, NULL, cancellable, error);
-      return flatpak_fail (error, "Metadata in header and app are inconsistent");
-    }
-
-  return TRUE;
-}
-
-typedef struct {
-  FlatpakOciPullProgress progress_cb;
-  gpointer progress_user_data;
-  guint64 total_size;
-  guint64 previous_layers_size;
-  guint32 n_layers;
-  guint32 pulled_layers;
-} FlatpakOciPullProgressData;
-
-static void
-oci_layer_progress (guint64 downloaded_bytes,
-                    gpointer user_data)
-{
-  FlatpakOciPullProgressData *progress_data = user_data;
-
-  if (progress_data->progress_cb)
-    progress_data->progress_cb (progress_data->total_size, progress_data->previous_layers_size + downloaded_bytes,
-                                progress_data->n_layers, progress_data->pulled_layers,
-                                progress_data->progress_user_data);
-}
-
-gboolean
-flatpak_mirror_image_from_oci (FlatpakOciRegistry *dst_registry,
-                               FlatpakOciRegistry *registry,
-                               const char *digest,
-                               const char *signature_digest,
-                               FlatpakOciPullProgress progress_cb,
-                               gpointer progress_user_data,
-                               GCancellable *cancellable,
-                               GError      **error)
-{
-  FlatpakOciPullProgressData progress_data = { progress_cb, progress_user_data };
-  g_autoptr(FlatpakOciVersioned) versioned = NULL;
-  FlatpakOciManifest *manifest = NULL;
-  g_autoptr(FlatpakOciDescriptor) manifest_desc = NULL;
-  gsize versioned_size;
-  g_autoptr(FlatpakOciIndex) index = NULL;
-  int i;
-
-  if (!flatpak_oci_registry_mirror_blob (dst_registry, registry, digest, NULL, NULL, cancellable, error))
-    return FALSE;
-
-  if (signature_digest &&
-      !flatpak_oci_registry_mirror_blob (dst_registry, registry, signature_digest, NULL, NULL, cancellable, error))
-    return FALSE;
-
-  versioned = flatpak_oci_registry_load_versioned (dst_registry, digest, &versioned_size, cancellable, error);
-  if (versioned == NULL)
-    return FALSE;
-
-  if (!FLATPAK_IS_OCI_MANIFEST (versioned))
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
-                   "Image is not a manifest");
-      return FALSE;
-    }
-
-  manifest = FLATPAK_OCI_MANIFEST (versioned);
-
-  if (manifest->config.digest != NULL)
-    {
-      if (!flatpak_oci_registry_mirror_blob (dst_registry, registry, manifest->config.digest, NULL, NULL, cancellable, error))
-        return FALSE;
-    }
-
-  for (i = 0; manifest->layers[i] != NULL; i++)
-    {
-      FlatpakOciDescriptor *layer = manifest->layers[i];
-      progress_data.total_size += layer->size;
-      progress_data.n_layers++;
-    }
-
-  if (progress_cb)
-    progress_cb (progress_data.total_size, 0,
-                 progress_data.n_layers, progress_data.pulled_layers,
-                 progress_user_data);
-
-  for (i = 0; manifest->layers[i] != NULL; i++)
-    {
-      FlatpakOciDescriptor *layer = manifest->layers[i];
-
-      if (!flatpak_oci_registry_mirror_blob (dst_registry, registry, layer->digest,
-                                             oci_layer_progress, &progress_data,
-                                             cancellable, error))
-        return FALSE;
-
-      progress_data.pulled_layers++;
-      progress_data.previous_layers_size += layer->size;
-    }
-
-
-  index = flatpak_oci_registry_load_index (dst_registry, NULL, NULL, NULL, NULL);
-  if (index == NULL)
-    index = flatpak_oci_index_new ();
-
-  manifest_desc = flatpak_oci_descriptor_new (versioned->mediatype, digest, versioned_size);
-
-  flatpak_oci_export_annotations (manifest->annotations, manifest_desc->annotations);
-
-  if (signature_digest)
-    g_hash_table_replace (manifest_desc->annotations,
-                          g_strdup ("org.flatpak.signature-digest"),
-                          g_strdup (signature_digest));
-
-  flatpak_oci_index_add_manifest (index, manifest_desc);
-
-  if (!flatpak_oci_registry_save_index (dst_registry, index, cancellable, error))
-    return FALSE;
-
-  return TRUE;
-}
-
-
-char *
-flatpak_pull_from_oci (OstreeRepo   *repo,
-                       FlatpakOciRegistry *registry,
-                       const char *digest,
-                       FlatpakOciManifest *manifest,
-                       const char *remote,
-                       const char *ref,
-                       const char *signature_digest,
-                       FlatpakOciPullProgress progress_cb,
-                       gpointer progress_user_data,
-                       GCancellable *cancellable,
-                       GError      **error)
-{
-  g_autoptr(OstreeMutableTree) archive_mtree = NULL;
-  g_autoptr(GFile) archive_root = NULL;
-  g_autofree char *commit_checksum = NULL;
-  const char *parent = NULL;
-  g_autofree char *subject = NULL;
-  g_autofree char *body = NULL;
-  g_autofree char *manifest_ref = NULL;
-  g_autofree char *full_ref = NULL;
-  guint64 timestamp = 0;
-  FlatpakOciPullProgressData progress_data = { progress_cb, progress_user_data };
-  g_autoptr(GVariantBuilder) metadata_builder = g_variant_builder_new (G_VARIANT_TYPE ("a{sv}"));
-  g_autoptr(GVariant) metadata = NULL;
-  GHashTable *annotations;
-  gboolean gpg_verify = FALSE;
-  int i;
-
-  g_assert (ref != NULL);
-  g_assert (g_str_has_prefix (digest, "sha256:"));
-
-  if (remote &&
-      !ostree_repo_remote_get_gpg_verify (repo, remote,
-                                          &gpg_verify, error))
-    return NULL;
-
-  if (gpg_verify)
-    {
-      g_autoptr(GBytes) signature_bytes = NULL;
-      g_autoptr(FlatpakOciSignature) signature = NULL;
-
-      if (signature_digest == NULL)
-        {
-          flatpak_fail (error, "GPG verification enabled, but no OCI signature found");
-          return NULL;
-        }
-
-      signature_bytes = flatpak_oci_registry_load_blob (registry, signature_digest, cancellable, error);
-      if (signature_bytes == NULL)
-        return NULL;
-
-      signature = flatpak_oci_verify_signature (repo, remote, signature_bytes, error);
-      if (signature == NULL)
-        return NULL;
-
-      if (g_strcmp0 (signature->critical.type, FLATPAK_OCI_SIGNATURE_TYPE_FLATPAK) != 0)
-        {
-          flatpak_fail (error, "Invalid signature type %s", signature->critical.type);
-          return NULL;
-        }
-
-      if (g_strcmp0 (signature->critical.image.digest, digest) != 0)
-        {
-          flatpak_fail (error, "Invalid signature digest %s", signature->critical.image.digest);
-          return NULL;
-        }
-
-      if (g_strcmp0 (signature->critical.identity.ref, ref) != 0)
-        {
-          flatpak_fail (error, "Invalid signature ref %s", signature->critical.identity.ref);
-          return NULL;
-        }
-
-      /* Success! It is valid */
-      g_debug ("Verified OCI signature for %s %s", signature->critical.identity.ref, digest);
-    }
-
-  annotations = flatpak_oci_manifest_get_annotations (manifest);
-  if (annotations)
-    flatpak_oci_parse_commit_annotations (annotations, &timestamp,
-                                          &subject, &body,
-                                          &manifest_ref, NULL, NULL,
-                                          metadata_builder);
-  if (manifest_ref == NULL)
-    {
-      flatpak_fail (error, "No ref specified for OCI image %s\n", digest);
-      return NULL;
-    }
-
-  if (strcmp (manifest_ref, ref) != 0)
-    {
-      flatpak_fail (error, "Wrong ref (%s) specified for OCI image %s, expected %s\n", manifest_ref, digest, ref);
-      return NULL;
-    }
-
-  g_variant_builder_add (metadata_builder, "{s@v}", "xa.alt-id",
-                         g_variant_new_variant (g_variant_new_string (digest + strlen("sha256:"))));
-
-  if (!ostree_repo_prepare_transaction (repo, NULL, cancellable, error))
-    return NULL;
-
-  /* There is no way to write a subset of the archive to a mtree, so instead
-     we write all of it and then build a new mtree with the subset */
-  archive_mtree = ostree_mutable_tree_new ();
-
-  for (i = 0; manifest->layers[i] != NULL; i++)
-    {
-      FlatpakOciDescriptor *layer = manifest->layers[i];
-      progress_data.total_size += layer->size;
-      progress_data.n_layers++;
-    }
-
-  if (progress_cb)
-    progress_cb (progress_data.total_size, 0,
-                 progress_data.n_layers, progress_data.pulled_layers,
-                 progress_user_data);
-
-  for (i = 0; manifest->layers[i] != NULL; i++)
-    {
-      FlatpakOciDescriptor *layer = manifest->layers[i];
-      OstreeRepoImportArchiveOptions opts = { 0, };
-      g_autoptr(FlatpakAutoArchiveRead) a = NULL;
-      glnx_fd_close int layer_fd = -1;
-      g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
-      const char *layer_checksum;
-
-      opts.autocreate_parents = TRUE;
-      opts.ignore_unsupported_content = TRUE;
-
-      layer_fd = flatpak_oci_registry_download_blob (registry, layer->digest,
-                                                     oci_layer_progress, &progress_data,
-                                                     cancellable, error);
-      if (layer_fd == -1)
-        goto error;
-
-      a = archive_read_new ();
-#ifdef HAVE_ARCHIVE_READ_SUPPORT_FILTER_ALL
-      archive_read_support_filter_all (a);
-#else
-      archive_read_support_compression_all (a);
-#endif
-      archive_read_support_format_all (a);
-
-      if (!flatpak_archive_read_open_fd_with_checksum (a, layer_fd, checksum, error))
-        goto error;
-
-      if (!ostree_repo_import_archive_to_mtree (repo, &opts, a, archive_mtree, NULL, cancellable, error))
-        goto error;
-
-      if (archive_read_close (a) != ARCHIVE_OK)
-        {
-          propagate_libarchive_error (error, a);
-          goto error;
-        }
-
-      layer_checksum = g_checksum_get_string (checksum);
-      if (!g_str_has_prefix (layer->digest, "sha256:") ||
-          strcmp (layer->digest + strlen ("sha256:"), layer_checksum) != 0)
-        {
-          flatpak_fail (error, "Wrong layer checksum, expected %s, was %s\n", layer->digest, layer_checksum);
-          goto error;
-        }
-
-      progress_data.pulled_layers++;
-      progress_data.previous_layers_size += layer->size;
-    }
-
-  if (!ostree_repo_write_mtree (repo, archive_mtree, &archive_root, cancellable, error))
-    goto error;
-
-  if (!ostree_repo_file_ensure_resolved ((OstreeRepoFile *) archive_root, error))
-    goto error;
-
-  metadata = g_variant_ref_sink (g_variant_builder_end (metadata_builder));
-  if (!ostree_repo_write_commit_with_time (repo,
-                                           parent,
-                                           subject,
-                                           body,
-                                           metadata,
-                                           OSTREE_REPO_FILE (archive_root),
-                                           timestamp,
-                                           &commit_checksum,
-                                           cancellable, error))
-    goto error;
-
-  if (remote)
-    full_ref = g_strdup_printf ("%s:%s", remote, ref);
-  else
-    full_ref = g_strdup (ref);
-
-  /* Don’t need to set the collection ID here, since the ref is bound to a
-   * collection via its remote. */
-  ostree_repo_transaction_set_ref (repo, NULL, full_ref, commit_checksum);
-
-  if (!ostree_repo_commit_transaction (repo, NULL, cancellable, error))
-    return NULL;
-
-  return g_steal_pointer (&commit_checksum);
-
- error:
-
-  ostree_repo_abort_transaction (repo, cancellable, NULL);
-  return NULL;
-}
 
 /* This allocates and locks a subdir of the tmp dir, using an existing
  * one with the same prefix if it is not in use already. */
@@ -5277,94 +984,6 @@ flatpak_allocate_tmpdir (int           tmpdir_dfd,
   return TRUE;
 }
 
-gboolean
-flatpak_yes_no_prompt (const char *prompt, ...)
-{
-  char buf[512];
-  va_list var_args;
-  gchar *s;
-
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-  va_start (var_args, prompt);
-  s = g_strdup_vprintf (prompt, var_args);
-  va_end (var_args);
-#pragma GCC diagnostic pop
-
-  while (TRUE)
-    {
-      g_print ("%s %s: ", s, "[y/n]");
-
-      if (!isatty (STDIN_FILENO) || !isatty (STDOUT_FILENO))
-        {
-          g_print ("n\n");
-          return FALSE;
-        }
-
-      if (fgets (buf, sizeof (buf), stdin) == NULL)
-        return FALSE;
-
-      g_strstrip (buf);
-      if (g_ascii_strcasecmp  (buf, "y") == 0 ||
-          g_ascii_strcasecmp  (buf, "yes") == 0)
-        return TRUE;
-
-      if (g_ascii_strcasecmp  (buf, "n") == 0 ||
-          g_ascii_strcasecmp  (buf, "no") == 0)
-        return FALSE;
-    }
-}
-
-static gboolean
-is_number (const char *s)
-{
-  while (*s != 0)
-    {
-      if (!g_ascii_isdigit (*s))
-        return FALSE;
-      s++;
-    }
-
-  return TRUE;
-}
-
-long
-flatpak_number_prompt (int min, int max, const char *prompt, ...)
-{
-  char buf[512];
-  va_list var_args;
-  gchar *s;
-
-  va_start (var_args, prompt);
-  s = g_strdup_vprintf (prompt, var_args);
-  va_end (var_args);
-
-  while (TRUE)
-    {
-      g_print ("%s [%d-%d]: ", s, min, max);
-
-      if (!isatty (STDIN_FILENO) || !isatty (STDOUT_FILENO))
-        {
-          g_print ("0\n");
-          return 0;
-        }
-
-      if (fgets (buf, sizeof (buf), stdin) == NULL)
-        return 0;
-
-      g_strstrip (buf);
-
-      if (is_number (buf))
-        {
-          long res = strtol (buf, NULL, 10);
-
-          if (res >= min && res <= max)
-            return res;
-        }
-    }
-}
-
 
 typedef struct {
   GMainLoop *loop;
@@ -5470,8 +1089,9 @@ load_uri_callback (GObject *source_object,
       switch (msg->status_code)
         {
         case 304:
-          domain = FLATPAK_OCI_ERROR;
-          code = FLATPAK_OCI_ERROR_NOT_CHANGED;
+          //TODO          domain = FLATPAK_OCI_ERROR;
+          //TODO          code = FLATPAK_OCI_ERROR_NOT_CHANGED;
+          code = G_IO_ERROR_FAILED;
           break;
         case 404:
         case 410:
@@ -5522,70 +1142,6 @@ flatpak_create_soup_session (const char *user_agent)
   return soup_session;
 }
 
-GBytes *
-flatpak_load_http_uri (SoupSession *soup_session,
-                       const char *uri,
-                       const char *etag,
-                       char      **out_etag,
-                       FlatpakLoadUriProgress progress,
-                       gpointer      user_data,
-                       GCancellable *cancellable,
-                       GError      **error)
-{
-  GBytes *bytes = NULL;
-  g_autoptr(GMainContext) context = NULL;
-  g_autoptr(SoupRequestHTTP) request = NULL;
-  g_autoptr(GMainLoop) loop = NULL;
-  g_autoptr(GString) content = g_string_new ("");
-  LoadUriData data = { NULL };
-
-  g_debug ("Loading %s using libsoup", uri);
-
-  context = g_main_context_ref_thread_default ();
-
-  loop = g_main_loop_new (context, TRUE);
-  data.loop = loop;
-  data.content = content;
-  data.progress = progress;
-  data.cancellable = cancellable;
-  data.user_data = user_data;
-  data.last_progress_time = g_get_monotonic_time ();
-
-  request = soup_session_request_http (soup_session, "GET",
-                                       uri, error);
-  if (request == NULL)
-    return NULL;
-
-  if (etag)
-    {
-      SoupMessage *m = soup_request_http_get_message (request);
-      soup_message_headers_replace (m->request_headers, "If-None-Match", etag);
-    }
-
-  soup_request_send_async (SOUP_REQUEST(request),
-                           cancellable,
-                           load_uri_callback, &data);
-
-  g_main_loop_run (loop);
-
-  if (data.error)
-    {
-      g_propagate_error (error, data.error);
-      g_free (data.etag);
-      return NULL;
-    }
-
-  bytes = g_string_free_to_bytes (g_steal_pointer (&content));
-  g_debug ("Received %" G_GUINT64_FORMAT " bytes", data.downloaded_bytes);
-
-  if (out_etag)
-    *out_etag = g_steal_pointer (&data.etag);
-
-  g_free (data.etag);
-
-  return bytes;
-}
-
 gboolean
 flatpak_download_http_uri (SoupSession *soup_session,
                            const char   *uri,
@@ -5634,799 +1190,1050 @@ flatpak_download_http_uri (SoupSession *soup_session,
   return TRUE;
 }
 
-/* Uncomment to get debug traces in /tmp/flatpak-completion-debug.txt (nice
- * to not have it interfere with stdout/stderr)
- */
-#if 0
-void
-flatpak_completion_debug (const gchar *format, ...)
-{
-  va_list var_args;
-  gchar *s;
-  static FILE *f = NULL;
+typedef enum {
+  FLATPAK_POLICY_NONE,
+  FLATPAK_POLICY_SEE,
+  FLATPAK_POLICY_TALK,
+  FLATPAK_POLICY_OWN
+} FlatpakPolicy;
 
-  va_start (var_args, format);
-  s = g_strdup_vprintf (format, var_args);
-  if (f == NULL)
-    f = fopen ("/tmp/flatpak-completion-debug.txt", "a+");
-  fprintf (f, "%s\n", s);
-  fflush (f);
-  g_free (s);
+typedef enum {
+  FLATPAK_CONTEXT_SHARED_NETWORK   = 1 << 0,
+  FLATPAK_CONTEXT_SHARED_IPC       = 1 << 1,
+} FlatpakContextShares;
+
+/* In numerical order of more privs */
+typedef enum {
+  FLATPAK_FILESYSTEM_MODE_READ_ONLY    = 1,
+  FLATPAK_FILESYSTEM_MODE_READ_WRITE   = 2,
+  FLATPAK_FILESYSTEM_MODE_CREATE       = 3,
+} FlatpakFilesystemMode;
+
+
+/* Same order as enum */
+const char *flatpak_context_shares[] = {
+  "network",
+  "ipc",
+  NULL
+};
+
+typedef enum {
+  FLATPAK_CONTEXT_SOCKET_X11         = 1 << 0,
+  FLATPAK_CONTEXT_SOCKET_WAYLAND     = 1 << 1,
+  FLATPAK_CONTEXT_SOCKET_PULSEAUDIO  = 1 << 2,
+  FLATPAK_CONTEXT_SOCKET_SESSION_BUS = 1 << 3,
+  FLATPAK_CONTEXT_SOCKET_SYSTEM_BUS  = 1 << 4,
+} FlatpakContextSockets;
+
+/* Same order as enum */
+const char *flatpak_context_sockets[] = {
+  "x11",
+  "wayland",
+  "pulseaudio",
+  "session-bus",
+  "system-bus",
+  NULL
+};
+
+const char *dont_mount_in_root[] = {
+  ".", "..", "lib", "lib32", "lib64", "bin", "sbin", "usr", "boot", "root",
+  "tmp", "etc", "app", "run", "proc", "sys", "dev", "var", NULL
+};
+
+/* We don't want to export paths pointing into these, because they are readonly
+   (so we can't create mountpoints there) and don't match whats on the host anyway */
+const char *dont_export_in[] = {
+  "/lib", "/lib32", "/lib64", "/bin", "/sbin", "/usr", "/etc", "/app", NULL
+};
+
+typedef enum {
+  FLATPAK_CONTEXT_DEVICE_DRI         = 1 << 0,
+  FLATPAK_CONTEXT_DEVICE_ALL         = 1 << 1,
+  FLATPAK_CONTEXT_DEVICE_KVM         = 1 << 2,
+} FlatpakContextDevices;
+
+const char *flatpak_context_devices[] = {
+  "dri",
+  "all",
+  "kvm",
+  NULL
+};
+
+typedef enum {
+  FLATPAK_CONTEXT_FEATURE_DEVEL        = 1 << 0,
+  FLATPAK_CONTEXT_FEATURE_MULTIARCH    = 1 << 1,
+} FlatpakContextFeatures;
+
+const char *flatpak_context_features[] = {
+  "devel",
+  "multiarch",
+  NULL
+};
+
+struct FlatpakContext
+{
+  FlatpakContextShares  shares;
+  FlatpakContextShares  shares_valid;
+  FlatpakContextSockets sockets;
+  FlatpakContextSockets sockets_valid;
+  FlatpakContextDevices devices;
+  FlatpakContextDevices devices_valid;
+  FlatpakContextFeatures  features;
+  FlatpakContextFeatures  features_valid;
+  GHashTable           *env_vars;
+  GHashTable           *persistent;
+  GHashTable           *filesystems;
+  GHashTable           *session_bus_policy;
+  GHashTable           *system_bus_policy;
+  GHashTable           *generic_policy;
+};
+
+FlatpakContext *
+flatpak_context_new (void)
+{
+  FlatpakContext *context;
+
+  context = g_slice_new0 (FlatpakContext);
+  context->env_vars = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+  context->persistent = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  context->filesystems = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  context->session_bus_policy = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  context->system_bus_policy = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+  context->generic_policy = g_hash_table_new_full (g_str_hash, g_str_equal,
+                                                   g_free, (GDestroyNotify)g_strfreev);
+
+  return context;
 }
-#else
-void
-flatpak_completion_debug (const gchar *format, ...)
-{
-}
-#endif
-
-static gboolean
-is_word_separator (char c)
-{
-  return g_ascii_isspace (c);
-}
 
 void
-flatpak_complete_file (FlatpakCompletion *completion)
+flatpak_context_free (FlatpakContext *context)
 {
-  flatpak_completion_debug ("completing FILE");
-  g_print ("%s\n", "__FLATPAK_FILE");
+  g_hash_table_destroy (context->env_vars);
+  g_hash_table_destroy (context->persistent);
+  g_hash_table_destroy (context->filesystems);
+  g_hash_table_destroy (context->session_bus_policy);
+  g_hash_table_destroy (context->system_bus_policy);
+  g_hash_table_destroy (context->generic_policy);
+  g_slice_free (FlatpakContext, context);
 }
 
-void
-flatpak_complete_dir (FlatpakCompletion *completion)
+static guint32
+flatpak_context_bitmask_from_string (const char *name, const char **names)
 {
-  flatpak_completion_debug ("completing DIR");
-  g_print ("%s\n", "__FLATPAK_DIR");
-}
+  guint32 i;
 
-void
-flatpak_complete_word (FlatpakCompletion *completion,
-                       char *format, ...)
-{
-  va_list args;
-  const char *rest;
-  const char *shell_cur;
-  const char *shell_cur_end;
-  g_autofree char *string = NULL;
-
-  g_return_if_fail (format != NULL);
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-  va_start (args, format);
-  string = g_strdup_vprintf (format, args);
-  va_end (args);
-#pragma GCC diagnostic pop
-
-  if (!g_str_has_prefix (string, completion->cur))
-    return;
-
-  shell_cur = completion->shell_cur ? completion->shell_cur : "";
-
-  rest = string + strlen (completion->cur);
-
-  shell_cur_end = shell_cur + strlen(shell_cur);
-  while (shell_cur_end > shell_cur &&
-         rest > string &&
-         shell_cur_end[-1] == rest[-1] &&
-         /* I'm not sure exactly what bash is doing here with =, but this seems to work... */
-         shell_cur_end[-1] != '=')
+  for (i = 0; names[i] != NULL; i++)
     {
-      rest--;
-      shell_cur_end--;
+      if (strcmp (names[i], name) == 0)
+        return 1 << i;
     }
 
-  flatpak_completion_debug ("completing word: '%s' (%s)", string, rest);
-
-  g_print ("%s\n", rest);
+  return 0;
 }
 
-void
-flatpak_complete_ref (FlatpakCompletion *completion,
-                      OstreeRepo *repo)
+static void
+flatpak_context_bitmask_to_args (guint32 enabled, guint32 valid, const char **names,
+                                 const char *enable_arg, const char *disable_arg,
+                                 GPtrArray *args)
 {
-  g_autoptr(GHashTable) refs = NULL;
-  flatpak_completion_debug ("completing REF");
+  guint32 i;
 
-  if (ostree_repo_list_refs (repo,
-                             NULL,
-                             &refs, NULL, NULL))
+  for (i = 0; names[i] != NULL; i++)
     {
-      GHashTableIter hashiter;
-      gpointer hashkey, hashvalue;
-
-      g_hash_table_iter_init (&hashiter, refs);
-      while ((g_hash_table_iter_next (&hashiter, &hashkey, &hashvalue)))
+      guint32 bitmask = 1 << i;
+      if (valid & bitmask)
         {
-          const char *ref = (const char *)hashkey;
-          if (!(g_str_has_prefix (ref, "runtime/") ||
-                g_str_has_prefix (ref, "app/")))
-            continue;
-          flatpak_complete_word (completion, "%s", ref);
+          if (enabled & bitmask)
+            g_ptr_array_add (args, g_strdup_printf ("%s=%s", enable_arg, names[i]));
+          else
+            g_ptr_array_add (args, g_strdup_printf ("%s=%s", disable_arg, names[i]));
         }
     }
 }
 
-static int
-find_current_element (const char *str)
+
+static FlatpakContextShares
+flatpak_context_share_from_string (const char *string, GError **error)
 {
-  int count = 0;
+  FlatpakContextShares shares = flatpak_context_bitmask_from_string (string, flatpak_context_shares);
 
-  if (g_str_has_prefix (str, "app/"))
-    str += strlen ("app/");
-  else if (g_str_has_prefix (str, "runtime/"))
-    str += strlen ("runtime/");
-
-  while (str != NULL && count <= 3)
+  if (shares == 0)
     {
-      str = strchr (str, '/');
-      count++;
-      if (str != NULL)
-        str = str + 1;
+      g_autofree char *values = g_strjoinv (", ", (char **)flatpak_context_shares);
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+                   _("Unknown share type %s, valid types are: %s"), string, values);
     }
 
-  return count;
+  return shares;
 }
 
-void
-flatpak_complete_partial_ref (FlatpakCompletion *completion,
-                              FlatpakKinds kinds,
-                              const char *only_arch,
-                              FlatpakDir *dir,
-                              const char *remote)
+static void
+flatpak_context_shared_to_args (FlatpakContextShares shares,
+                                FlatpakContextShares valid,
+                                GPtrArray *args)
 {
-  FlatpakKinds matched_kinds;
-  const char *pref;
-  g_autofree char *id = NULL;
-  g_autofree char *arch = NULL;
-  g_autofree char *branch = NULL;
-  g_auto(GStrv) refs = NULL;
-  int element;
-  const char *cur_parts[4] = { NULL };
-  g_autoptr(GError) error = NULL;
-  int i;
+  return flatpak_context_bitmask_to_args (shares, valid, flatpak_context_shares, "--share", "--unshare", args);
+}
 
-  pref = completion->cur;
-  element = find_current_element (pref);
+static const char *
+flatpak_policy_to_string (FlatpakPolicy policy)
+{
+  if (policy == FLATPAK_POLICY_SEE)
+    return "see";
+  if (policy == FLATPAK_POLICY_TALK)
+    return "talk";
+  if (policy == FLATPAK_POLICY_OWN)
+    return "own";
 
-  flatpak_split_partial_ref_arg_novalidate (pref, kinds,
-                                            NULL, NULL,
-                                            &matched_kinds, &id, &arch, &branch);
+  return "none";
+}
 
-  cur_parts[1] = id;
-  cur_parts[2] = arch ? arch : "";
-  cur_parts[3] = branch ? branch : "";
+static gboolean
+flatpak_verify_dbus_name (const char *name, GError **error)
+{
+  const char *name_part;
+  g_autofree char *tmp = NULL;
 
-  if (remote)
+  if (g_str_has_suffix (name, ".*"))
     {
-      refs = flatpak_dir_find_remote_refs (dir, completion->argv[1],
-                                           (element > 1) ? id : NULL,
-                                           (element > 3) ? branch : NULL,
-                                           (element > 2 )? arch : only_arch,
-                                           matched_kinds, NULL, &error);
+      tmp = g_strndup (name, strlen (name) - 2);
+      name_part = tmp;
     }
   else
     {
-      refs = flatpak_dir_find_installed_refs (dir,
-                                              (element > 1) ? id : NULL,
-                                              (element > 3) ? branch : NULL,
-                                              (element > 2 )? arch : only_arch,
-                                              matched_kinds, &error);
+      name_part = name;
     }
-  if (refs == NULL)
-    flatpak_completion_debug ("find refs error: %s", error->message);
-  for (i = 0; refs != NULL && refs[i] != NULL; i++)
+
+  if (g_dbus_is_name (name_part) && !g_dbus_is_unique_name (name_part))
+    return TRUE;
+
+  g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+               _("Invalid dbus name %s\n"), name);
+  return FALSE;
+}
+
+static FlatpakContextSockets
+flatpak_context_socket_from_string (const char *string, GError **error)
+{
+  FlatpakContextSockets sockets = flatpak_context_bitmask_from_string (string, flatpak_context_sockets);
+
+  if (sockets == 0)
     {
-      int j;
-      g_autoptr(GString) comp = NULL;
-      g_auto(GStrv) parts = flatpak_decompose_ref (refs[i], NULL);
-      if (parts == NULL)
-        continue;
-
-      if (!g_str_has_prefix (parts[element], cur_parts[element]))
-        continue;
-
-      comp = g_string_new (pref);
-      g_string_append (comp, parts[element] + strlen (cur_parts[element]));
-
-      /* Only complete on the last part if the user explicitly adds a / */
-      if (element >= 2)
-        {
-          for (j = element + 1; j < 4; j++)
-            {
-              g_string_append (comp, "/");
-              g_string_append (comp, parts[j]);
-            }
-        }
-
-      flatpak_complete_word (completion, "%s", comp->str);
+      g_autofree char *values = g_strjoinv (", ", (char **)flatpak_context_sockets);
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+                   _("Unknown socket type %s, valid types are: %s"), string, values);
     }
+
+  return sockets;
+}
+
+static void
+flatpak_context_sockets_to_args (FlatpakContextSockets sockets,
+                                 FlatpakContextSockets valid,
+                                 GPtrArray *args)
+{
+  return flatpak_context_bitmask_to_args (sockets, valid, flatpak_context_sockets, "--socket", "--nosocket", args);
+}
+
+static FlatpakContextDevices
+flatpak_context_device_from_string (const char *string, GError **error)
+{
+  FlatpakContextDevices devices = flatpak_context_bitmask_from_string (string, flatpak_context_devices);
+
+  if (devices == 0)
+    {
+      g_autofree char *values = g_strjoinv (", ", (char **)flatpak_context_devices);
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+                   _("Unknown device type %s, valid types are: %s"), string, values);
+    }
+  return devices;
+}
+
+static void
+flatpak_context_devices_to_args (FlatpakContextDevices devices,
+                                 FlatpakContextDevices valid,
+                                 GPtrArray *args)
+{
+  return flatpak_context_bitmask_to_args (devices, valid, flatpak_context_devices, "--device", "--nodevice", args);
+}
+
+static FlatpakContextFeatures
+flatpak_context_feature_from_string (const char *string, GError **error)
+{
+  FlatpakContextFeatures feature = flatpak_context_bitmask_from_string (string, flatpak_context_features);
+
+  if (feature == 0)
+    {
+      g_autofree char *values = g_strjoinv (", ", (char **)flatpak_context_features);
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+                   _("Unknown feature type %s, valid types are: %s"), string, values);
+    }
+
+  return feature;
+}
+
+static void
+flatpak_context_features_to_args (FlatpakContextFeatures features,
+                                FlatpakContextFeatures valid,
+                                GPtrArray *args)
+{
+  return flatpak_context_bitmask_to_args (features, valid, flatpak_context_features, "--allow", "--disallow", args);
+}
+
+static void
+flatpak_context_add_shares (FlatpakContext      *context,
+                            FlatpakContextShares shares)
+{
+  context->shares_valid |= shares;
+  context->shares |= shares;
+}
+
+static void
+flatpak_context_remove_shares (FlatpakContext      *context,
+                               FlatpakContextShares shares)
+{
+  context->shares_valid |= shares;
+  context->shares &= ~shares;
+}
+
+static void
+flatpak_context_add_sockets (FlatpakContext       *context,
+                             FlatpakContextSockets sockets)
+{
+  context->sockets_valid |= sockets;
+  context->sockets |= sockets;
+}
+
+static void
+flatpak_context_remove_sockets (FlatpakContext       *context,
+                                FlatpakContextSockets sockets)
+{
+  context->sockets_valid |= sockets;
+  context->sockets &= ~sockets;
+}
+
+static void
+flatpak_context_add_devices (FlatpakContext       *context,
+                             FlatpakContextDevices devices)
+{
+  context->devices_valid |= devices;
+  context->devices |= devices;
+}
+
+static void
+flatpak_context_remove_devices (FlatpakContext       *context,
+                                FlatpakContextDevices devices)
+{
+  context->devices_valid |= devices;
+  context->devices &= ~devices;
+}
+
+static void
+flatpak_context_add_features (FlatpakContext       *context,
+                           FlatpakContextFeatures   features)
+{
+  context->features_valid |= features;
+  context->features |= features;
+}
+
+static void
+flatpak_context_remove_features (FlatpakContext       *context,
+                               FlatpakContextFeatures  features)
+{
+  context->features_valid |= features;
+  context->features &= ~features;
+}
+
+static void
+flatpak_context_set_env_var (FlatpakContext *context,
+                             const char     *name,
+                             const char     *value)
+{
+  g_hash_table_insert (context->env_vars, g_strdup (name), g_strdup (value));
+}
+
+static void
+flatpak_context_set_session_bus_policy (FlatpakContext *context,
+                                        const char     *name,
+                                        FlatpakPolicy   policy)
+{
+  g_hash_table_insert (context->session_bus_policy, g_strdup (name), GINT_TO_POINTER (policy));
+}
+
+static void
+flatpak_context_set_system_bus_policy (FlatpakContext *context,
+                                       const char     *name,
+                                       FlatpakPolicy   policy)
+{
+  g_hash_table_insert (context->system_bus_policy, g_strdup (name), GINT_TO_POINTER (policy));
+}
+
+static void
+flatpak_context_apply_generic_policy (FlatpakContext *context,
+                                      const char     *key,
+                                      const char     *value)
+{
+  GPtrArray *new = g_ptr_array_new ();
+  const char **old_v;
+  int i;
+
+  g_assert (strchr (key, '.') != NULL);
+
+  old_v = g_hash_table_lookup (context->generic_policy, key);
+  for (i = 0; old_v != NULL && old_v[i] != NULL; i++)
+    {
+      const char *old = old_v[i];
+      const char *cmp1 = old;
+      const char *cmp2 = value;
+      if (*cmp1 == '!')
+        cmp1++;
+      if (*cmp2 == '!')
+        cmp2++;
+      if (strcmp (cmp1, cmp2) != 0)
+        g_ptr_array_add (new, g_strdup (old));
+    }
+
+  g_ptr_array_add (new, g_strdup (value));
+  g_ptr_array_add (new, NULL);
+
+  g_hash_table_insert (context->generic_policy, g_strdup (key),
+                       g_ptr_array_free (new, FALSE));
+}
+
+static void
+flatpak_context_set_persistent (FlatpakContext *context,
+                                const char     *path)
+{
+  g_hash_table_insert (context->persistent, g_strdup (path), GINT_TO_POINTER (1));
 }
 
 static gboolean
-switch_already_in_line (FlatpakCompletion *completion,
-                        GOptionEntry      *entry)
+get_xdg_dir_from_prefix (const char *prefix,
+                         const char **where,
+                         const char **dir)
 {
-  guint i = 0;
-  guint line_part_len = 0;
-
-  for (; i < completion->original_argc; ++i)
+  if (strcmp (prefix, "xdg-data") == 0)
     {
-      line_part_len = strlen (completion->original_argv[i]);
-      if (line_part_len > 2 &&
-          g_strcmp0 (&completion->original_argv[i][2], entry->long_name) == 0)
-        return TRUE;
+      if (where)
+        *where = "data";
+      if (dir)
+        *dir = g_get_user_data_dir ();
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-cache") == 0)
+    {
+      if (where)
+        *where = "cache";
+      if (dir)
+        *dir = g_get_user_cache_dir ();
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-config") == 0)
+    {
+      if (where)
+        *where = "config";
+      if (dir)
+        *dir = g_get_user_config_dir ();
+      return TRUE;
+    }
+  return FALSE;
+}
 
-      if (line_part_len == 2 &&
-          completion->original_argv[i][1] == entry->short_name)
-        return TRUE;
+static gboolean
+get_xdg_user_dir_from_string (const char  *filesystem,
+                              const char **config_key,
+                              const char **suffix,
+                              const char **dir)
+{
+  char *slash;
+  const char *rest;
+  g_autofree char *prefix = NULL;
+  gsize len;
+
+  slash = strchr (filesystem, '/');
+
+  if (slash)
+    len = slash - filesystem;
+  else
+    len = strlen (filesystem);
+
+  rest = filesystem + len;
+  while (*rest == '/')
+    rest++;
+
+  if (suffix)
+    *suffix = rest;
+
+  prefix = g_strndup (filesystem, len);
+
+  if (strcmp (prefix, "xdg-desktop") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_DESKTOP_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_DESKTOP);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-documents") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_DOCUMENTS_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_DOCUMENTS);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-download") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_DOWNLOAD_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_DOWNLOAD);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-music") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_MUSIC_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_MUSIC);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-pictures") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_PICTURES_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_PICTURES);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-public-share") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_PUBLICSHARE_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_PUBLIC_SHARE);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-templates") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_TEMPLATES_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_TEMPLATES);
+      return TRUE;
+    }
+  if (strcmp (prefix, "xdg-videos") == 0)
+    {
+      if (config_key)
+        *config_key = "XDG_VIDEOS_DIR";
+      if (dir)
+        *dir = g_get_user_special_dir (G_USER_DIRECTORY_VIDEOS);
+      return TRUE;
+    }
+  if (get_xdg_dir_from_prefix (prefix, NULL, dir))
+    {
+      if (config_key)
+        *config_key = NULL;
+      return TRUE;
+    }
+  /* Don't support xdg-run without suffix, because that doesn't work */
+  if (strcmp (prefix, "xdg-run") == 0 &&
+      *rest != 0)
+    {
+      if (config_key)
+        *config_key = NULL;
+      if (dir)
+        *dir = g_get_user_runtime_dir ();
+      return TRUE;
     }
 
   return FALSE;
 }
 
-static gboolean
-should_filter_out_option_from_completion (FlatpakCompletion *completion,
-                                          GOptionEntry      *entry)
+static char *
+parse_filesystem_flags (const char *filesystem, FlatpakFilesystemMode *mode)
 {
-  switch (entry->arg)
+  gsize len = strlen (filesystem);
+
+  if (mode)
+    *mode = FLATPAK_FILESYSTEM_MODE_READ_WRITE;
+
+  if (g_str_has_suffix (filesystem, ":ro"))
     {
-      case G_OPTION_ARG_NONE:
-      case G_OPTION_ARG_STRING:
-      case G_OPTION_ARG_INT:
-      case G_OPTION_ARG_FILENAME:
-      case G_OPTION_ARG_DOUBLE:
-      case G_OPTION_ARG_INT64:
-        return switch_already_in_line (completion, entry);
-      default:
-        return FALSE;
+      len -= 3;
+      if (mode)
+        *mode = FLATPAK_FILESYSTEM_MODE_READ_ONLY;
     }
-}
-
-void
-flatpak_complete_options (FlatpakCompletion *completion,
-                          GOptionEntry *entries)
-{
-  GOptionEntry *e = entries;
-  int i;
-
-  while (e->long_name != NULL)
+  else if (g_str_has_suffix (filesystem, ":rw"))
     {
-      if (e->arg_description)
-        {
-          g_autofree char *prefix = g_strdup_printf ("--%s=", e->long_name);
-
-          if (g_str_has_prefix (completion->cur, prefix))
-            {
-              if (strcmp (e->arg_description, "ARCH") == 0)
-                {
-                  const char *arches[] = {"i386", "x86_64", "aarch64", "arm"};
-                  for (i = 0; i < G_N_ELEMENTS (arches); i++)
-                    flatpak_complete_word (completion, "%s%s ", prefix, arches[i]);
-                }
-              else if (strcmp (e->arg_description, "SHARE") == 0)
-                {
-                  for (i = 0; flatpak_context_shares[i] != NULL; i++)
-                    flatpak_complete_word (completion, "%s%s ", prefix, flatpak_context_shares[i]);
-                }
-              else if (strcmp (e->arg_description, "DEVICE") == 0)
-                {
-                  for (i = 0; flatpak_context_devices[i] != NULL; i++)
-                    flatpak_complete_word (completion, "%s%s ", prefix, flatpak_context_devices[i]);
-                }
-              else if (strcmp (e->arg_description, "FEATURE") == 0)
-                {
-                  for (i = 0; flatpak_context_features[i] != NULL; i++)
-                    flatpak_complete_word (completion, "%s%s ", prefix, flatpak_context_features[i]);
-                }
-              else if (strcmp (e->arg_description, "SOCKET") == 0)
-                {
-                  for (i = 0; flatpak_context_sockets[i] != NULL; i++)
-                    flatpak_complete_word (completion, "%s%s ", prefix, flatpak_context_sockets[i]);
-                }
-              else if (strcmp (e->arg_description, "FILE") == 0)
-                {
-                  flatpak_complete_file (completion);
-                }
-              else
-                flatpak_complete_word (completion, "%s", prefix);
-            }
-          else
-            flatpak_complete_word (completion, "%s", prefix);
-        }
-      else
-        {
-          /* If this is just a switch, then don't add it multiple
-           * times */
-          if (!should_filter_out_option_from_completion (completion, e)) {
-            flatpak_complete_word (completion, "--%s ", e->long_name);
-          }  else {
-            flatpak_completion_debug ("switch --%s is already in line %s", e->long_name, completion->line);
-          }
-        }
-
-      /* We may end up checking switch_already_in_line twice, but this is
-       * for simplicity's sake - the alternative solution would be to
-       * continue the loop early and have to increment e. */
-      if (e->short_name != 0)
-        {
-          /* This is a switch, we may not want to add it */
-          if (!e->arg_description)
-            {
-              if (!should_filter_out_option_from_completion (completion, e)) {
-                flatpak_complete_word (completion, "-%c ", e->short_name);
-              } else {
-                flatpak_completion_debug ("switch -%c is already in line %s", e->short_name, completion->line);
-              }
-            }
-          else
-            {
-              flatpak_complete_word (completion, "-%c ", e->short_name);
-            }
-        }
-      e++;
+      len -= 3;
+      if (mode)
+        *mode = FLATPAK_FILESYSTEM_MODE_READ_WRITE;
     }
-}
-
-static gchar *
-pick_word_at (const char  *s,
-              int          cursor,
-              int         *out_word_begins_at)
-{
-  int begin, end;
-
-  if (s[0] == '\0')
+  else if (g_str_has_suffix (filesystem, ":create"))
     {
-      if (out_word_begins_at != NULL)
-        *out_word_begins_at = -1;
-      return NULL;
+      len -= 7;
+      if (mode)
+        *mode = FLATPAK_FILESYSTEM_MODE_CREATE;
     }
 
-  if (is_word_separator (s[cursor]) && ((cursor > 0 && is_word_separator(s[cursor-1])) || cursor == 0))
-    {
-      if (out_word_begins_at != NULL)
-        *out_word_begins_at = cursor;
-      return g_strdup ("");
-    }
-
-  while (!is_word_separator (s[cursor - 1]) && cursor > 0)
-    cursor--;
-  begin = cursor;
-
-  end = begin;
-  while (!is_word_separator (s[end]) && s[end] != '\0')
-    end++;
-
-  if (out_word_begins_at != NULL)
-    *out_word_begins_at = begin;
-
-  return g_strndup (s + begin, end - begin);
+  return g_strndup (filesystem, len);
 }
 
 static gboolean
-parse_completion_line_to_argv (const char        *initial_completion_line,
-                               FlatpakCompletion *completion)
+flatpak_context_verify_filesystem (const char *filesystem_and_mode,
+                                   GError    **error)
 {
-  gboolean parse_result = g_shell_parse_argv (initial_completion_line,
-                                              &completion->original_argc,
-                                              &completion->original_argv,
-                                              NULL);
+  g_autofree char *filesystem = parse_filesystem_flags (filesystem_and_mode, NULL);
 
-  /* Make a shallow copy of argv, which will be our "working set" */
-  completion->argc = completion->original_argc;
-  completion->argv = g_memdup (completion->original_argv,
-                               sizeof (gchar *) * (completion->original_argc + 1));
+  if (strcmp (filesystem, "host") == 0)
+    return TRUE;
+  if (strcmp (filesystem, "home") == 0)
+    return TRUE;
+  if (get_xdg_user_dir_from_string (filesystem, NULL, NULL, NULL))
+    return TRUE;
+  if (g_str_has_prefix (filesystem, "~/"))
+    return TRUE;
+  if (g_str_has_prefix (filesystem, "/"))
+    return TRUE;
 
-  return parse_result;
-}
-
-FlatpakCompletion *
-flatpak_completion_new (const char *arg_line,
-                        const char *arg_point,
-                        const char *arg_cur)
-{
-  FlatpakCompletion *completion;
-  g_autofree char *initial_completion_line = NULL;
-  int _point;
-  char *endp;
-  int cur_begin;
-  int i;
-
-  _point = strtol (arg_point, &endp, 10);
-  if (endp == arg_point || *endp != '\0')
-    return NULL;
-
-  completion = g_new0 (FlatpakCompletion, 1);
-  completion->line = g_strdup (arg_line);
-  completion->shell_cur = g_strdup (arg_cur);
-  completion->point = _point;
-
-  flatpak_completion_debug ("========================================");
-  flatpak_completion_debug ("completion_point=%d", completion->point);
-  flatpak_completion_debug ("completion_shell_cur='%s'", completion->shell_cur);
-  flatpak_completion_debug ("----");
-  flatpak_completion_debug (" 0123456789012345678901234567890123456789012345678901234567890123456789");
-  flatpak_completion_debug ("'%s'", completion->line);
-  flatpak_completion_debug (" %*s^", completion->point, "");
-
-  /* compute cur and prev */
-  completion->prev = NULL;
-  completion->cur = pick_word_at (completion->line, completion->point, &cur_begin);
-  if (cur_begin > 0)
-    {
-      gint prev_end;
-      for (prev_end = cur_begin - 1; prev_end >= 0; prev_end--)
-        {
-          if (!is_word_separator (completion->line[prev_end]))
-            {
-              completion->prev = pick_word_at (completion->line, prev_end, NULL);
-              break;
-            }
-        }
-
-      initial_completion_line = g_strndup (completion->line, cur_begin);
-    }
-  else
-    initial_completion_line = g_strdup ("");
-
-  flatpak_completion_debug ("'%s'", initial_completion_line);
-  flatpak_completion_debug ("----");
-
-  flatpak_completion_debug (" cur='%s'", completion->cur);
-  flatpak_completion_debug ("prev='%s'", completion->prev);
-
-  if (!parse_completion_line_to_argv (initial_completion_line,
-                                      completion))
-    {
-      /* it's very possible the command line can't be parsed (for
-       * example, missing quotes etc) - in that case, we just
-       * don't autocomplete at all
-       */
-      flatpak_completion_free (completion);
-      return NULL;
-    }
-
-  flatpak_completion_debug ("completion_argv %i:", completion->original_argc);
-  for (i = 0; i < completion->original_argc; i++)
-    flatpak_completion_debug (completion->original_argv[i]);
-
-  flatpak_completion_debug ("----");
-
-  return completion;
-}
-
-void
-flatpak_completion_free (FlatpakCompletion *completion)
-{
-  g_free (completion->cur);
-  g_free (completion->prev);
-  g_free (completion->line);
-  g_free (completion->argv);
-  g_strfreev (completion->original_argv);
-  g_free (completion);
-}
-
-char **
-flatpak_get_current_locale_subpaths (void)
-{
-  const gchar * const *langs = g_get_language_names ();
-  GPtrArray *subpaths = g_ptr_array_new ();
-  int i;
-
-  for (i = 0; langs[i] != NULL; i++)
-    {
-      g_autofree char *dir = g_strconcat ("/", langs[i], NULL);
-      char *c;
-
-      c = strchr (dir, '@');
-      if (c != NULL)
-        *c = 0;
-      c = strchr (dir, '_');
-      if (c != NULL)
-        *c = 0;
-      c = strchr (dir, '.');
-      if (c != NULL)
-        *c = 0;
-
-      if (strcmp (dir, "/C") == 0)
-        continue;
-
-      g_ptr_array_add (subpaths, g_steal_pointer (&dir));
-    }
-
-  g_ptr_array_add (subpaths, NULL);
-
-  return (char **)g_ptr_array_free (subpaths, FALSE);
-}
-
-#define BAR_LENGTH 20
-#define BAR_CHARS " -=#"
-
-void
-flatpak_terminal_progress_cb (const char *status,
-                              guint       progress,
-                              gboolean    estimating,
-                              gpointer    user_data)
-{
-  g_autoptr(GString) str = g_string_new ("");
-  FlatpakTerminalProgress *term = user_data;
-  int i;
-  int n_full, remainder, partial;
-  int width, padded_width;
-
-  if (!term->inited)
-    {
-      struct winsize w;
-      ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
-      term->n_columns = w.ws_col;
-      term->last_width = 0;
-      term->inited = 1;
-    }
-
-  g_string_append (str, "[");
-
-  n_full = (BAR_LENGTH * progress) / 100;
-  remainder = progress - (n_full * 100 / BAR_LENGTH);
-  partial = (remainder * strlen(BAR_CHARS) * BAR_LENGTH) / 100;
-
-  for (i = 0; i < n_full; i++)
-    g_string_append_c (str, BAR_CHARS[strlen(BAR_CHARS)-1]);
-
-  if (i < BAR_LENGTH)
-    {
-      g_string_append_c (str, BAR_CHARS[partial]);
-      i++;
-    }
-
-  for (; i < BAR_LENGTH; i++)
-    g_string_append (str, " ");
-
-  g_string_append (str, "] ");
-  g_string_append (str, status);
-
-  g_print ("\r");
-  width = MIN (strlen (str->str), term->n_columns);
-  padded_width = MAX (term->last_width, width);
-  term->last_width = width;
-  g_print ("%-*.*s", padded_width, padded_width, str->str);
-}
-
-void
-flatpak_terminal_progress_end (FlatpakTerminalProgress *term)
-{
-  if (term->inited)
-    g_print("\n");
-}
-
-static inline guint
-get_write_progress (guint outstanding_writes)
-{
-  return outstanding_writes > 0 ? (guint) (3 / (gdouble) outstanding_writes) : 3;
+  g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+               _("Unknown filesystem location %s, valid locations are: host, home, xdg-*[/...], ~/dir, /dir"), filesystem);
+  return FALSE;
 }
 
 static void
-progress_cb (OstreeAsyncProgress *progress, gpointer user_data)
+flatpak_context_add_filesystem (FlatpakContext *context,
+                                const char     *what)
 {
-  gboolean last_was_metadata = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (progress), "last-was-metadata"));
-  FlatpakProgressCallback progress_cb = g_object_get_data (G_OBJECT (progress), "callback");
-  guint last_progress = GPOINTER_TO_UINT (g_object_get_data (G_OBJECT (progress), "last_progress"));
-  GString *buf;
-  g_autofree char *status = NULL;
-  guint outstanding_fetches;
-  guint outstanding_metadata_fetches;
-  guint outstanding_writes;
-  guint64 bytes_transferred;
-  guint64 fetched_delta_part_size;
-  guint64 total_delta_part_size;
-  guint outstanding_extra_data;
-  guint64 total_extra_data_bytes;
-  guint64 transferred_extra_data_bytes;
-  guint64 total;
-  guint metadata_fetched;
-  guint64 start_time;
-  guint64 elapsed_time;
-  guint new_progress = 0;
-  gboolean estimating = FALSE;
-  gboolean downloading_extra_data;
-  gboolean scanning;
-  guint n_scanned_metadata;
-  guint fetched_delta_parts;
-  guint total_delta_parts;
-  guint fetched_delta_part_fallbacks;
-  guint total_delta_part_fallbacks;
-  guint fetched;
-  guint requested;
-  guint64 total_transferred;
-  g_autofree gchar *formatted_bytes_total_transferred = NULL;
+  FlatpakFilesystemMode mode;
+  char *fs = parse_filesystem_flags (what, &mode);
 
-  /* We get some extra calls before we've really started due to the initialization of the
-     extra data, so ignore those */
-  if (ostree_async_progress_get_variant (progress, "outstanding-fetches") == NULL)
-    return;
-
-  buf = g_string_new ("");
-
-  /* The heuristic here goes as follows:
-   *  - While fetching metadata, grow up to 5%
-   *  - Download goes up to 97%
-   *  - Writing objects adds the last 3%
-   *
-   *
-   * Meaning of each variable:
-   *
-   *   Status:
-   *    - status: only sent by OSTree when the pull ends (with or without an error)
-   *
-   *   Fetches:
-   *    - fetched: sum of content + metadata fetches
-   *    - requested: sum of requested content and metadata fetches
-   *    - bytes_transferred: every and all tranferred data (in bytes)
-   *    - metadata_fetched: the number of fetched metadata objects
-   *    - outstanding_fetches: missing fetches (metadata + content + deltas)
-   *    - outstanding_delta_fetches: missing delta-only fetches
-   *    - outstanding_metadata_fetches: missing metadata-only fetches
-   *    - fetched_content_bytes: the estimated downloaded size of content (in bytes)
-   *    - total_content_bytes: the estimated total size of content, based on average bytes per object (in bytes)
-   *
-   *   Writes:
-   *    - outstanding_writes: all missing writes (sum of outstanding content, metadata and delta writes)
-   *
-   *   Static deltas:
-   *    - total_delta_part_size: the total size (in bytes) of static deltas
-   *    - fetched_delta_part_size: the size (in bytes) of already fetched static deltas
-   *
-   *   Extra data:
-   *    - total_extra_data_bytes: the sum of all extra data file sizes (in bytes)
-   *    - downloading_extra_data: whether extra-data files are being downloaded or not
-   */
-
-  /* We request everything in one go to make sure we don't race with the update from
-     the async download and get mixed results */
-  ostree_async_progress_get (progress,
-                             "outstanding-fetches", "u", &outstanding_fetches,
-                             "outstanding-metadata-fetches", "u", &outstanding_metadata_fetches,
-                             "outstanding-writes", "u", &outstanding_writes,
-                             "scanning", "u", &scanning,
-                             "scanned-metadata", "u", &n_scanned_metadata,
-                             "fetched-delta-parts", "u", &fetched_delta_parts,
-                             "total-delta-parts", "u", &total_delta_parts,
-                             "fetched-delta-fallbacks", "u", &fetched_delta_part_fallbacks,
-                             "total-delta-fallbacks", "u", &total_delta_part_fallbacks,
-                             "fetched-delta-part-size", "t", &fetched_delta_part_size,
-                             "total-delta-part-size", "t", &total_delta_part_size,
-                             "bytes-transferred", "t", &bytes_transferred,
-                             "fetched", "u", &fetched,
-                             "metadata-fetched", "u", &metadata_fetched,
-                             "requested", "u", &requested,
-                             "start-time", "t", &start_time,
-                             "status", "s", &status,
-                             "outstanding-extra-data", "u", &outstanding_extra_data,
-                             "total-extra-data-bytes", "t", &total_extra_data_bytes,
-                             "transferred-extra-data-bytes", "t", &transferred_extra_data_bytes,
-                             "downloading-extra-data", "u", &downloading_extra_data,
-                             NULL);
-
-  elapsed_time = (g_get_monotonic_time () - start_time) / G_USEC_PER_SEC;
-
-  /* When we receive the status, it means that the ostree pull operation is
-   * finished. We only have to be careful about the extra-data fields. */
-  if (status && *status && total_extra_data_bytes == 0)
-    {
-      g_string_append (buf, status);
-      new_progress = 100;
-      goto out;
-    }
-
-  total_transferred = bytes_transferred + transferred_extra_data_bytes;
-  formatted_bytes_total_transferred =  g_format_size_full (total_transferred, 0);
-
-  g_object_set_data (G_OBJECT (progress), "last-was-metadata", GUINT_TO_POINTER (FALSE));
-
-  if (total_delta_parts == 0 &&
-      (outstanding_metadata_fetches > 0 || last_was_metadata)  &&
-      metadata_fetched < 20)
-    {
-      /* We need to hit two callbacks with no metadata outstanding, because
-         sometimes we get called when we just handled a metadata, but did
-         not yet process it and add more metadata */
-      if (outstanding_metadata_fetches > 0)
-        g_object_set_data (G_OBJECT (progress), "last-was-metadata", GUINT_TO_POINTER (TRUE));
-
-      /* At this point we don't really know how much data there is, so we have to make a guess.
-       * Since its really hard to figure out early how much data there is we report 1% until
-       * all objects are scanned. */
-
-      estimating = TRUE;
-
-      g_string_append_printf (buf, "Downloading metadata: %u/(estimating) %s",
-                              fetched, formatted_bytes_total_transferred);
-
-      /* Go up to 5% until the metadata is all fetched */
-      new_progress = 0;
-      if (requested > 0)
-        new_progress = fetched * 5 / requested;
-    }
-  else
-    {
-      if (total_delta_parts > 0)
-        {
-          g_autofree gchar *formatted_bytes_total = NULL;
-
-          /* We're only using deltas, so we can ignore regular objects
-           * and get perfect sizes.
-           *
-           * fetched_delta_part_size is the total size of all the
-           * delta parts and fallback objects that were already
-           * available at the start and need not be downloaded.
-           */
-          total = total_delta_part_size - fetched_delta_part_size + total_extra_data_bytes;
-          formatted_bytes_total = g_format_size_full (total, 0);
-
-          g_string_append_printf (buf, "Downloading: %s/%s",
-                                  formatted_bytes_total_transferred,
-                                  formatted_bytes_total);
-        }
-      else
-        {
-          /* Non-deltas, so we can't know anything other than object
-             counts, except the additional extra data which we know
-             the byte size of. To be able to compare them with the
-             extra data we use the average object size to estimate a
-             total size. */
-          double average_object_size = 1;
-          if (fetched > 0)
-            average_object_size = bytes_transferred / (double)fetched;
-
-          total = average_object_size * requested + total_extra_data_bytes;
-
-          if (downloading_extra_data)
-            {
-              g_autofree gchar *formatted_bytes_total = g_format_size_full (total, 0);;
-              g_string_append_printf (buf, "Downloading extra data: %s/%s",
-                                      formatted_bytes_total_transferred,
-                                      formatted_bytes_total);
-            }
-          else
-            g_string_append_printf (buf, "Downloading files: %d/%d %s",
-                                    fetched, requested, formatted_bytes_total_transferred);
-        }
-
-      /* The download progress goes up to 97% */
-      new_progress = 5 + ((total_transferred / (gdouble) total) * 92);
-
-      /* And the writing of the objects adds 3% to the progress */
-      new_progress += get_write_progress (outstanding_writes);
-    }
-
-  if (elapsed_time > 0) // Ignore first second
-    {
-      g_autofree gchar *formatted_bytes_sec = g_format_size (total_transferred / elapsed_time);
-      g_string_append_printf (buf, " (%s/s)", formatted_bytes_sec);
-    }
-
-out:
-  if (new_progress < last_progress)
-    new_progress = last_progress;
-  g_object_set_data (G_OBJECT (progress), "last_progress", GUINT_TO_POINTER (new_progress));
-
-  progress_cb (buf->str, new_progress, estimating, user_data);
-
-  g_string_free (buf, TRUE);
+  g_hash_table_insert (context->filesystems, fs, GINT_TO_POINTER (mode));
 }
 
-OstreeAsyncProgress *
-flatpak_progress_new (FlatpakProgressCallback progress,
-                      gpointer                progress_data)
+static void
+flatpak_context_remove_filesystem (FlatpakContext *context,
+                                   const char     *what)
 {
-  OstreeAsyncProgress *ostree_progress =
-    ostree_async_progress_new_and_connect (progress_cb,
-                                           progress_data);
-  g_object_set_data (G_OBJECT (ostree_progress), "callback", progress);
-  g_object_set_data (G_OBJECT (ostree_progress), "last_progress", GUINT_TO_POINTER (0));
+  g_hash_table_insert (context->filesystems,
+                       parse_filesystem_flags (what, NULL),
+                       NULL);
+}
 
-  if (progress == flatpak_terminal_progress_cb)
-    g_object_set_data (G_OBJECT (ostree_progress), "update-frequency", GUINT_TO_POINTER (FLATPAK_CLI_UPDATE_FREQUENCY));
+static gboolean
+option_share_cb (const gchar *option_name,
+                 const gchar *value,
+                 gpointer     data,
+                 GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextShares share;
 
-  return ostree_progress;
+  share = flatpak_context_share_from_string (value, error);
+  if (share == 0)
+    return FALSE;
+
+  flatpak_context_add_shares (context, share);
+
+  return TRUE;
+}
+
+static gboolean
+option_unshare_cb (const gchar *option_name,
+                   const gchar *value,
+                   gpointer     data,
+                   GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextShares share;
+
+  share = flatpak_context_share_from_string (value, error);
+  if (share == 0)
+    return FALSE;
+
+  flatpak_context_remove_shares (context, share);
+
+  return TRUE;
+}
+
+static gboolean
+option_socket_cb (const gchar *option_name,
+                  const gchar *value,
+                  gpointer     data,
+                  GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextSockets socket;
+
+  socket = flatpak_context_socket_from_string (value, error);
+  if (socket == 0)
+    return FALSE;
+
+  flatpak_context_add_sockets (context, socket);
+
+  return TRUE;
+}
+
+static gboolean
+option_nosocket_cb (const gchar *option_name,
+                    const gchar *value,
+                    gpointer     data,
+                    GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextSockets socket;
+
+  socket = flatpak_context_socket_from_string (value, error);
+  if (socket == 0)
+    return FALSE;
+
+  flatpak_context_remove_sockets (context, socket);
+
+  return TRUE;
+}
+
+static gboolean
+option_device_cb (const gchar *option_name,
+                  const gchar *value,
+                  gpointer     data,
+                  GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextDevices device;
+
+  device = flatpak_context_device_from_string (value, error);
+  if (device == 0)
+    return FALSE;
+
+  flatpak_context_add_devices (context, device);
+
+  return TRUE;
+}
+
+static gboolean
+option_nodevice_cb (const gchar *option_name,
+                    const gchar *value,
+                    gpointer     data,
+                    GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextDevices device;
+
+  device = flatpak_context_device_from_string (value, error);
+  if (device == 0)
+    return FALSE;
+
+  flatpak_context_remove_devices (context, device);
+
+  return TRUE;
+}
+
+static gboolean
+option_allow_cb (const gchar *option_name,
+                 const gchar *value,
+                 gpointer     data,
+                 GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextFeatures feature;
+
+  feature = flatpak_context_feature_from_string (value, error);
+  if (feature == 0)
+    return FALSE;
+
+  flatpak_context_add_features (context, feature);
+
+  return TRUE;
+}
+
+static gboolean
+option_disallow_cb (const gchar *option_name,
+                    const gchar *value,
+                    gpointer     data,
+                    GError     **error)
+{
+  FlatpakContext *context = data;
+  FlatpakContextFeatures feature;
+
+  feature = flatpak_context_feature_from_string (value, error);
+  if (feature == 0)
+    return FALSE;
+
+  flatpak_context_remove_features (context, feature);
+
+  return TRUE;
+}
+
+static gboolean
+option_filesystem_cb (const gchar *option_name,
+                      const gchar *value,
+                      gpointer     data,
+                      GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_context_verify_filesystem (value, error))
+    return FALSE;
+
+  flatpak_context_add_filesystem (context, value);
+  return TRUE;
+}
+
+static gboolean
+option_nofilesystem_cb (const gchar *option_name,
+                        const gchar *value,
+                        gpointer     data,
+                        GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_context_verify_filesystem (value, error))
+    return FALSE;
+
+  flatpak_context_remove_filesystem (context, value);
+  return TRUE;
+}
+
+static gboolean
+option_env_cb (const gchar *option_name,
+               const gchar *value,
+               gpointer     data,
+               GError     **error)
+{
+  FlatpakContext *context = data;
+
+  g_auto(GStrv) split = g_strsplit (value, "=", 2);
+
+  if (split == NULL || split[0] == NULL || split[0][0] == 0 || split[1] == NULL)
+    {
+      g_set_error (error, G_OPTION_ERROR, G_OPTION_ERROR_FAILED,
+                   _("Invalid env format %s"), value);
+      return FALSE;
+    }
+
+  flatpak_context_set_env_var (context, split[0], split[1]);
+  return TRUE;
+}
+
+static gboolean
+option_own_name_cb (const gchar *option_name,
+                    const gchar *value,
+                    gpointer     data,
+                    GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_verify_dbus_name (value, error))
+    return FALSE;
+
+  flatpak_context_set_session_bus_policy (context, value, FLATPAK_POLICY_OWN);
+  return TRUE;
+}
+
+static gboolean
+option_talk_name_cb (const gchar *option_name,
+                     const gchar *value,
+                     gpointer     data,
+                     GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_verify_dbus_name (value, error))
+    return FALSE;
+
+  flatpak_context_set_session_bus_policy (context, value, FLATPAK_POLICY_TALK);
+  return TRUE;
+}
+
+static gboolean
+option_system_own_name_cb (const gchar *option_name,
+                           const gchar *value,
+                           gpointer     data,
+                           GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_verify_dbus_name (value, error))
+    return FALSE;
+
+  flatpak_context_set_system_bus_policy (context, value, FLATPAK_POLICY_OWN);
+  return TRUE;
+}
+
+static gboolean
+option_system_talk_name_cb (const gchar *option_name,
+                            const gchar *value,
+                            gpointer     data,
+                            GError     **error)
+{
+  FlatpakContext *context = data;
+
+  if (!flatpak_verify_dbus_name (value, error))
+    return FALSE;
+
+  flatpak_context_set_system_bus_policy (context, value, FLATPAK_POLICY_TALK);
+  return TRUE;
+}
+
+static gboolean
+option_add_generic_policy_cb (const gchar *option_name,
+                              const gchar *value,
+                              gpointer     data,
+                              GError     **error)
+{
+  FlatpakContext *context = data;
+  char *t;
+  g_autofree char *key = NULL;
+  const char *policy_value;
+
+  t = strchr (value, '=');
+  if (t == NULL)
+    return flatpak_fail (error, "--policy arguments must be in the form SUBSYSTEM.KEY=[!]VALUE");
+  policy_value = t + 1;
+  key = g_strndup (value, t - value);
+  if (strchr (key, '.') == NULL)
+    return flatpak_fail (error, "--policy arguments must be in the form SUBSYSTEM.KEY=[!]VALUE");
+
+  if (policy_value[0] == '!')
+    return flatpak_fail (error, "--policy values can't start with \"!\"");
+
+  flatpak_context_apply_generic_policy (context, key, policy_value);
+
+  return TRUE;
+}
+
+static gboolean
+option_remove_generic_policy_cb (const gchar *option_name,
+                                 const gchar *value,
+                                 gpointer     data,
+                                 GError     **error)
+{
+  FlatpakContext *context = data;
+  char *t;
+  g_autofree char *key = NULL;
+  const char *policy_value;
+  g_autofree char *extended_value = NULL;
+
+  t = strchr (value, '=');
+  if (t == NULL)
+    return flatpak_fail (error, "--policy arguments must be in the form SUBSYSTEM.KEY=[!]VALUE");
+  policy_value = t + 1;
+  key = g_strndup (value, t - value);
+  if (strchr (key, '.') == NULL)
+    return flatpak_fail (error, "--policy arguments must be in the form SUBSYSTEM.KEY=[!]VALUE");
+
+  if (policy_value[0] == '!')
+    return flatpak_fail (error, "--policy values can't start with \"!\"");
+
+  extended_value = g_strconcat ("!", policy_value, NULL);
+
+  flatpak_context_apply_generic_policy (context, key, extended_value);
+
+  return TRUE;
+}
+
+static gboolean
+option_persist_cb (const gchar *option_name,
+                   const gchar *value,
+                   gpointer     data,
+                   GError     **error)
+{
+  FlatpakContext *context = data;
+
+  flatpak_context_set_persistent (context, value);
+  return TRUE;
+}
+
+static GOptionEntry context_options[] = {
+  { "share", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_share_cb, N_("Share with host"), N_("SHARE") },
+  { "unshare", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_unshare_cb, N_("Unshare with host"), N_("SHARE") },
+  { "socket", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_socket_cb, N_("Expose socket to app"), N_("SOCKET") },
+  { "nosocket", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_nosocket_cb, N_("Don't expose socket to app"), N_("SOCKET") },
+  { "device", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_device_cb, N_("Expose device to app"), N_("DEVICE") },
+  { "nodevice", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_nodevice_cb, N_("Don't expose device to app"), N_("DEVICE") },
+  { "allow", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_allow_cb, N_("Allow feature"), N_("FEATURE") },
+  { "disallow", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_disallow_cb, N_("Don't allow feature"), N_("FEATURE") },
+  { "filesystem", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_filesystem_cb, N_("Expose filesystem to app (:ro for read-only)"), N_("FILESYSTEM[:ro]") },
+  { "nofilesystem", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_nofilesystem_cb, N_("Don't expose filesystem to app"), N_("FILESYSTEM") },
+  { "env", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_env_cb, N_("Set environment variable"), N_("VAR=VALUE") },
+  { "own-name", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_own_name_cb, N_("Allow app to own name on the session bus"), N_("DBUS_NAME") },
+  { "talk-name", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_talk_name_cb, N_("Allow app to talk to name on the session bus"), N_("DBUS_NAME") },
+  { "system-own-name", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_system_own_name_cb, N_("Allow app to own name on the system bus"), N_("DBUS_NAME") },
+  { "system-talk-name", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_system_talk_name_cb, N_("Allow app to talk to name on the system bus"), N_("DBUS_NAME") },
+  { "add-policy", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_add_generic_policy_cb, N_("Add generic policy option"), N_("SUBSYSTEM.KEY=VALUE") },
+  { "remove-policy", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_remove_generic_policy_cb, N_("Remove generic policy option"), N_("SUBSYSTEM.KEY=VALUE") },
+  { "persist", 0, G_OPTION_FLAG_IN_MAIN, G_OPTION_ARG_CALLBACK, &option_persist_cb, N_("Persist home directory"), N_("FILENAME") },
+  { NULL }
+};
+
+GOptionGroup  *
+flatpak_context_get_options (FlatpakContext *context)
+{
+  GOptionGroup *group;
+
+  group = g_option_group_new ("environment",
+                              "Runtime Environment",
+                              "Runtime Environment",
+                              context,
+                              NULL);
+  g_option_group_set_translation_domain (group, GETTEXT_PACKAGE);
+
+  g_option_group_add_entries (group, context_options);
+
+  return group;
+}
+
+void
+flatpak_context_to_args (FlatpakContext *context,
+                         GPtrArray *args)
+{
+  GHashTableIter iter;
+  gpointer key, value;
+
+  flatpak_context_shared_to_args (context->shares, context->shares_valid, args);
+  flatpak_context_sockets_to_args (context->sockets, context->sockets_valid, args);
+  flatpak_context_devices_to_args (context->devices, context->devices_valid, args);
+  flatpak_context_features_to_args (context->features, context->features_valid, args);
+
+  g_hash_table_iter_init (&iter, context->env_vars);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    g_ptr_array_add (args, g_strdup_printf ("--env=%s=%s", (char *)key, (char *)value));
+
+  g_hash_table_iter_init (&iter, context->persistent);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    g_ptr_array_add (args, g_strdup_printf ("--persist=%s", (char *)key));
+
+  g_hash_table_iter_init (&iter, context->session_bus_policy);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const char *name = key;
+      FlatpakPolicy policy = GPOINTER_TO_INT (value);
+
+      g_ptr_array_add (args, g_strdup_printf ("--%s-name=%s", flatpak_policy_to_string (policy), name));
+    }
+
+  g_hash_table_iter_init (&iter, context->system_bus_policy);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const char *name = key;
+      FlatpakPolicy policy = GPOINTER_TO_INT (value);
+
+      g_ptr_array_add (args, g_strdup_printf ("--system-%s-name=%s", flatpak_policy_to_string (policy), name));
+    }
+
+  g_hash_table_iter_init (&iter, context->filesystems);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      FlatpakFilesystemMode mode = GPOINTER_TO_INT (value);
+
+      if (mode == FLATPAK_FILESYSTEM_MODE_READ_ONLY)
+        g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s:ro", (char *)key));
+      else if (mode == FLATPAK_FILESYSTEM_MODE_READ_WRITE)
+        g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s", (char *)key));
+      else if (mode == FLATPAK_FILESYSTEM_MODE_CREATE)
+        g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s:create", (char *)key));
+      else
+        g_ptr_array_add (args, g_strdup_printf ("--nofilesystem=%s", (char *)key));
+    }
 }

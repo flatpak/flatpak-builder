@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!DOCTYPE reference PUBLIC "-//OASIS//DTD DocBook XML V4.3//EN"
+               "http://www.oasis-open.org/docbook/xml/4.3/docbookx.dtd" [
+<!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
+]>
+<reference xmlns:xi="http://www.w3.org/2003/XInclude">
+    <referenceinfo>
+      <releaseinfo>Version @VERSION@</releaseinfo>
+    </referenceinfo>
+    <title>Flatpak Builder Command Reference</title>
+    <partintro>
+      <para>
+        Flatpak-builder is a tool to build flatpak applications.
+      </para>
+    </partintro>
+    <chapter>
+      <title>Executables</title>
+      <xi:include href="@srcdir@/flatpak-builder.xml"/>
+    </chapter>
+    <chapter>
+      <title>File Formats</title>
+      <xi:include href="@srcdir@/flatpak-manifest.xml"/>
+    </chapter>
+</reference>

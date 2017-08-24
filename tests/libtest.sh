@@ -77,8 +77,6 @@ TEST_DATA_DIR=`mktemp -d /var/tmp/test-flatpak-XXXXXX`
 mkdir -p ${TEST_DATA_DIR}/home
 mkdir -p ${TEST_DATA_DIR}/runtime
 mkdir -p ${TEST_DATA_DIR}/system
-export FLATPAK_SYSTEM_DIR=${TEST_DATA_DIR}/system
-export FLATPAK_SYSTEM_HELPER_ON_SESSION=1
 
 export HOME=${TEST_DATA_DIR}/home
 export XDG_CACHE_HOME=${TEST_DATA_DIR}/home/cache
@@ -87,20 +85,10 @@ export XDG_DATA_HOME=${TEST_DATA_DIR}/home/share
 export XDG_RUNTIME_DIR=${TEST_DATA_DIR}/runtime
 
 export USERDIR=${TEST_DATA_DIR}/home/share/flatpak
-export SYSTEMDIR=${TEST_DATA_DIR}/system
 export ARCH=`flatpak --default-arch`
 
-if [ x${USE_SYSTEMDIR-} == xyes ] ; then
-    export FL_DIR=${SYSTEMDIR}
-    export U=
-else
-    export FL_DIR=${USERDIR}
-    export U="--user"
-fi
-
-if [ x${USE_DELTAS-} == xyes ] ; then
-    export UPDATE_REPO_ARGS="--generate-static-deltas"
-fi
+export FL_DIR=${USERDIR}
+export U="--user"
 
 export FLATPAK="${CMD_PREFIX} flatpak"
 export FLATPAK_BUILDER="${CMD_PREFIX} flatpak-builder"
@@ -205,11 +193,6 @@ setup_repo_no_add () {
     GPGARGS="${GPGARGS:-${FL_GPGARGS}}" . $(dirname $0)/make-test-runtime.sh ${REPONAME} org.test.Platform "${COLLECTION_ID}" bash ls cat echo readlink > /dev/null
     GPGARGS="${GPGARGS:-${FL_GPGARGS}}" . $(dirname $0)/make-test-app.sh ${REPONAME} "${COLLECTION_ID}" > /dev/null
     update_repo $REPONAME "${COLLECTION_ID}"
-    if [ $REPONAME == "test" ]; then
-        $(dirname $0)/test-webserver.sh repos
-        FLATPAK_HTTP_PID=$(cat httpd-pid)
-        mv httpd-port httpd-port-main
-    fi
 }
 
 setup_repo () {
@@ -218,7 +201,6 @@ setup_repo () {
 
     setup_repo_no_add "$@"
 
-    port=$(cat httpd-port-main)
     if [ x${GPGPUBKEY:-${FL_GPG_HOMEDIR}/pubring.gpg} != x ]; then
         import_args=--gpg-import=${GPGPUBKEY:-${FL_GPG_HOMEDIR}/pubring.gpg}
     else
@@ -230,7 +212,7 @@ setup_repo () {
         collection_args=
     fi
 
-    flatpak remote-add ${U} ${collection_args} ${import_args} ${REPONAME}-repo "http://127.0.0.1:${port}/$REPONAME"
+    flatpak remote-add ${U} ${collection_args} ${import_args} ${REPONAME}-repo repos/$REPONAME
 }
 
 update_repo () {
@@ -309,25 +291,6 @@ run_sh () {
     ${CMD_PREFIX} flatpak run --command=bash ${ARGS-} org.test.Hello -c "$*"
 }
 
-skip_without_user_xattrs () {
-    touch ${TEST_DATA_DIR}/test-xattrs
-    if ! setfattr -n user.testvalue -v somevalue ${TEST_DATA_DIR}/test-xattrs; then
-        echo "1..0 # SKIP this test requires xattr support"
-        exit 0
-    fi
-}
-
-skip_without_bwrap () {
-    if [ -z "${FLATPAK_BWRAP:-}" ]; then
-        # running installed-tests: assume we know what we're doing
-        :
-    elif ! "$FLATPAK_BWRAP" --ro-bind / / /bin/true > bwrap-result 2>&1; then
-        sed -e 's/^/# /' < bwrap-result
-        echo "1..0 # SKIP Cannot run bwrap"
-        exit 0
-    fi
-}
-
 skip_without_python2 () {
     if ! test -f /usr/bin/python2 || ! /usr/bin/python2 -c "import sys; sys.exit(0 if sys.version_info >= (2, 7) else 1)" ; then
         echo "1..0 # SKIP this test requires /usr/bin/python2 (2.7) support"
@@ -335,28 +298,8 @@ skip_without_python2 () {
     fi
 }
 
-skip_without_p2p () {
-    if ! ${FLATPAK} remote-add --help | grep -q -e '--collection-id'; then
-        echo "1..0 # SKIP this test requires peer to peer support (--enable-p2p)"
-        exit 0
-    fi
-}
-
-
-sed s#@testdir@#${test_builddir}# ${test_srcdir}/session.conf.in > session.conf
-dbus-daemon --fork --config-file=session.conf --print-address=3 --print-pid=4 \
-    3> dbus-session-bus-address 4> dbus-session-bus-pid
-export DBUS_SESSION_BUS_ADDRESS="$(cat dbus-session-bus-address)"
-DBUS_SESSION_BUS_PID="$(cat dbus-session-bus-pid)"
-
-if ! /bin/kill -0 "$DBUS_SESSION_BUS_PID"; then
-    assert_not_reached "Failed to start dbus-daemon"
-fi
-
 cleanup () {
-    /bin/kill $DBUS_SESSION_BUS_PID ${FLATPAK_HTTP_PID:-}
     gpg-connect-agent --homedir "${FL_GPG_HOMEDIR}" killagent /bye || true
-    fusermount -u $XDG_RUNTIME_DIR/doc || :
     if test -n "${TEST_SKIP_CLEANUP:-}"; then
         echo "Skipping cleanup of ${TEST_DATA_DIR}"
     else

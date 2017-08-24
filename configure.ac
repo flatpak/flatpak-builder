@@ -22,14 +22,13 @@ m4_define([flatpak_binary_age],
 m4_define([flatpak_version],
           [flatpak_major_version.flatpak_minor_version.flatpak_micro_version])
 
-AC_INIT([Flatpak],
+AC_INIT([flatpak-builder],
         [flatpak_version],
         [https://github.com/flatpak/flatpak/issues],
         [flatpak],
         [http://flatpak.org/])
 
 GLIB_REQS=2.44
-SYSTEM_BWRAP_REQS=0.1.8
 OSTREE_REQS=2017.10
 
 AC_USE_SYSTEM_EXTENSIONS
@@ -42,7 +41,7 @@ AC_DISABLE_STATIC
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
 
-AC_CONFIG_SRCDIR([common/flatpak-dir.c])
+AC_CONFIG_SRCDIR([common/flatpak-utils.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.13.4 no-define no-dist-gzip dist-xz tar-ustar foreign subdir-objects])
@@ -81,77 +80,7 @@ AX_VALGRIND_CHECK
 
 PKG_PROG_PKG_CONFIG([0.24])
 
-AC_ARG_WITH(privileged_group,
-		AS_HELP_STRING([--with-privileged-group=GROUP],[Name of privileged group, [default=wheel]]),
-            with_privileged_group="$withval", with_privileged_group=wheel)
-PRIVILEGED_GROUP=$with_privileged_group
-AC_SUBST(PRIVILEGED_GROUP)
-
-AC_ARG_WITH(dbus_service_dir,
-		AS_HELP_STRING([--with-dbus-service-dir=PATH],[choose directory for dbus service files, [default=PREFIX/share/dbus-1/services]]),
-            with_dbus_service_dir="$withval", with_dbus_service_dir=$datadir/dbus-1/services)
-DBUS_SERVICE_DIR=$with_dbus_service_dir
-AC_SUBST(DBUS_SERVICE_DIR)
-
-AC_ARG_WITH(dbus_config_dir,
-		AS_HELP_STRING([--with-dbus-config-dir=PATH],[choose directory for dbus config files, [default=SYSCONFDIR/dbus-1/system.d]]),
-            with_dbus_config_dir="$withval", with_dbus_config_dir=${sysconfdir}/dbus-1/system.d)
-DBUS_CONFIG_DIR=$with_dbus_config_dir
-AC_SUBST(DBUS_CONFIG_DIR)
-
-AC_ARG_WITH([systemduserunitdir],
-            [AS_HELP_STRING([--with-systemduserunitdir=DIR],
-                            [Directory for systemd user service files (default=PREFIX/lib/systemd/user)])],
-    [],
-    dnl This is deliberately not ${libdir}: systemd units always go in
-    dnl .../lib, never .../lib64 or .../lib/x86_64-linux-gnu
-    [with_systemduserunitdir='${prefix}/lib/systemd/user'])
-AC_SUBST([systemduserunitdir], [$with_systemduserunitdir])
-
-AC_ARG_WITH([systemdsystemunitdir],
-            [AS_HELP_STRING([--with-systemdsystemunitdir=DIR],
-                            [Directory for systemd system service files (default=PREFIX/lib/systemd/system)])],
-    [],
-    dnl This is deliberately not ${libdir}: systemd units always go in
-    dnl .../lib, never .../lib64 or .../lib/x86_64-linux-gnu
-    [with_systemdsystemunitdir='${prefix}/lib/systemd/system'])
-AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
-
-AC_ARG_WITH(system_fonts_dir,
-		AS_HELP_STRING([--with-system-fonts-dir=PATH],[Directory where system fonts are, [default=/usr/share/fonts]]),
-            with_system_fonts_dir="$withval", with_system_fonts_dir=/usr/share/fonts)
-SYSTEM_FONTS_DIR=$with_system_fonts_dir
-AC_SUBST(SYSTEM_FONTS_DIR)
-
-AC_ARG_WITH(profile_dir,
-		AS_HELP_STRING([--with-profile-dir=PATH],[choose directory for profile.d files, [default=SYSCONFDIR/profile.d]]),
-            with_profile_dir="$withval", with_profile_dir=${sysconfdir}/profile.d)
-PROFILE_DIR=$with_profile_dir
-AC_SUBST(PROFILE_DIR)
-
-AC_ARG_VAR([BWRAP], [Bubblewrap executable])
-AC_ARG_WITH([system-bubblewrap],
-            [AS_HELP_STRING([--with-system-bubblewrap], [Use system bwrap executable [default=check $BWRAP]])],
-            [BWRAP="$withval"],
-            [BWRAP="${BWRAP:-false}"])
-AS_CASE([$BWRAP],
-        [yes],
-            [BWRAP=bwrap],
-        [no],
-            [BWRAP=false],
-        [auto],
-            [AC_CHECK_PROG([BWRAP], [bwrap], [bwrap], [false])])
-if test "x$BWRAP" != xfalse; then
-   BWRAP_VERSION=`$BWRAP --version | sed 's,.*\ \([0-9]*\.[0-9]*\.[0-9]*\)$,\1,'`
-   AX_COMPARE_VERSION([$SYSTEM_BWRAP_REQS],[gt],[$BWRAP_VERSION],
-         AC_MSG_ERROR([You need at least version $SYSTEM_BWRAP_REQS of bubblewrap to use the system installed version]))
-   AM_CONDITIONAL([WITH_SYSTEM_BWRAP], [true])
-else
-   AM_CONDITIONAL([WITH_SYSTEM_BWRAP], [false])
-fi
-
 AC_CHECK_FUNCS(fdwalk)
-
 AC_CHECK_HEADER([sys/xattr.h], [], AC_MSG_ERROR([You must have sys/xattr.h from glibc]))
 AC_CHECK_HEADER([sys/capability.h], have_caps=yes, AC_MSG_ERROR([sys/capability.h header not found]))
 
@@ -159,111 +88,10 @@ AC_SUBST([GLIB_MKENUMS], [`$PKG_CONFIG --variable glib_mkenums glib-2.0`])
 AC_SUBST([GLIB_COMPILE_RESOURCES], [`$PKG_CONFIG --variable glib_compile_resources gio-2.0`])
 AC_SUBST([GDBUS_CODEGEN], [`$PKG_CONFIG --variable gdbus_codegen gio-2.0`])
 
-POLKIT_GOBJECT_REQUIRED=0.98
-
-PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 libarchive >= 2.8.0 libxml-2.0 >= 2.4 ])
+PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ])
 PKG_CHECK_MODULES(SOUP, [libsoup-2.4])
-
-save_LIBS=$LIBS
-LIBS=$BASE_LIBS
-AC_CHECK_FUNCS(archive_read_support_filter_all)
-LIBS=$save_LIBS
-
-LIBGPGME_DEPENDENCY="1.1.8"
-PKG_CHECK_MODULES(DEP_GPGME, gpgme-pthread >= $LIBGPGME_DEPENDENCY, have_gpgme=yes, [
-    m4_ifdef([AM_PATH_GPGME_PTHREAD], [
-       AM_PATH_GPGME_PTHREAD($LIBGPGME_DEPENDENCY, have_gpgme=yes, have_gpgme=no)
-    ],[ have_gpgme=no ])
-])
-AS_IF([ test x$have_gpgme = xno ], [
-   AC_MSG_ERROR([Need GPGME_PTHREAD version $LIBGPGME_DEPENDENCY or later])
-])
-
-AC_ARG_ENABLE([system-helper],
-              AC_HELP_STRING([--disable-system-helper],
-                             [Disable system helper]),
-              [],
-              [enable_system_helper=yes])
-if test "x$enable_system_helper" = "xyes"; then
-  PKG_CHECK_MODULES(POLKIT, \
-  		    polkit-gobject-1 >= $POLKIT_GOBJECT_REQUIRED)
-  AC_DEFINE([USE_SYSTEM_HELPER], [1], [Define if using system-helper])
-fi
-AM_CONDITIONAL(BUILD_SYSTEM_HELPER, test x$enable_system_helper = xyes)
-
-AC_ARG_ENABLE([xauth],
-              AC_HELP_STRING([--disable-xauth],
-                             [Disable Xauth use]),
-              [],
-              [enable_xauth=yes])
-if test "x$enable_xauth" = "xyes"; then
-   PKG_CHECK_MODULES(XAUTH, [xau])
-   AC_DEFINE([ENABLE_XAUTH], [1],
-      [Define if using xauth])
-fi
-
-AC_ARG_ENABLE([sandboxed-triggers],
-              AC_HELP_STRING([--disable-sandboxed-triggers],
-                             [Disable sandboxed triggers]),
-              [],
-              [enable_sandboxed_triggers=yes])
-if test "x$enable_sandboxed_triggers" = "xno"; then
-   AC_DEFINE([DISABLE_SANDBOXED_TRIGGERS], [1],
-      [Define if sandboxed triggers are disabled])
-fi
-
 PKG_CHECK_MODULES(OSTREE, [ostree-1 >= $OSTREE_REQS])
-
-PKG_CHECK_MODULES(FUSE, [fuse])
-
 PKG_CHECK_MODULES(JSON, [json-glib-1.0])
-
-AC_ARG_ENABLE([seccomp],
-              AC_HELP_STRING([--disable-seccomp],
-                             [Disable seccomp]),
-              [],
-              [enable_seccomp=yes])
-
-if test "x$enable_seccomp" = "xyes"; then
-   PKG_CHECK_MODULES(LIBSECCOMP, [libseccomp])
-   AC_DEFINE([ENABLE_SECCOMP], [1],
-      [Define if using seccomp])
-fi
-
-AC_ARG_WITH(priv-mode,
-            AS_HELP_STRING([--with-priv-mode=setuid/none],
-                           [How to set privilege-raising during install (only needed if userns not working)]),
-            [],
-            [with_priv_mode="none"])
-
-AM_CONDITIONAL(PRIV_MODE_SETUID, test "x$with_priv_mode" = "xsetuid")
-
-AC_ARG_ENABLE(sudo,
-              AS_HELP_STRING([--enable-sudo],[Use sudo to set setuid flags on binaries during install (only needed if userns disabled)]),
-              [SUDO_BIN="sudo"], [SUDO_BIN=""])
-AC_SUBST([SUDO_BIN])
-
-# Do we enable building peer to peer support using libostree’s experimental (non-stable) API?
-# If so, OSTREE_ENABLE_EXPERIMENTAL_API needs to be #defined before ostree.h is
-# included.
-AC_ARG_ENABLE([p2p],
-  [AS_HELP_STRING([--enable-p2p],
-                  [Enable unstable peer to peer support [default=no]])],,
-  [enable_p2p=no])
-AS_IF([test x$enable_p2p = xyes],[
-  PKG_CHECK_MODULES(OSTREE, [ostree-1 >= $OSTREE_REQS])
-
-  ostree_features=$($PKG_CONFIG --variable=features ostree-1)
-  AS_CASE(["$ostree_features"],
-          [*experimental*],[have_ostree_experimental=yes])
-
-  AS_IF([test "x$have_ostree_experimental" != "xyes"],
-        [AC_MSG_ERROR([Experimental API not found in ostree-1, which is needed for --enable-p2p. OSTree must be compiled with --enable-experimental-api.])])
-
-  AC_DEFINE([OSTREE_ENABLE_EXPERIMENTAL_API],[1],[Define if libostree experimental API should be enabled])
-  AC_DEFINE([FLATPAK_ENABLE_P2P],[1],[Define if peer to peer support should be enabled])
-])
-AM_CONDITIONAL([ENABLE_P2P],[test x$enable_p2p = xyes])
 
 dnl ************************
 dnl *** check for libelf ***
@@ -286,14 +114,6 @@ AS_IF([ test $have_libelf = maybe ], [
 if test x$have_libelf != xyes; then
   AC_MSG_ERROR([libelf not found])
 fi
-
-AC_ARG_WITH(system-install-dir,
-           [AS_HELP_STRING([--with-system-install-dir=DIR],
-                           [Location of system installation [LOCALSTATEDIR/lib/flatpak]])],
-           [],
-           [with_system_install_dir='$(localstatedir)/lib/flatpak'])
-SYSTEM_INSTALL_DIR=$with_system_install_dir
-AC_SUBST(SYSTEM_INSTALL_DIR)
 
 dnl This only checks for the header, not the library.
 AC_ARG_WITH([dwarf-header],
@@ -366,7 +186,6 @@ AM_CONDITIONAL([ENABLE_GTK_DOC], [false])
 ])
 AM_CONDITIONAL([ENABLE_GTK_DOC_CHECK], [test "x$enable_gtk_doc_check" = xyes])
 
-
 AC_ARG_ENABLE(docbook-docs,
         [AS_HELP_STRING([--enable-docbook-docs],[build documentation (requires xmlto)])],
         enable_docbook_docs=$enableval, enable_docbook_docs=auto)
@@ -395,37 +214,6 @@ fi
 AM_CONDITIONAL(DOCBOOK_DOCS_ENABLED, test x$enable_docbook_docs = xyes)
 AC_ARG_VAR([XMLTO],[Define/override the 'xmlto' location.])
 AC_ARG_VAR([XMLTO_FLAGS],[Define/override 'xmlto' options, like '--skip-validation'.])
-
-
-##################################################
-# Visibility handling
-##################################################
-
-HIDDEN_VISIBILITY_CFLAGS=""
-case "$host" in
-  *)
-    dnl on other compilers, check if we can do -fvisibility=hidden
-    SAVED_CFLAGS="${CFLAGS}"
-    CFLAGS="-fvisibility=hidden"
-    AC_MSG_CHECKING([for -fvisibility=hidden compiler flag])
-    AC_TRY_COMPILE([], [int main (void) { return 0; }],
-                   AC_MSG_RESULT(yes)
-                   enable_fvisibility_hidden=yes,
-                   AC_MSG_RESULT(no)
-                   enable_fvisibility_hidden=no)
-    CFLAGS="${SAVED_CFLAGS}"
-
-    AS_IF([test "${enable_fvisibility_hidden}" = "yes"], [
-      AC_DEFINE([FLATPAK_EXTERN], [__attribute__((visibility("default"))) extern],
-                [defines how to decorate public symbols while building])
-      HIDDEN_VISIBILITY_CFLAGS="-fvisibility=hidden"
-    ], [
-      AC_DEFINE([FLATPAK_EXTERN], [extern],
-                [defines how to decorate public symbols while building])
-    ])
-    ;;
-esac
-AC_SUBST(HIDDEN_VISIBILITY_CFLAGS)
 
 GLIB_TESTS
 
@@ -462,11 +250,7 @@ AC_CONFIG_FILES([
 Makefile
 doc/Makefile
 doc/reference/Makefile
-flatpak.pc
-lib/flatpak-version-macros.h
-doc/reference/version.xml
-doc/flatpak-docs.xml
-po/Makefile.in
+doc/flatpak-builder-docs.xml
 ])
 AC_OUTPUT
 
@@ -477,14 +261,6 @@ else
 fi
 
 echo ""
-echo "          Flatpak $FLATPAK_VERSION"
-echo "          ============="
-echo ""
-echo "          Build system helper:    $enable_system_helper"
-echo "          Build bubblewrap:       $build_bwrap"
-echo "          Use sandboxed triggers: $enable_sandboxed_triggers"
-echo "          Use seccomp:            $enable_seccomp"
-echo "          Privileged group:       $PRIVILEGED_GROUP"
-echo "          Privilege mode:         $with_priv_mode"
-echo "          Peer to peer support:   $enable_p2p"
+echo "          flatpak-builder $FLATPAK_VERSION"
+echo "          ============================="
 echo ""
