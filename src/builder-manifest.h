@@ -23,7 +23,7 @@
 
 #include <json-glib/json-glib.h>
 
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 #include "builder-options.h"
 #include "builder-module.h"
 #include "builder-cache.h"

@@ -31,7 +31,7 @@
 
 #include "builder-source-bzr.h"
 #include "builder-utils.h"
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 
 struct BuilderSourceBzr
 {

@@ -20,7 +20,7 @@
 
 #include "config.h"
 
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 
 #include <glib/gi18n.h>
 

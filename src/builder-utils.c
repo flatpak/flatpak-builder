@@ -36,7 +36,7 @@
 #include <gio/gunixoutputstream.h>
 #include <gio/gunixinputstream.h>
 
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 #include "builder-utils.h"
 
 char *

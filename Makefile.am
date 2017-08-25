@@ -27,8 +27,6 @@ AM_CPPFLAGS =							\
 	-DFLATPAK_BASEDIR=\"$(pkgdatadir)\"			\
 	-DG_LOG_DOMAIN=\"flatpak-builder\"			\
 	-I$(srcdir)/libglnx					\
-	-I$(srcdir)/common					\
-	-I$(builddir)/common					\
 	-include "config.h"					\
 	$(NULL)
 
@@ -46,7 +44,6 @@ libglnx_cflags := \
 libglnx_libs := $(BASE_LIBS)
 include libglnx/Makefile-libglnx.am.inc
 
-include common/Makefile.am.inc
 include src/Makefile.am.inc
 include tests/Makefile.am.inc
 

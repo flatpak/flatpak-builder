@@ -31,7 +31,7 @@
 
 #include "builder-git.h"
 #include "builder-utils.h"
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 
 static gboolean
 git (GFile   *dir,

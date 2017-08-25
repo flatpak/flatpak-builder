@@ -29,7 +29,7 @@
 
 #include "builder-manifest.h"
 #include "builder-utils.h"
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 #include "builder-post-process.h"
 #include "builder-extension.h"
 

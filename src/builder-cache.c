@@ -31,7 +31,7 @@
 #include <ostree.h>
 #include "libglnx/libglnx.h"
 
-#include "flatpak-utils.h"
+#include "builder-flatpak-utils.h"
 #include "builder-utils.h"
 #include "builder-cache.h"
 #include "builder-context.h"

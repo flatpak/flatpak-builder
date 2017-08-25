@@ -36,10 +36,12 @@ flatpak_builder_SOURCES = \
 	src/builder-cache.h \
 	src/builder-utils.c \
 	src/builder-utils.h \
+	src/builder-flatpak-utils.c \
+	src/builder-flatpak-utils.h \
 	src/builder-git.c \
 	src/builder-git.h \
 	$(NULL)
 
 flatpak_builder_LDADD = $(AM_LDADD) $(BASE_LIBS) $(OSTREE_LIBS) $(JSON_LIBS) $(SOUP_LIBS) $(LIBELF_LIBS) \
-			libglnx.la libflatpak-common.la
+			libglnx.la
 flatpak_builder_CFLAGS = $(AM_CFLAGS) $(BASE_CFLAGS) $(OSTREE_CFLAGS) $(JSON_CFLAGS) $(SOUP_CFLAGS)

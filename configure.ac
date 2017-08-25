@@ -41,7 +41,7 @@ AC_DISABLE_STATIC
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
 
-AC_CONFIG_SRCDIR([common/flatpak-utils.c])
+AC_CONFIG_SRCDIR([src/builder-main.c])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([1.13.4 no-define no-dist-gzip dist-xz tar-ustar foreign subdir-objects])
