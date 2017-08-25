@@ -25,7 +25,7 @@ m4_define([flatpak_version],
 AC_INIT([flatpak-builder],
         [flatpak_version],
         [https://github.com/flatpak/flatpak/issues],
-        [flatpak],
+        [flatpak-builder],
         [http://flatpak.org/])
 
 GLIB_REQS=2.44
