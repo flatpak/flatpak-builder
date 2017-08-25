@@ -64,8 +64,8 @@ Flatpak-1.0.*
 /doc/reference/gtkdoc-check.test
 /doc/reference/gtkdoc-check.trs
 /doc/reference/version.xml
-/doc/flatpak-docs.html
-/doc/flatpak-docs.xml
+/doc/flatpak-builder-docs.html
+/doc/flatpak-builder-docs.xml
 /doc/*.1
 /doc/*.5
 /test-doc-portal
