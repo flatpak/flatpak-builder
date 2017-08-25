@@ -13,23 +13,21 @@ AC_PREREQ([2.63])
 # on the stable branch, interface age == micro
 # on the unstable (ie master), interface age = 0
 
-m4_define([flatpak_major_version], [0])
-m4_define([flatpak_minor_version], [9])
-m4_define([flatpak_micro_version], [8])
-m4_define([flatpak_interface_age], [8])
-m4_define([flatpak_binary_age],
-          [m4_eval(10000 * flatpak_major_version + 100 * flatpak_minor_version + flatpak_micro_version)])
-m4_define([flatpak_version],
-          [flatpak_major_version.flatpak_minor_version.flatpak_micro_version])
+m4_define([flatpak_builder_major_version], [0])
+m4_define([flatpak_builder_minor_version], [9])
+m4_define([flatpak_builder_micro_version], [8])
+m4_define([flatpak_builder_version],
+          [flatpak_builder_major_version.flatpak_builder_minor_version.flatpak_builder_micro_version])
 
 AC_INIT([flatpak-builder],
-        [flatpak_version],
+        [flatpak_builder_version],
         [https://github.com/flatpak/flatpak/issues],
         [flatpak-builder],
         [http://flatpak.org/])
 
 GLIB_REQS=2.44
 OSTREE_REQS=2017.10
+FLATPAK_REQS=0.9.8
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
@@ -37,6 +35,17 @@ AC_SYS_LARGEFILE
 AC_PROG_CC
 AM_PROG_CC_C_O
 AC_DISABLE_STATIC
+
+AC_CHECK_PROG([FLATPAK], [flatpak], [flatpak], [false])
+
+if test "x$FLATPAK" = xfalse; then
+   AC_MSG_ERROR([You need flatpak installed])
+else
+   FLATPAK_VERSION=`$FLATPAK --version | sed 's,.*\ \([0-9]*\.[0-9]*\.[0-9]*\)$,\1,'`
+   AX_COMPARE_VERSION([$FLATPAK_REQS],[gt],[$FLATPAK_VERSION],
+         AC_MSG_ERROR([You need at least version $FLATPAK_REQS of flatpak, your version is $FLATPAK_VERSION]))
+fi
+
 
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
@@ -84,14 +93,7 @@ AC_CHECK_FUNCS(fdwalk)
 AC_CHECK_HEADER([sys/xattr.h], [], AC_MSG_ERROR([You must have sys/xattr.h from glibc]))
 AC_CHECK_HEADER([sys/capability.h], have_caps=yes, AC_MSG_ERROR([sys/capability.h header not found]))
 
-AC_SUBST([GLIB_MKENUMS], [`$PKG_CONFIG --variable glib_mkenums glib-2.0`])
-AC_SUBST([GLIB_COMPILE_RESOURCES], [`$PKG_CONFIG --variable glib_compile_resources gio-2.0`])
-AC_SUBST([GDBUS_CODEGEN], [`$PKG_CONFIG --variable gdbus_codegen gio-2.0`])
-
-PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ])
-PKG_CHECK_MODULES(SOUP, [libsoup-2.4])
-PKG_CHECK_MODULES(OSTREE, [ostree-1 >= $OSTREE_REQS])
-PKG_CHECK_MODULES(JSON, [json-glib-1.0])
+PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 libsoup-2.4 ostree-1 >= $OSTREE_REQS json-glib-1.0])
 
 dnl ************************
 dnl *** check for libelf ***
@@ -170,22 +172,6 @@ AM_CONDITIONAL(BUILD_DOCUMENTATION, test x$enable_documentation = xyes)
 
 GOBJECT_INTROSPECTION_CHECK([1.40.0])
 
-# gtkdocize greps for ^GTK_DOC_CHECK, so we need to put it on its own line
-m4_ifdef([GTK_DOC_CHECK], [
-GTK_DOC_CHECK([1.20], [--flavour no-tmpl])
-
-AC_ARG_ENABLE([gtk-doc-check],
-              [AS_HELP_STRING([--enable-gtk-doc-check],
-                              [Check completeness of documentation in 'make check'])],
-    [],
-    [enable_gtk_doc_check=no])
-],[
-enable_gtk_doc="disabled (no gtk-doc)"
-enable_gtk_doc_check="disabled (no gtk-doc)"
-AM_CONDITIONAL([ENABLE_GTK_DOC], [false])
-])
-AM_CONDITIONAL([ENABLE_GTK_DOC_CHECK], [test "x$enable_gtk_doc_check" = xyes])
-
 AC_ARG_ENABLE(docbook-docs,
         [AS_HELP_STRING([--enable-docbook-docs],[build documentation (requires xmlto)])],
         enable_docbook_docs=$enableval, enable_docbook_docs=auto)
@@ -217,34 +203,8 @@ AC_ARG_VAR([XMLTO_FLAGS],[Define/override 'xmlto' options, like '--skip-validati
 
 GLIB_TESTS
 
-FLATPAK_MAJOR_VERSION=flatpak_major_version
-FLATPAK_MINOR_VERSION=flatpak_minor_version
-FLATPAK_MICRO_VERSION=flatpak_micro_version
-FLATPAK_INTERFACE_AGE=flatpak_interface_age
-FLATPAK_VERSION=flatpak_version
-AC_SUBST(FLATPAK_MAJOR_VERSION)
-AC_SUBST(FLATPAK_MINOR_VERSION)
-AC_SUBST(FLATPAK_MICRO_VERSION)
-AC_SUBST(FLATPAK_INTERFACE_AGE)
-AC_SUBST(FLATPAK_VERSION)
-AC_DEFINE_UNQUOTED([PACKAGE_MAJOR_VERSION], $FLATPAK_MAJOR_VERSION, [Major version])
-AC_DEFINE_UNQUOTED([PACKAGE_MINOR_VERSION], $FLATPAK_MINOR_VERSION, [Minor version])
-AC_DEFINE_UNQUOTED([PACKAGE_MICRO_VERSION], $FLATPAK_MICRO_VERSION, [Micro version])
-
-# libtool versioning
-#LT_RELEASE=$FLATPAK_MAJOR_VERSION.$FLATPAK_MINOR_VERSION
-#LT_CURRENT=`expr $FLATPAK_MICRO_VERSION - $FLATPAK_INTERFACE_AGE`
-#LT_REVISION=$FLATPAK_INTERFACE_AGE
-#LT_AGE=`expr $FLATPAK_BINARY_AGE - $FLATPAK_INTERFACE_AGE`
-#LT_CURRENT_MINUS_AGE=`expr $LT_CURRENT - $LT_AGE`
-
-m4_define([lt_current], [m4_eval(10000 * flatpak_major_version +  100 * flatpak_minor_version + flatpak_micro_version - flatpak_interface_age)])
-m4_define([lt_revision], [flatpak_interface_age])
-m4_define([lt_age], [m4_eval(flatpak_binary_age - flatpak_interface_age)])
-LT_VERSION_INFO="lt_current:lt_revision:lt_age"
-LT_CURRENT_MINUS_AGE=m4_eval(lt_current - lt_age)
-AC_SUBST(LT_VERSION_INFO)
-AC_SUBST(LT_CURRENT_MINUS_AGE)
+FLATPAK_BUILDER_VERSION=flatpak_builder_version
+AC_SUBST(FLATPAK_BUILDER_VERSION)
 
 AC_CONFIG_FILES([
 Makefile
@@ -254,13 +214,7 @@ doc/flatpak-builder-docs.xml
 ])
 AC_OUTPUT
 
-if test x$BWRAP = xfalse ; then
-  build_bwrap="yes"
-else
-  build_bwrap="no"
-fi
-
 echo ""
-echo "          flatpak-builder $FLATPAK_VERSION"
+echo "          flatpak-builder $FLATPAK_BUILDER_VERSION"
 echo "          ============================="
 echo ""
