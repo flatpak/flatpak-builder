@@ -47,7 +47,7 @@ libglnx_libs := $(BASE_LIBS)
 include libglnx/Makefile-libglnx.am.inc
 
 include common/Makefile.am.inc
-include builder/Makefile.am.inc
+include src/Makefile.am.inc
 include tests/Makefile.am.inc
 
 EXTRA_DIST += README.md
