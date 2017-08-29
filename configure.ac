@@ -209,7 +209,6 @@ AC_SUBST(FLATPAK_BUILDER_VERSION)
 AC_CONFIG_FILES([
 Makefile
 doc/Makefile
-doc/reference/Makefile
 doc/flatpak-builder-docs.xml
 ])
 AC_OUTPUT
