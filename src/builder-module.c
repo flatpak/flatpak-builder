@@ -1010,6 +1010,7 @@ setup_build_args (GFile          *app_dir,
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
+  g_ptr_array_add (args, g_strdup ("--die-with-parent"));
 
   source_dir_path_canonical = realpath (source_dir_path, NULL);
   if (source_dir_path_canonical == NULL)

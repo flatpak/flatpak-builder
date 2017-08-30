@@ -1802,6 +1802,7 @@ command (GFile      *app_dir,
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
 
+  g_ptr_array_add (args, g_strdup ("--die-with-parent"));
   g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
   if (extra_args)
     {
@@ -1981,6 +1982,7 @@ appstream_compose (GFile   *app_dir,
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
+  g_ptr_array_add (args, g_strdup ("--die-with-parent"));
   g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
   g_ptr_array_add (args, g_file_get_path (app_dir));
   g_ptr_array_add (args, g_strdup ("appstream-compose"));
@@ -3244,6 +3246,7 @@ builder_manifest_run (BuilderManifest *self,
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
+  g_ptr_array_add (args, g_strdup ("--die-with-parent"));
 
   build_dir_path = g_file_get_path (builder_context_get_build_dir (context));
   g_ptr_array_add (args, g_strdup_printf ("--bind-mount=/run/%s=%s",
