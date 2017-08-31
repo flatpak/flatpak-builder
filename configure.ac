@@ -21,7 +21,7 @@ m4_define([flatpak_builder_version],
 
 AC_INIT([flatpak-builder],
         [flatpak_builder_version],
-        [https://github.com/flatpak/flatpak/issues],
+        [https://github.com/flatpak/flatpak-builder/issues],
         [flatpak-builder],
         [http://flatpak.org/])
 
