@@ -1,0 +1,6 @@
+Major changes in 0.9.9
+======================
+
+flatpak-builder was split out from flatpak into its own module.
+
+ * Pass --die-with-parent to all flatpak build commands
