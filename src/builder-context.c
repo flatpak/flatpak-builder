@@ -878,17 +878,21 @@ char **
 builder_context_extend_env (BuilderContext *self,
                             char          **envp)
 {
+  g_autofree char *path = NULL;
+
+  path = g_strdup (g_environ_getenv (envp, "PATH"));
+  if (path == NULL)
+    path = g_strdup ("/app/bin:/usr/bin"); /* This is the flatpak default PATH, we alway set it so we can easily append to it */
+
   if (self->use_ccache)
     {
-      const char *old_path = g_environ_getenv (envp, "PATH");
-      g_autofree char *new_path = NULL;
-      if (old_path == NULL)
-        old_path = "/app/bin:/usr/bin"; /* This is the flatpak default PATH */
-
-      new_path = g_strdup_printf ("/run/ccache/bin:%s", old_path);
-      envp = g_environ_setenv (envp, "PATH", new_path, TRUE);
+      char *new_path = g_strdup_printf ("/run/ccache/bin:%s", path);
+      g_free (path);
+      path = new_path;
       envp = g_environ_setenv (envp, "CCACHE_DIR", "/run/ccache", TRUE);
     }
+
+  envp = g_environ_setenv (envp, "PATH", path, TRUE);
 
   return envp;
 }

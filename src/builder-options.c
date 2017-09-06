@@ -42,6 +42,8 @@ struct BuilderOptions
   char       *cppflags;
   char       *cxxflags;
   char       *ldflags;
+  char       *append_path;
+  char       *append_ld_library_path;
   char       *prefix;
   char      **env;
   char      **build_args;
@@ -72,6 +74,8 @@ enum {
   PROP_ARCH,
   PROP_BUILD_ARGS,
   PROP_CONFIG_OPTS,
+  PROP_APPEND_PATH,
+  PROP_APPEND_LD_LIBRARY_PATH,
   LAST_PROP
 };
 
@@ -85,6 +89,8 @@ builder_options_finalize (GObject *object)
   g_free (self->cxxflags);
   g_free (self->cppflags);
   g_free (self->ldflags);
+  g_free (self->append_path);
+  g_free (self->append_ld_library_path);
   g_free (self->prefix);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
@@ -118,6 +124,14 @@ builder_options_get_property (GObject    *object,
 
     case PROP_LDFLAGS:
       g_value_set_string (value, self->ldflags);
+      break;
+
+    case PROP_APPEND_PATH:
+      g_value_set_string (value, self->append_path);
+      break;
+
+    case PROP_APPEND_LD_LIBRARY_PATH:
+      g_value_set_string (value, self->append_ld_library_path);
       break;
 
     case PROP_PREFIX:
@@ -182,6 +196,16 @@ builder_options_set_property (GObject      *object,
     case PROP_LDFLAGS:
       g_clear_pointer (&self->ldflags, g_free);
       self->ldflags = g_value_dup_string (value);
+      break;
+
+    case PROP_APPEND_PATH:
+      g_clear_pointer (&self->append_path, g_free);
+      self->append_path = g_value_dup_string (value);
+      break;
+
+    case PROP_APPEND_LD_LIBRARY_PATH:
+      g_clear_pointer (&self->append_ld_library_path, g_free);
+      self->append_ld_library_path = g_value_dup_string (value);
       break;
 
     case PROP_PREFIX:
@@ -259,6 +283,20 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_LDFLAGS,
                                    g_param_spec_string ("ldflags",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_APPEND_PATH,
+                                   g_param_spec_string ("append-path",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_APPEND_LD_LIBRARY_PATH,
+                                   g_param_spec_string ("append-ld-library-path",
                                                         "",
                                                         "",
                                                         NULL,
@@ -583,6 +621,69 @@ builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags));
 }
 
+static char *
+builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context, const char *initial_value, size_t field_offset)
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+  GString *path_list = NULL;
+
+  if (initial_value)
+    path_list = g_string_new (initial_value);
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      const char *append = G_STRUCT_MEMBER (const char *, o, field_offset);
+
+      if (append)
+        {
+          if (path_list == NULL)
+            path_list = g_string_new ("");
+
+          if (path_list->len > 0)
+            g_string_append_c (path_list, ':');
+
+          g_string_append (path_list, append);
+        }
+    }
+
+  if (path_list)
+    return g_string_free (path_list, FALSE);
+
+  return NULL;
+}
+
+static char **
+builder_options_update_ld_path (BuilderOptions *self, BuilderContext *context, char **envp)
+{
+  g_autofree char *path = NULL;
+  const char *old = NULL;
+
+  old = g_environ_getenv (envp, "LD_LIBRARY_PATH");
+  if (old == NULL)
+    old = "/app/lib";
+
+  path = builder_options_get_appended_path (self, context, old,
+                                            G_STRUCT_OFFSET (BuilderOptions, append_ld_library_path));
+  if (path)
+    envp = g_environ_setenv (envp, "LD_LIBRARY_PATH", path, TRUE);
+
+  return envp;
+}
+
+static char **
+builder_options_update_path (BuilderOptions *self, BuilderContext *context, char **envp)
+{
+  g_autofree char *path = NULL;
+  path = builder_options_get_appended_path (self, context,
+                                            g_environ_getenv (envp, "PATH"),
+                                            G_STRUCT_OFFSET (BuilderOptions, append_path));
+  if (path)
+    envp = g_environ_setenv (envp, "PATH", path, TRUE);
+  return envp;
+}
+
 const char *
 builder_options_get_prefix (BuilderOptions *self, BuilderContext *context)
 {
@@ -688,6 +789,9 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   ldflags = builder_options_get_ldflags (self, context);
   if (ldflags)
     envp = g_environ_setenv (envp, "LDFLAGS", ldflags, FALSE);
+
+  envp = builder_options_update_path (self, context, envp);
+  envp = builder_options_update_ld_path (self, context, envp);
 
   return envp;
 }
