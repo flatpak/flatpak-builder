@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/statfs.h>
+#include <glib/gi18n.h>
 
 #include "builder-manifest.h"
 #include "builder-utils.h"
@@ -2331,6 +2332,8 @@ builder_manifest_finish (BuilderManifest *self,
       g_autofree char *ref = NULL;
       g_print ("Finishing app\n");
 
+      builder_set_term_title (_("Finishing %s"), self->id);
+
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;
 
@@ -2701,6 +2704,8 @@ builder_manifest_create_platform (BuilderManifest *self,
 
       g_print ("Creating platform based on %s\n", self->runtime);
 
+      builder_set_term_title (_("Creating platform for %s"), self->id);
+
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;
 
@@ -2998,6 +3003,8 @@ builder_manifest_bundle_sources (BuilderManifest *self,
       GList *l;
 
       g_print ("Bundling sources\n");
+
+      builder_set_term_title (_("Bunding sources for %s"), self->id);
 
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;

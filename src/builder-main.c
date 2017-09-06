@@ -25,6 +25,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <glib/gi18n.h>
 #include <gio/gio.h>
 #include "libglnx/libglnx.h"
 
@@ -722,6 +723,7 @@ main (int    argc,
       };
 
       g_print ("Mirroring screenshots from appdata\n");
+      builder_set_term_title (_("Mirroring screenshots"));
 
       if (!flatpak_mkdir_p (screenshots, NULL, &error))
         {
@@ -752,6 +754,7 @@ main (int    argc,
       GList *l;
 
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
+      builder_set_term_title (_("Exporting to repository"));
 
       if (!do_export (build_context, &error,
                       FALSE,
