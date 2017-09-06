@@ -124,7 +124,10 @@ run_script (BuilderContext *context,
   g_autofree char *source_dir_path_canonical = NULL;
   g_autoptr(GFile) source_dir_path_canonical_file = NULL;
   g_auto(GStrv) build_args = NULL;
+  g_auto(GStrv) env = NULL;
   int i;
+
+  env = builder_options_get_env (build_options, context);
 
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
@@ -135,6 +138,12 @@ run_script (BuilderContext *context,
 
   g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
   g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s", source_dir_path_canonical));
+
+  if (env)
+    {
+      for (i = 0; env[i] != NULL; i++)
+        g_ptr_array_add (args, g_strdup_printf ("--env=%s", env[i]));
+    }
 
   build_args = builder_options_get_build_args (build_options, context, error);
   if (build_args == NULL)
