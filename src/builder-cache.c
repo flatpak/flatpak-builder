@@ -228,6 +228,8 @@ gboolean
 builder_cache_open (BuilderCache *self,
                     GError      **error)
 {
+  g_autoptr(GKeyFile) config = NULL;
+
   self->repo = ostree_repo_new (builder_context_get_cache_dir (self->context));
 
   /* We don't need fsync on checkouts as they are transient, and we
@@ -246,6 +248,12 @@ builder_cache_open (BuilderCache *self,
     }
 
   if (!ostree_repo_open (self->repo, NULL, error))
+    return FALSE;
+
+  config = ostree_repo_copy_config (self->repo);
+  g_key_file_set_value (config, "core", "min-free-space-percent", "0");
+
+  if (!ostree_repo_write_config (self->repo, config, error))
     return FALSE;
 
   /* At one point we used just the branch name as a ref, make sure to
