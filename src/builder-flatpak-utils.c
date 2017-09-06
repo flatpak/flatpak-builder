@@ -279,9 +279,8 @@ flatpak_get_arch (void)
 #else
   return "armeb";
 #endif
-#else
-  return flatpak_get_kernel_arch ();
 #endif
+  return flatpak_get_kernel_arch ();
 }
 
 gboolean
