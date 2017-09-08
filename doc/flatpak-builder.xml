@@ -238,7 +238,13 @@
 
                 <listitem><para>
                   List all the (local) files that the manifest depends on.
-                </para></listitem>
+                  </para>
+
+                  <para>
+                  Only the <option>--verbose</option> option can be combined
+                  with this option.
+                  </para>
+                </listitem>
             </varlistentry>
 
             <varlistentry>
