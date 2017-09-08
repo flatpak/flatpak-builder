@@ -158,6 +158,17 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--default-branch=<replaceable>BRANCH</replaceable></option></term>
+
+                <listitem><para>
+                    Set the default branch to
+                    <replaceable>BRANCH</replaceable>. This is used if
+                    the manifest does not specify a branch. The default
+                    is <literal>master</literal>.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--disable-cache</option></term>
 
                 <listitem><para>
