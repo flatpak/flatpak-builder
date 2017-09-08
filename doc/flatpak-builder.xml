@@ -211,7 +211,16 @@
                   arguments to give the same environment as the build, and the same permissions the final app
                   will have. The command to run must be the last argument passed to
                   flatpak-builder, after the directory and the manifest.
-                </para></listitem>
+                  </para>
+
+                  <para>
+                  Only the
+                  <option>--arch=</option><replaceable>ARCH</replaceable>,
+                  <option>--ccache</option> and
+                  <option>--verbose</option> options can be combined
+                  with this option.
+                  </para>
+                </listitem>
             </varlistentry>
 
             <varlistentry>
