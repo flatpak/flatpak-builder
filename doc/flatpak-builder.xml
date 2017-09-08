@@ -241,6 +241,18 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--bundle-sources</option></term>
+
+                <listitem><para>
+                    Create an additional runtime with the source code for
+                    this module. It will be named
+                    <replaceable>app-id</replaceable><literal>.Sources</literal>,
+                    for example
+                    <literal>org.gnome.Maps.Sources</literal>.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--build-only</option></term>
 
                 <listitem><para>
