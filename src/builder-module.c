@@ -1204,6 +1204,28 @@ builder_module_ensure_writable (BuilderModule  *self,
   return TRUE;
 }
 
+static GFile *
+find_file_with_extension (GFile *dir,
+                          const char *extension)
+{
+  g_autoptr(GFileEnumerator) dir_enum = NULL;
+  GFileInfo *next = NULL;
+
+  dir_enum = g_file_enumerate_children (dir, "standard::name,standard::type",
+                                        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                        NULL, NULL);
+  while (dir_enum != NULL &&
+         (next = g_file_enumerator_next_file (dir_enum, NULL, NULL)))
+    {
+      g_autoptr(GFileInfo) child_info = next;
+      const char *name = g_file_info_get_name (child_info);
+      if (g_str_has_suffix (name, extension))
+        return g_file_enumerator_get_child (dir_enum, child_info);
+    }
+
+  return NULL;
+}
+
 static gboolean
 builder_module_build_helper (BuilderModule  *self,
                              BuilderCache   *cache,
@@ -1217,11 +1239,11 @@ builder_module_build_helper (BuilderModule  *self,
   g_autofree char *make_l = NULL;
   const char *make_cmd = NULL;
 
-  gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE;
+  gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE;
   g_autoptr(GFile) configure_file = NULL;
   g_autoptr(GFile) build_dir = NULL;
   g_autofree char *build_dir_relative = NULL;
-  gboolean has_configure;
+  gboolean has_configure = FALSE;
   gboolean var_require_builddir;
   gboolean use_builddir;
   int i;
@@ -1279,6 +1301,8 @@ builder_module_build_helper (BuilderModule  *self,
     cmake_ninja = TRUE;
   else if (!strcmp (self->buildsystem, "simple"))
     simple = TRUE;
+  else if (!strcmp (self->buildsystem, "qmake"))
+    qmake = TRUE;
   else
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Invalid buildsystem: \"%s\"",
@@ -1318,6 +1342,15 @@ builder_module_build_helper (BuilderModule  *self,
           return FALSE;
         }
       configure_file = g_object_ref (meson_file);
+    }
+  else if (qmake)
+    {
+      configure_file = find_file_with_extension (source_subdir, ".pro");
+      if (configure_file == NULL)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find *.pro file", self->name);
+          return FALSE;
+        }
     }
   else if (autotools)
     {
@@ -1380,9 +1413,9 @@ builder_module_build_helper (BuilderModule  *self,
       const char *configure_cmd;
       const char *cmake_generator = NULL;
       gchar *configure_final_arg = NULL;
-      g_autofree char *configure_content = NULL;
       g_auto(GStrv) configure_args = NULL;
       g_autoptr(GPtrArray) configure_args_arr = g_ptr_array_new ();
+      g_autofree char *configure_content = NULL;
 
       if (!g_file_load_contents (configure_file, NULL, &configure_content, NULL, NULL, error))
         {
@@ -1412,6 +1445,13 @@ builder_module_build_helper (BuilderModule  *self,
               configure_cmd = "cmake";
               configure_final_arg = g_strdup("..");
             }
+          else if (qmake)
+            {
+              g_autofree char *basename = g_file_get_basename (configure_file);
+
+              configure_cmd = "qmake";
+              configure_final_arg = g_strconcat ("../", basename, NULL);
+            }
           else if (meson)
             {
               configure_cmd = "meson";
@@ -1431,6 +1471,11 @@ builder_module_build_helper (BuilderModule  *self,
               configure_cmd = "cmake";
               configure_final_arg = g_strdup (".");
             }
+          else if (qmake)
+            {
+              configure_cmd = "qmake";
+              configure_final_arg = g_file_get_basename (configure_file);
+            }
           else
             {
               g_assert (!meson);
@@ -1449,6 +1494,11 @@ builder_module_build_helper (BuilderModule  *self,
                                                                 builder_options_get_prefix (self->build_options, context)));
           g_ptr_array_add (configure_args_arr, g_strdup ("-G"));
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("%s", cmake_generator));
+        }
+      else if (qmake)
+        {
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'",
+                                                                builder_options_get_prefix (self->build_options, context)));
         }
       else /* autotools and meson */
         {
@@ -1480,7 +1530,7 @@ builder_module_build_helper (BuilderModule  *self,
           return FALSE;
         }
     }
-  else if (autotools || cmake)
+  else if (autotools || cmake || qmake)
     {
       const char *makefile_names[] =  {"Makefile", "makefile", "GNUmakefile", NULL};
 
