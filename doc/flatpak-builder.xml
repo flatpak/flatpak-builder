@@ -158,6 +158,17 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--default-branch=<replaceable>BRANCH</replaceable></option></term>
+
+                <listitem><para>
+                    Set the default branch to
+                    <replaceable>BRANCH</replaceable>. This is used if
+                    the manifest does not specify a branch. The default
+                    is <literal>master</literal>.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--disable-cache</option></term>
 
                 <listitem><para>
@@ -200,7 +211,16 @@
                   arguments to give the same environment as the build, and the same permissions the final app
                   will have. The command to run must be the last argument passed to
                   flatpak-builder, after the directory and the manifest.
-                </para></listitem>
+                  </para>
+
+                  <para>
+                  Only the
+                  <option>--arch=</option><replaceable>ARCH</replaceable>,
+                  <option>--ccache</option> and
+                  <option>--verbose</option> options can be combined
+                  with this option.
+                  </para>
+                </listitem>
             </varlistentry>
 
             <varlistentry>
@@ -218,7 +238,13 @@
 
                 <listitem><para>
                   List all the (local) files that the manifest depends on.
-                </para></listitem>
+                  </para>
+
+                  <para>
+                  Only the <option>--verbose</option> option can be combined
+                  with this option.
+                  </para>
+                </listitem>
             </varlistentry>
 
             <varlistentry>
@@ -226,6 +252,18 @@
 
                 <listitem><para>
                      Exit successfully after downloading the required sources.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>--bundle-sources</option></term>
+
+                <listitem><para>
+                    Create an additional runtime with the source code for
+                    this module. It will be named
+                    <replaceable>app-id</replaceable><literal>.Sources</literal>,
+                    for example
+                    <literal>org.gnome.Maps.Sources</literal>.
                 </para></listitem>
             </varlistentry>
 
