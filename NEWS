@@ -1,3 +1,16 @@
+Major changes in 0.9.11
+======================
+
+Skipped 0.9.10 to sync with flatpakk
+
+ * Fix build on some arches due to lack of flatpak_get_kernel_arch symbol
+ * Disable ostree 3% free space check for build cache
+ * Add some new status terminal title updates
+ * Set the requested environment vars in type=shell sources commands
+ * Add append-path and append-ld-library-path build options
+ * Add buildtype=qmake
+ * Updated docs
+
 Major changes in 0.9.9
 ======================
 
