@@ -69,6 +69,11 @@ enum {
 #define OSTREE_GIO_FAST_QUERYINFO ("standard::name,standard::type,standard::size,standard::is-symlink,standard::symlink-target," \
                                    "unix::device,unix::inode,unix::mode,unix::uid,unix::gid,unix::rdev")
 
+static GPtrArray   *builder_cache_get_changes_to (BuilderCache *self,
+                                                  GFile        *current_root,
+                                                  GError      **error);
+
+
 static void
 builder_cache_finalize (GObject *object)
 {
@@ -537,6 +542,8 @@ builder_cache_commit (BuilderCache *self,
   g_autofree char *ref = NULL;
   g_autoptr(GFile) last_root = NULL;
   g_autoptr(GFile) new_root = NULL;
+  g_autoptr(GPtrArray) changes = NULL;
+  g_autoptr(GVariantDict) metadata_dict = NULL;
 
   g_print ("Committing stage %s to cache\n", self->stage);
 
@@ -563,9 +570,14 @@ builder_cache_commit (BuilderCache *self,
   if (!ostree_repo_write_mtree (self->repo, mtree, &root, NULL, error))
     goto out;
 
+  changes = builder_cache_get_changes_to (self, root, NULL);
+  metadata_dict = g_variant_dict_new (NULL);
+  g_variant_dict_insert_value (metadata_dict, "changes",
+                               g_variant_new_strv ((const gchar * const  *) changes->pdata, changes->len));
+
   current = builder_cache_get_current (self);
 
-  if (!ostree_repo_write_commit (self->repo, self->last_parent, current, body, NULL,
+  if (!ostree_repo_write_commit (self->repo, self->last_parent, current, body, g_variant_dict_end (metadata_dict),
                                  OSTREE_REPO_FILE (root),
                                  &commit_checksum, NULL, error))
     goto out;
@@ -1019,6 +1031,22 @@ builder_cache_get_all_changes (BuilderCache *self,
   return get_changes (self, init_root, finish_root, error);
 }
 
+static GPtrArray   *
+builder_cache_get_changes_to (BuilderCache *self,
+                              GFile        *current_root,
+                              GError      **error)
+{
+  g_autoptr(GFile) parent_root = NULL;
+  g_autoptr(GVariant) variant = NULL;
+  g_autofree char *parent_commit = NULL;
+
+  if (self->last_parent != NULL &&
+      !ostree_repo_read_commit (self->repo, self->last_parent, &parent_root, NULL, NULL, error))
+    return FALSE;
+
+  return get_changes (self, parent_root, current_root, error);
+}
+
 GPtrArray   *
 builder_cache_get_changes (BuilderCache *self,
                            GError      **error)
@@ -1026,7 +1054,9 @@ builder_cache_get_changes (BuilderCache *self,
   g_autoptr(GFile) current_root = NULL;
   g_autoptr(GFile) parent_root = NULL;
   g_autoptr(GVariant) variant = NULL;
+  g_autoptr(GVariant) commit_metadata = NULL;
   g_autofree char *parent_commit = NULL;
+  g_autoptr(GVariant) changes_v = NULL;
 
   if (!ostree_repo_read_commit (self->repo, self->last_parent, &current_root, NULL, NULL, error))
     return NULL;
@@ -1034,6 +1064,24 @@ builder_cache_get_changes (BuilderCache *self,
   if (!ostree_repo_load_variant (self->repo, OSTREE_OBJECT_TYPE_COMMIT, self->last_parent,
                                  &variant, NULL))
     return NULL;
+
+  commit_metadata = g_variant_get_child_value (variant, 0);
+  changes_v = g_variant_lookup_value (commit_metadata, "changes", G_VARIANT_TYPE ("as"));
+
+  if (changes_v)
+    {
+      g_autoptr(GPtrArray) changed_paths = g_ptr_array_new_with_free_func (g_free);
+      int i;
+
+      for (i = 0; i < g_variant_n_children (changes_v); i++)
+        {
+          char *str;
+          g_variant_get_child (changes_v, i, "s", &str);
+          g_ptr_array_add (changed_paths, str);
+        }
+
+      return g_steal_pointer (&changed_paths);
+    }
 
   parent_commit = ostree_commit_get_parent (variant);
   if (parent_commit != NULL)
