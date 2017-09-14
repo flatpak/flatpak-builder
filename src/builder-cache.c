@@ -947,6 +947,12 @@ builder_cache_get_outstanding_changes (BuilderCache *self,
   return TRUE;
 }
 
+static int
+cmpstringp (const void *p1, const void *p2)
+{
+  return strcmp (*(char * const *) p1, *(char * const *) p2);
+}
+
 static GPtrArray *
 get_changes (BuilderCache *self,
              GFile       *from,
@@ -980,6 +986,8 @@ get_changes (BuilderCache *self,
       char *path = g_file_get_relative_path (to, modified_item->target);
       g_ptr_array_add (changed_paths, path);
     }
+
+  g_ptr_array_sort (changed_paths, cmpstringp);
 
   return g_steal_pointer (&changed_paths);
 }

@@ -2832,8 +2832,6 @@ builder_manifest_create_platform (BuilderManifest *self,
       if (changes == NULL)
         return FALSE;
 
-      g_ptr_array_sort (changes, cmpstringp);
-
       for (i = 0; i < changes->len; i++)
         {
           const char *changed = g_ptr_array_index (changes, i);
