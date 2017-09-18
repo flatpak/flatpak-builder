@@ -512,7 +512,11 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>branch</option> (string)</term>
-                        <listitem><para>The branch/tag to use from the git repository</para></listitem>
+                        <listitem><para>The branch to use from the git repository</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>tag</option> (string)</term>
+                        <listitem><para>The tag to use from the git repository</para></listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>commit</option> (string)</term>

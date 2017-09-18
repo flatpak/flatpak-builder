@@ -41,6 +41,7 @@ struct BuilderSourceGit
   char         *url;
   char         *path;
   char         *branch;
+  char         *tag;
   char         *commit;
   gboolean      disable_fsckobjects;
 };
@@ -57,6 +58,7 @@ enum {
   PROP_URL,
   PROP_PATH,
   PROP_BRANCH,
+  PROP_TAG,
   PROP_COMMIT,
   PROP_DISABLE_FSCKOBJECTS,
   LAST_PROP
@@ -70,6 +72,7 @@ builder_source_git_finalize (GObject *object)
   g_free (self->url);
   g_free (self->path);
   g_free (self->branch);
+  g_free (self->tag);
   g_free (self->commit);
 
   G_OBJECT_CLASS (builder_source_git_parent_class)->finalize (object);
@@ -95,6 +98,10 @@ builder_source_git_get_property (GObject    *object,
 
     case PROP_BRANCH:
       g_value_set_string (value, self->branch);
+      break;
+
+    case PROP_TAG:
+      g_value_set_string (value, self->tag);
       break;
 
     case PROP_COMMIT:
@@ -135,6 +142,11 @@ builder_source_git_set_property (GObject      *object,
       self->branch = g_value_dup_string (value);
       break;
 
+    case PROP_TAG:
+      g_free (self->tag);
+      self->tag = g_value_dup_string (value);
+      break;
+
     case PROP_COMMIT:
       g_free (self->commit);
       self->commit = g_value_dup_string (value);
@@ -154,6 +166,8 @@ get_branch (BuilderSourceGit *self)
 {
   if (self->branch)
     return self->branch;
+  else if (self->tag)
+    return self->tag;
   else if (self->commit)
     return self->commit;
   else
@@ -205,6 +219,9 @@ builder_source_git_download (BuilderSource  *source,
   if (location == NULL)
     return FALSE;
 
+  if (self->tag != NULL && self->branch != NULL)
+    return flatpak_fail (error, "Both tag (%s) and branch (%s) specified for git source", self->tag, self->branch);
+
   if (!builder_git_mirror_repo (location,
                                 NULL,
                                 update_vcs, TRUE, self->disable_fsckobjects,
@@ -213,15 +230,15 @@ builder_source_git_download (BuilderSource  *source,
                                 error))
     return FALSE;
 
-  if (self->commit != NULL && self->branch != NULL)
+  if (self->commit != NULL && (self->branch != NULL || self->tag != NULL))
     {
       /* We want to support the commit being both a tag object and the real commit object that it points too */
-      g_autofree char *current_commit = builder_git_get_current_commit (location,get_branch (self), FALSE, context, error);
-      g_autofree char *current_commit2 = builder_git_get_current_commit (location,get_branch (self), TRUE, context, error);
+      g_autofree char *current_commit = builder_git_get_current_commit (location, get_branch (self), FALSE, context, error);
+      g_autofree char *current_commit2 = builder_git_get_current_commit (location, get_branch (self), TRUE, context, error);
       if (current_commit == NULL || current_commit2 == NULL)
         return FALSE;
       if (strcmp (current_commit, self->commit) != 0 && strcmp (current_commit2, self->commit) != 0)
-        return flatpak_fail (error, "Git commit for branch %s is %s, but expected %s\n", self->branch, current_commit2, self->commit);
+        return flatpak_fail (error, "Git commit for branch %s is %s, but expected %s", self->branch, current_commit2, self->commit);
     }
 
   return TRUE;
@@ -330,7 +347,11 @@ builder_source_git_update (BuilderSource  *source,
   if (current_commit)
     {
       g_free (self->branch);
-      self->branch = current_commit;
+      self->branch = NULL;
+      g_free (self->tag);
+      self->tag = NULL;
+      g_free (self->commit);
+      self->commit = current_commit;
     }
 
   return TRUE;
@@ -369,6 +390,13 @@ builder_source_git_class_init (BuilderSourceGitClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_BRANCH,
                                    g_param_spec_string ("branch",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_TAG,
+                                   g_param_spec_string ("tag",
                                                         "",
                                                         "",
                                                         NULL,
