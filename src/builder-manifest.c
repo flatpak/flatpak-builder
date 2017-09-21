@@ -2571,7 +2571,8 @@ builder_manifest_finish (BuilderManifest *self,
           extension_contents = g_strdup_printf ("\n"
                                                 "[Extension %s]\n"
                                                 "directory=%s\n"
-                                                "autodelete=true\n",
+                                                "autodelete=true\n"
+                                                "locale-subset=true\n",
                                                 locale_id,
                                                 LOCALES_SEPARATE_DIR);
 
@@ -2940,7 +2941,8 @@ builder_manifest_create_platform (BuilderManifest *self,
           extension_contents = g_strdup_printf ("\n"
                                                 "[Extension %s]\n"
                                                 "directory=%s\n"
-                                                "autodelete=true\n",
+                                                "autodelete=true\n"
+                                                "locale-subset=true\n",
                                                 locale_id,
                                                 LOCALES_SEPARATE_DIR);
 
