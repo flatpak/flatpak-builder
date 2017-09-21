@@ -46,6 +46,7 @@ typedef void (*FlatpakLoadUriProgress) (guint64 downloaded_bytes,
 #define FLATPAK_METADATA_KEY_ENABLE_IF "enable-if"
 #define FLATPAK_METADATA_KEY_MERGE_DIRS "merge-dirs"
 #define FLATPAK_METADATA_KEY_NO_AUTODOWNLOAD "no-autodownload"
+#define FLATPAK_METADATA_KEY_LOCALE_SUBSET "locale-subset"
 #define FLATPAK_METADATA_KEY_SUBDIRECTORIES "subdirectories"
 #define FLATPAK_METADATA_KEY_SUBDIRECTORY_SUFFIX "subdirectory-suffix"
 #define FLATPAK_METADATA_KEY_VERSION "version"

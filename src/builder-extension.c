@@ -44,6 +44,7 @@ struct BuilderExtension
   gboolean        bundle;
   gboolean        autodelete;
   gboolean        no_autodownload;
+  gboolean        locale_subset;
   gboolean        subdirectories;
   char           *add_ld_path;
   char           *download_if;
@@ -71,6 +72,7 @@ enum {
   PROP_ENABLE_IF,
   PROP_MERGE_DIRS,
   PROP_NO_AUTODOWNLOAD,
+  PROP_LOCALE_SUBSET,
   PROP_SUBDIRECTORIES,
   PROP_SUBDIRECTORY_SUFFIX,
   PROP_VERSION,
@@ -120,6 +122,10 @@ builder_extension_get_property (GObject    *object,
 
     case PROP_NO_AUTODOWNLOAD:
       g_value_set_boolean (value, self->autodelete);
+      break;
+
+    case PROP_LOCALE_SUBSET:
+      g_value_set_boolean (value, self->locale_subset);
       break;
 
     case PROP_SUBDIRECTORIES:
@@ -184,6 +190,10 @@ builder_extension_set_property (GObject      *object,
 
     case PROP_NO_AUTODOWNLOAD:
       self->no_autodownload = g_value_get_boolean (value);
+      break;
+
+    case PROP_LOCALE_SUBSET:
+      self->locale_subset = g_value_get_boolean (value);
       break;
 
     case PROP_SUBDIRECTORIES:
@@ -263,6 +273,13 @@ builder_extension_class_init (BuilderExtensionClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_NO_AUTODOWNLOAD,
                                    g_param_spec_boolean ("no-autodownload",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_LOCALE_SUBSET,
+                                   g_param_spec_boolean ("locale-subset",
                                                          "",
                                                          "",
                                                          FALSE,
@@ -392,6 +409,7 @@ builder_extension_add_finish_args (BuilderExtension  *self,
   add_arg (self, args, FLATPAK_METADATA_KEY_DIRECTORY, self->directory);
   add_argb (self, args, FLATPAK_METADATA_KEY_AUTODELETE, self->autodelete);
   add_argb (self, args, FLATPAK_METADATA_KEY_NO_AUTODOWNLOAD, self->no_autodownload);
+  add_argb (self, args, FLATPAK_METADATA_KEY_LOCALE_SUBSET, self->locale_subset);
   add_argb (self, args, FLATPAK_METADATA_KEY_SUBDIRECTORIES, self->subdirectories);
   add_arg (self, args, FLATPAK_METADATA_KEY_ADD_LD_PATH, self->add_ld_path);
   add_arg (self, args, FLATPAK_METADATA_KEY_DOWNLOAD_IF, self->download_if);
@@ -413,6 +431,7 @@ builder_extension_checksum (BuilderExtension  *self,
   builder_cache_checksum_boolean (cache, self->bundle);
   builder_cache_checksum_boolean (cache, self->autodelete);
   builder_cache_checksum_boolean (cache, self->no_autodownload);
+  builder_cache_checksum_boolean (cache, self->locale_subset);
   builder_cache_checksum_boolean (cache, self->subdirectories);
   builder_cache_checksum_str (cache, self->add_ld_path);
   builder_cache_checksum_str (cache, self->download_if);

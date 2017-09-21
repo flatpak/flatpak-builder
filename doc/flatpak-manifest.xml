@@ -317,7 +317,7 @@
               are supported, and put directly into the metadata file:
               autodelete, no-autodownload, subdirectories,
               add-ld-path, download-if, enable-if, merge-dirs,
-              subdirectory-suffix, version, versions.
+              subdirectory-suffix, locale-subset, version, versions.
             </para>
         </refsect2>
         <refsect2>
