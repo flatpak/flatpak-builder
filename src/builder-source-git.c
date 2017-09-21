@@ -43,6 +43,7 @@ struct BuilderSourceGit
   char         *branch;
   char         *tag;
   char         *commit;
+  char         *orig_ref;
   gboolean      disable_fsckobjects;
 };
 
@@ -74,6 +75,7 @@ builder_source_git_finalize (GObject *object)
   g_free (self->branch);
   g_free (self->tag);
   g_free (self->commit);
+  g_free (self->orig_ref);
 
   G_OBJECT_CLASS (builder_source_git_parent_class)->finalize (object);
 }
@@ -288,12 +290,12 @@ builder_source_git_bundle (BuilderSource  *source,
   if (!flatpak_mkdir_p (mirror_dir, NULL, error))
     return FALSE;
 
-  if (!builder_git_mirror_repo (location,
-                                flatpak_file_get_path_cached (mirror_dir),
-                                FALSE, TRUE, FALSE,
-                                get_branch (self),
-                                context,
-                                error))
+  if (!builder_git_shallow_mirror_ref (location,
+                                       flatpak_file_get_path_cached (mirror_dir),
+                                       TRUE,
+                                       self->orig_ref,
+                                       context,
+                                       error))
     return FALSE;
 
   return TRUE;
@@ -343,7 +345,8 @@ builder_source_git_update (BuilderSource  *source,
   if (location == NULL)
     return FALSE;
 
-  current_commit = builder_git_get_current_commit (location, get_branch (self), FALSE, context, NULL);
+  self->orig_ref = g_strdup (get_branch (self));
+  current_commit = builder_git_get_current_commit (location, self->orig_ref, FALSE, context, NULL);
   if (current_commit)
     {
       g_free (self->branch);

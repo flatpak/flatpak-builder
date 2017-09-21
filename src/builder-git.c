@@ -150,6 +150,7 @@ make_absolute (const char *orig_parent, const char *orig_relpath, GError **error
 static gboolean
 git_mirror_submodules (const char     *repo_location,
                        const char     *destination_path,
+                       gboolean        shallow,
                        gboolean        update,
                        GFile          *mirror_dir,
                        gboolean        disable_fsck,
@@ -217,8 +218,17 @@ git_mirror_submodules (const char     *repo_location,
           if (g_strcmp0 (words[0], "160000") != 0)
             continue;
 
-          if (!builder_git_mirror_repo (absolute_url, destination_path, update, TRUE, disable_fsck, words[2], context, error))
-            return FALSE;
+          g_debug ("mirror submodule %s at revision %s\n", absolute_url, words[2]);
+          if (shallow)
+            {
+              if (!builder_git_shallow_mirror_ref (absolute_url, destination_path, TRUE, words[2], context, error))
+                return FALSE;
+            }
+          else
+            {
+              if (!builder_git_mirror_repo (absolute_url, destination_path, update, TRUE, disable_fsck, words[2], context, error))
+                return FALSE;
+            }
         }
     }
 
@@ -342,8 +352,76 @@ builder_git_mirror_repo (const char     *repo_location,
       if (current_commit == NULL)
         return FALSE;
 
-      if (!git_mirror_submodules (repo_location, destination_path, update,
+      if (!git_mirror_submodules (repo_location, destination_path, FALSE, update,
                                   mirror_dir, disable_fsck, current_commit, context, error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+gboolean
+builder_git_shallow_mirror_ref (const char     *repo_location,
+                                const char     *destination_path,
+                                gboolean        mirror_submodules,
+                                const char     *ref,
+                                BuilderContext *context,
+                                GError        **error)
+{
+  g_autoptr(GFile) cache_mirror_dir = NULL;
+  g_autoptr(GFile) mirror_dir = NULL;
+  g_autofree char *current_commit = NULL;
+  g_autofree char *file_name = NULL;
+  g_autofree char *destination_file_path = NULL;
+  g_autofree char *full_ref = NULL;
+
+  cache_mirror_dir = git_get_mirror_dir (repo_location, context);
+
+  file_name = g_file_get_basename (cache_mirror_dir);
+  destination_file_path = g_build_filename (destination_path,
+                                            file_name,
+                                            NULL);
+  mirror_dir = g_file_new_for_path (destination_file_path);
+
+  if (!g_file_query_exists (mirror_dir, NULL))
+    {
+      if (!git (NULL, NULL, error,
+                "init", "--bare", destination_file_path, NULL))
+        return FALSE;
+      if (!git (mirror_dir, NULL, error,
+                "remote", "add", "--mirror=fetch", "origin",
+                (char *)flatpak_file_get_path_cached (cache_mirror_dir), NULL))
+        return FALSE;
+    }
+
+  if (!git (cache_mirror_dir, &full_ref, NULL,
+            "rev-parse", "--symbolic-full-name", ref, NULL))
+    return FALSE;
+
+  /* Trim trailing whitespace */
+  g_strchomp (full_ref);
+
+  if (*full_ref == 0)
+    {
+      g_free (full_ref);
+      full_ref = g_strdup_printf ("flatpak-builder/ref-%s", ref);
+      if (!git (cache_mirror_dir, NULL, NULL,
+                "branch", "-f", full_ref, ref, NULL))
+        return FALSE;
+    }
+
+  if (!git (mirror_dir, NULL, error,
+            "fetch", "--depth", "1", "origin", full_ref, NULL))
+    return FALSE;
+
+  if (mirror_submodules)
+    {
+      current_commit = git_get_current_commit (mirror_dir, ref, FALSE, context, error);
+      if (current_commit == NULL)
+        return FALSE;
+
+      if (!git_mirror_submodules (repo_location, destination_path, TRUE, FALSE,
+                                  mirror_dir, TRUE, current_commit, context, error))
         return FALSE;
     }
 

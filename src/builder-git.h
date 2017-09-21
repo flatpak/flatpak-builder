@@ -49,6 +49,12 @@ gboolean builder_git_checkout_dir       (const char      *repo_location,
                                          GFile           *dest,
                                          BuilderContext  *context,
                                          GError         **error);
+gboolean builder_git_shallow_mirror_ref (const char     *repo_location,
+                                         const char     *destination_path,
+                                         gboolean        mirror_submodules,
+                                         const char     *ref,
+                                         BuilderContext *context,
+                                         GError        **error);
 
 G_END_DECLS
 
