@@ -314,8 +314,8 @@ builder_source_git_checksum (BuilderSource  *source,
   builder_cache_checksum_str (cache, self->url);
   builder_cache_checksum_str (cache, self->path);
   builder_cache_checksum_str (cache, self->branch);
-  builder_cache_checksum_compat_str (cache, self->commit);
-  builder_cache_checksum_compat_boolean (cache, self->disable_fsckobjects);
+  builder_cache_checksum_str (cache, self->commit);
+  builder_cache_checksum_boolean (cache, self->disable_fsckobjects);
 
   location = get_url_or_path (self, context, &error);
   if (location != NULL)

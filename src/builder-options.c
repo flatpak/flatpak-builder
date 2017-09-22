@@ -943,7 +943,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_str (cache, BUILDER_OPTION_CHECKSUM_VERSION);
   builder_cache_checksum_str (cache, self->cflags);
   builder_cache_checksum_str (cache, self->cxxflags);
-  builder_cache_checksum_compat_str (cache, self->cppflags);
+  builder_cache_checksum_str (cache, self->cppflags);
   builder_cache_checksum_str (cache, self->ldflags);
   builder_cache_checksum_str (cache, self->prefix);
   builder_cache_checksum_strv (cache, self->env);

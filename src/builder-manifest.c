@@ -1566,7 +1566,7 @@ builder_manifest_checksum_for_finish (BuilderManifest *self,
   builder_cache_checksum_str (cache, BUILDER_MANIFEST_CHECKSUM_FINISH_VERSION);
   builder_cache_checksum_strv (cache, self->finish_args);
   builder_cache_checksum_str (cache, self->command);
-  builder_cache_checksum_compat_strv (cache, self->inherit_extensions);
+  builder_cache_checksum_strv (cache, self->inherit_extensions);
 
   for (l = self->add_extensions; l != NULL; l = l->next)
     {

@@ -1769,9 +1769,9 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_boolean (cache, self->no_python_timestamp_fix);
   builder_cache_checksum_boolean (cache, self->cmake);
   builder_cache_checksum_boolean (cache, self->builddir);
-  builder_cache_checksum_compat_strv (cache, self->build_commands);
-  builder_cache_checksum_compat_str (cache, self->buildsystem);
-  builder_cache_checksum_compat_str (cache, self->install_rule);
+  builder_cache_checksum_strv (cache, self->build_commands);
+  builder_cache_checksum_str (cache, self->buildsystem);
+  builder_cache_checksum_str (cache, self->install_rule);
 
   if (self->build_options)
     builder_options_checksum (self->build_options, cache, context);
