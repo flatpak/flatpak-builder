@@ -48,6 +48,8 @@ struct BuilderOptions
   char      **env;
   char      **build_args;
   char      **config_opts;
+  char      **make_args;
+  char      **make_install_args;
   GHashTable *arch;
 };
 
@@ -74,6 +76,8 @@ enum {
   PROP_ARCH,
   PROP_BUILD_ARGS,
   PROP_CONFIG_OPTS,
+  PROP_MAKE_ARGS,
+  PROP_MAKE_INSTALL_ARGS,
   PROP_APPEND_PATH,
   PROP_APPEND_LD_LIBRARY_PATH,
   LAST_PROP
@@ -95,6 +99,8 @@ builder_options_finalize (GObject *object)
   g_strfreev (self->env);
   g_strfreev (self->build_args);
   g_strfreev (self->config_opts);
+  g_strfreev (self->make_args);
+  g_strfreev (self->make_install_args);
   g_hash_table_destroy (self->arch);
 
   G_OBJECT_CLASS (builder_options_parent_class)->finalize (object);
@@ -152,6 +158,14 @@ builder_options_get_property (GObject    *object,
 
     case PROP_CONFIG_OPTS:
       g_value_set_boxed (value, self->config_opts);
+      break;
+
+    case PROP_MAKE_ARGS:
+      g_value_set_boxed (value, self->make_args);
+      break;
+
+    case PROP_MAKE_INSTALL_ARGS:
+      g_value_set_boxed (value, self->make_install_args);
       break;
 
     case PROP_STRIP:
@@ -234,6 +248,18 @@ builder_options_set_property (GObject      *object,
     case PROP_CONFIG_OPTS:
       tmp = self->config_opts;
       self->config_opts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_MAKE_ARGS:
+      tmp = self->make_args;
+      self->make_args = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_MAKE_INSTALL_ARGS:
+      tmp = self->make_install_args;
+      self->make_install_args = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -332,6 +358,20 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_CONFIG_OPTS,
                                    g_param_spec_boxed ("config-opts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_MAKE_ARGS,
+                                   g_param_spec_boxed ("make-args",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_MAKE_INSTALL_ARGS,
+                                   g_param_spec_boxed ("make-install-args",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -831,10 +871,11 @@ builder_options_get_build_args (BuilderOptions *self,
   return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
 }
 
-char **
-builder_options_get_config_opts (BuilderOptions *self,
-                                 BuilderContext *context,
-                                 char          **base_opts)
+static char **
+builder_options_get_strv (BuilderOptions *self,
+                          BuilderContext *context,
+                          char          **base,
+                          size_t          field_offset)
 {
   g_autoptr(GList) options = get_all_options (self, context);
   GList *l;
@@ -844,27 +885,52 @@ builder_options_get_config_opts (BuilderOptions *self,
   /* Last argument wins, so reverse the list for per-module to win */
   options = g_list_reverse (options);
 
-  /* Start by adding the base options */
-  if (base_opts)
+  /* Start by adding the base values */
+  if (base)
     {
-      for (i = 0; base_opts[i] != NULL; i++)
-	g_ptr_array_add (array, g_strdup (base_opts[i]));
+      for (i = 0; base[i] != NULL; i++)
+        g_ptr_array_add (array, g_strdup (base[i]));
     }
 
   for (l = options; l != NULL; l = l->next)
     {
       BuilderOptions *o = l->data;
+      char **strv = G_STRUCT_MEMBER (char **, o, field_offset);
 
-      if (o->config_opts)
+      if (strv)
         {
-          for (i = 0; o->config_opts[i] != NULL; i++)
-            g_ptr_array_add (array, g_strdup (o->config_opts[i]));
+          for (i = 0; strv[i] != NULL; i++)
+            g_ptr_array_add (array, g_strdup (strv[i]));
         }
     }
 
   g_ptr_array_add (array, NULL);
 
   return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
+}
+
+char **
+builder_options_get_config_opts (BuilderOptions *self,
+                                 BuilderContext *context,
+                                 char          **base_opts)
+{
+  return builder_options_get_strv (self, context, base_opts, G_STRUCT_OFFSET (BuilderOptions, config_opts));
+}
+
+char **
+builder_options_get_make_args (BuilderOptions *self,
+                               BuilderContext *context,
+                               char          **base_args)
+{
+  return builder_options_get_strv (self, context, base_args, G_STRUCT_OFFSET (BuilderOptions, make_args));
+}
+
+char **
+builder_options_get_make_install_args (BuilderOptions *self,
+                                       BuilderContext *context,
+                                       char          **base_args)
+{
+  return builder_options_get_strv (self, context, base_args, G_STRUCT_OFFSET (BuilderOptions, make_install_args));
 }
 
 void
@@ -883,6 +949,8 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_strv (cache, self->env);
   builder_cache_checksum_strv (cache, self->build_args);
   builder_cache_checksum_strv (cache, self->config_opts);
+  builder_cache_checksum_strv (cache, self->make_args);
+  builder_cache_checksum_strv (cache, self->make_install_args);
   builder_cache_checksum_boolean (cache, self->strip);
   builder_cache_checksum_boolean (cache, self->no_debuginfo);
 

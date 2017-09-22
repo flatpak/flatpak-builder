@@ -55,6 +55,12 @@ char **     builder_options_get_build_args (BuilderOptions *self,
 char **     builder_options_get_config_opts (BuilderOptions *self,
                                              BuilderContext *context,
                                              char          **base_opts);
+char **     builder_options_get_make_args (BuilderOptions *self,
+                                           BuilderContext *context,
+                                           char          **base_args);
+char **     builder_options_get_make_install_args (BuilderOptions *self,
+                                                   BuilderContext *context,
+                                                   char          **base_args);
 void        builder_options_checksum (BuilderOptions *self,
                                       BuilderCache   *cache,
                                       BuilderContext *context);
