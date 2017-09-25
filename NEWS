@@ -1,3 +1,18 @@
+Major changes in 0.9.98
+=======================
+
+ * build cache hits are now faster
+ * git sources have a new property "tag" which works the same as "branch", but
+   improves readability when referencing a git tag.
+ * flatpak-builder --run now passes  --with-appdir which is useful when
+   testing uninstalled builds.
+ * When bundling git repos in .Sources we now make a shallow clone which uses
+   a lot less space.
+ * .Locale extensions now always set the new locale-subset property
+ * locale-subset is supported in the add-extension property
+ * build-options now also supports make-args and make-install args, which
+   allows per-arch make flags.
+
 Major changes in 0.9.11
 ======================
 
