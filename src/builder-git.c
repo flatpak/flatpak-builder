@@ -374,6 +374,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
   g_autofree char *file_name = NULL;
   g_autofree char *destination_file_path = NULL;
   g_autofree char *full_ref = NULL;
+  g_autofree char *full_ref_colon_full_ref = NULL;
 
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
@@ -410,8 +411,9 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
         return FALSE;
     }
 
+  full_ref_colon_full_ref = g_strdup_printf ("%s:%s", full_ref, full_ref);
   if (!git (mirror_dir, NULL, error,
-            "fetch", "--depth", "1", "origin", full_ref, NULL))
+            "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
     return FALSE;
 
   if (mirror_submodules)
