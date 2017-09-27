@@ -1037,8 +1037,6 @@ builder_cache_get_changes_to (BuilderCache *self,
                               GError      **error)
 {
   g_autoptr(GFile) parent_root = NULL;
-  g_autoptr(GVariant) variant = NULL;
-  g_autofree char *parent_commit = NULL;
 
   if (self->last_parent != NULL &&
       !ostree_repo_read_commit (self->repo, self->last_parent, &parent_root, NULL, NULL, error))
