@@ -6,7 +6,7 @@ Flatpak-builder is a tool for building flatpaks from sources.
 
 See http://flatpak.org/ for more information.
 
-Read documentation for the flatpak-builder [commandline tools](http://flatpak.github.io/flatpak/flatpak-docs.html).
+Read documentation for the flatpak-builder [commandline tools](http://flatpak.org/flatpak/flatpak-docs.html).
 
 # INSTALLATION
 
