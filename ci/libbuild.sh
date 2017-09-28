@@ -15,6 +15,7 @@ pkg_install() {
 }
 
 pkg_install_testing() {
+    yum -y --repo=updates-testing clean expire-cache
     yum -y install --enablerepo=updates-testing "$@"
 }
 
