@@ -1238,6 +1238,24 @@ builder_cache_checksum_uint32 (BuilderCache *self,
 }
 
 void
+builder_cache_checksum_uint64 (BuilderCache *self,
+                               guint64       val)
+{
+  guchar v[8];
+
+  v[0] = (val >> 0) & 0xff;
+  v[1] = (val >> 8) & 0xff;
+  v[2] = (val >> 16) & 0xff;
+  v[3] = (val >> 24) & 0xff;
+  v[4] = (val >> 32) & 0xff;
+  v[5] = (val >> 40) & 0xff;
+  v[6] = (val >> 48) & 0xff;
+  v[7] = (val >> 56) & 0xff;
+
+  g_checksum_update (self->checksum, v, 8);
+}
+
+void
 builder_cache_checksum_data (BuilderCache *self,
                              guint8       *data,
                              gsize         len)
