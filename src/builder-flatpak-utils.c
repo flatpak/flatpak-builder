@@ -394,8 +394,6 @@ flatpak_compose_ref (gboolean    app,
                      const char *arch,
                      GError    **error)
 {
-  g_autoptr(GError) local_error = NULL;
-
   if (app)
     return flatpak_build_app_ref (name, branch, arch);
   else

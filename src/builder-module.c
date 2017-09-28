@@ -1253,7 +1253,6 @@ builder_module_build_helper (BuilderModule  *self,
   g_autoptr(GFile) source_subdir = NULL;
   const char *source_subdir_relative = NULL;
   g_autofree char *source_dir_path = NULL;
-  g_autoptr(GError) my_error = NULL;
   BuilderPostProcessFlags post_process_flags = 0;
 
   source_dir_path = g_file_get_path (source_dir);
