@@ -25,6 +25,8 @@
 #include <libsoup/soup.h>
 #include <json-glib/json-glib.h>
 
+#include <libxml/tree.h>
+
 G_BEGIN_DECLS
 
 typedef struct BuilderUtils BuilderUtils;
@@ -74,6 +76,18 @@ GParamSpec * builder_serializable_find_property_with_error (JsonSerializable *se
 
 void builder_set_term_title (const gchar *format,
                              ...) G_GNUC_PRINTF (1, 2);
+
+static inline void
+xml_autoptr_cleanup_generic_free (void *p)
+{
+  void **pp = (void**)p;
+  if (*pp)
+    xmlFree (*pp);
+}
+
+#define xml_autofree _GLIB_CLEANUP(xml_autoptr_cleanup_generic_free)
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (xmlDoc, xmlFreeDoc)
 
 G_END_DECLS
 

@@ -208,6 +208,15 @@
                     <listitem><para>Any icon with this name will be renamed to a name based on id during the cleanup phase. Note that this is the icon name, not the full filenames, so it should not include a filename extension. </para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>appdata-license</option> (string)</term>
+                    <listitem><para>Replace the appdata
+                    project_license field with this string. This is
+                    useful as the upstream license is typically only
+                    about the application itself, whereas the bundled
+                    app can contain other licenses
+                    too. </para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>copy-icon</option> (boolean)</term>
                     <listitem><para>If rename-icon is set, keep a copy of the old icon file.</para></listitem>
                 </varlistentry>
