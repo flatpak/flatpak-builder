@@ -640,6 +640,35 @@
                     </varlistentry>
                 </variablelist>
             </refsect3>
+            <refsect3>
+                <title>Extra data sources</title>
+                <variablelist>
+                    <varlistentry>
+                        <term><option>type</option></term>
+                        <listitem><para>"extra-data"</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>filename</option> (string)</term>
+                        <listitem><para>The name to use for the downloaded extra data</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>url</option> (string)</term>
+                        <listitem><para>The url to the extra data.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>sha256</option> (string)</term>
+                        <listitem><para>The sha256 of the extra data.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>size</option> (string)</term>
+                        <listitem><para>The size of the extra data.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>installed-size</option> (string)</term>
+                        <listitem><para>The extra installed size this adds to the app (optional).</para></listitem>
+                    </varlistentry>
+                </variablelist>
+            </refsect3>
         </refsect2>
     </refsect1>
 

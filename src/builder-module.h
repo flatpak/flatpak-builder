@@ -68,6 +68,9 @@ gboolean builder_module_extract_sources (BuilderModule  *self,
 gboolean builder_module_bundle_sources (BuilderModule  *self,
                                         BuilderContext *context,
                                         GError        **error);
+void     builder_module_finish_sources (BuilderModule  *self,
+                                        GPtrArray      *args,
+                                        BuilderContext *context);
 gboolean builder_module_ensure_writable (BuilderModule  *self,
                                          BuilderCache   *cache,
                                          BuilderContext *context,

@@ -2493,6 +2493,12 @@ builder_manifest_finish (BuilderManifest *self,
       for (l = self->add_extensions; l != NULL; l = l->next)
         builder_extension_add_finish_args (l->data, args);
 
+      for (l = self->expanded_modules; l != NULL; l = l->next)
+        {
+          BuilderModule *m = l->data;
+          builder_module_finish_sources (m, args, context);
+        }
+
       g_ptr_array_add (args, g_file_get_path (app_dir));
       g_ptr_array_add (args, NULL);
 

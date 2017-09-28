@@ -36,6 +36,7 @@
 #include "builder-source-file.h"
 #include "builder-source-script.h"
 #include "builder-source-shell.h"
+#include "builder-source-extra-data.h"
 
 static void serializable_iface_init (JsonSerializableIface *serializable_iface);
 
@@ -252,6 +253,8 @@ builder_source_to_json (BuilderSource *self)
     type = "script";
   else if (BUILDER_IS_SOURCE_SHELL (self))
     type = "shell";
+  else if (BUILDER_IS_SOURCE_EXTRA_DATA (self))
+    type = "extra-data";
   else if (BUILDER_IS_SOURCE_PATCH (self))
     type = "patch";
   else if (BUILDER_IS_SOURCE_GIT (self))
@@ -285,6 +288,8 @@ builder_source_from_json (JsonNode *node)
     return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SCRIPT, node);
   else if (strcmp (type, "shell") == 0)
     return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SHELL, node);
+  else if (strcmp (type, "extra-data") == 0)
+    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_EXTRA_DATA, node);
   else if (strcmp (type, "patch") == 0)
     return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_PATCH, node);
   else if (strcmp (type, "git") == 0)
@@ -386,6 +391,17 @@ builder_source_checksum (BuilderSource  *self,
   builder_cache_checksum_strv (cache, self->skip_arches);
 
   class->checksum (self, cache, context);
+}
+
+void
+builder_source_finish (BuilderSource  *self,
+                       GPtrArray      *args,
+                       BuilderContext *context)
+{
+  BuilderSourceClass *class = BUILDER_SOURCE_GET_CLASS (self);
+
+  if (class->finish)
+    class->finish (self, args, context);
 }
 
 gboolean
