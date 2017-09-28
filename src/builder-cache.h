@@ -75,6 +75,8 @@ void builder_cache_checksum_compat_boolean (BuilderCache *self,
                                             gboolean      val);
 void builder_cache_checksum_uint32 (BuilderCache *self,
                                     guint32       val);
+void builder_cache_checksum_uint64 (BuilderCache *self,
+                                    guint64       val);
 void builder_cache_checksum_data (BuilderCache *self,
                                   guint8       *data,
                                   gsize         len);
