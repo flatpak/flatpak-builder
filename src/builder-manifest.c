@@ -34,6 +34,8 @@
 #include "builder-post-process.h"
 #include "builder-extension.h"
 
+#include <libxml/parser.h>
+
 #include "libglnx/libglnx.h"
 
 #define LOCALES_SEPARATE_DIR "share/runtime/locale"
@@ -83,6 +85,7 @@ struct BuilderManifest
   char          **tags;
   char           *rename_desktop_file;
   char           *rename_appdata_file;
+  char           *appdata_license;
   char           *rename_icon;
   gboolean        copy_icon;
   char           *desktop_file_name_prefix;
@@ -147,6 +150,7 @@ enum {
   PROP_TAGS,
   PROP_RENAME_DESKTOP_FILE,
   PROP_RENAME_APPDATA_FILE,
+  PROP_APPDATA_LICENSE,
   PROP_RENAME_ICON,
   PROP_COPY_ICON,
   PROP_DESKTOP_FILE_NAME_PREFIX,
@@ -189,6 +193,7 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->tags);
   g_free (self->rename_desktop_file);
   g_free (self->rename_appdata_file);
+  g_free (self->appdata_license);
   g_free (self->rename_icon);
   g_free (self->desktop_file_name_prefix);
   g_free (self->desktop_file_name_suffix);
@@ -397,6 +402,10 @@ builder_manifest_get_property (GObject    *object,
 
     case PROP_RENAME_APPDATA_FILE:
       g_value_set_string (value, self->rename_appdata_file);
+      break;
+
+    case PROP_APPDATA_LICENSE:
+      g_value_set_string (value, self->appdata_license);
       break;
 
     case PROP_RENAME_ICON:
@@ -619,6 +628,11 @@ builder_manifest_set_property (GObject      *object,
     case PROP_RENAME_APPDATA_FILE:
       g_free (self->rename_appdata_file);
       self->rename_appdata_file = g_value_dup_string (value);
+      break;
+
+    case PROP_APPDATA_LICENSE:
+      g_free (self->appdata_license);
+      self->appdata_license = g_value_dup_string (value);
       break;
 
     case PROP_RENAME_ICON:
@@ -901,6 +915,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_RENAME_APPDATA_FILE,
                                    g_param_spec_string ("rename-appdata-file",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_APPDATA_LICENSE,
+                                   g_param_spec_string ("appdata-license",
                                                         "",
                                                         "",
                                                         NULL,
@@ -1543,6 +1564,7 @@ builder_manifest_checksum_for_cleanup (BuilderManifest *self,
   builder_cache_checksum_strv (cache, self->cleanup_commands);
   builder_cache_checksum_str (cache, self->rename_desktop_file);
   builder_cache_checksum_str (cache, self->rename_appdata_file);
+  builder_cache_checksum_compat_str (cache, self->appdata_license);
   builder_cache_checksum_str (cache, self->rename_icon);
   builder_cache_checksum_boolean (cache, self->copy_icon);
   builder_cache_checksum_str (cache, self->desktop_file_name_prefix);
@@ -2028,6 +2050,62 @@ strcatv (char **strv1,
     return retval;
 }
 
+static gboolean
+rewrite_appdata (GFile *file,
+                 const char *license,
+                 GError **error)
+{
+  g_autofree gchar *data = NULL;
+  gsize data_len;
+  g_autoptr(xmlDoc) doc = NULL;
+  xml_autofree xmlChar *xmlbuff = NULL;
+  int buffersize;
+  xmlNode *root_element, *component_node;
+
+  if (!g_file_load_contents (file, NULL, &data, &data_len, NULL, error))
+    return FALSE;
+
+  doc = xmlReadMemory (data, data_len, NULL, NULL,  0);
+  if (doc == NULL)
+    return flatpak_fail (error, _("Error parsing appstream"));
+
+  root_element = xmlDocGetRootElement (doc);
+
+  for (component_node = root_element; component_node; component_node = component_node->next)
+    {
+      xmlNode *sub_node = NULL;
+      xmlNode *license_node = NULL;
+
+      if (component_node->type != XML_ELEMENT_NODE ||
+          strcmp ((char *)component_node->name, "component") != 0)
+        continue;
+
+      for (sub_node = component_node->children; sub_node; sub_node = sub_node->next)
+        {
+          if (sub_node->type != XML_ELEMENT_NODE ||
+              strcmp ((char *)sub_node->name, "project_license") != 0)
+            continue;
+
+          license_node = sub_node;
+          break;
+        }
+
+      if (license_node)
+        xmlNodeSetContent(license_node, (xmlChar *)license);
+      else
+        xmlNewChild(component_node, NULL, (xmlChar *)"project_license", (xmlChar *)license);
+    }
+
+  xmlDocDumpFormatMemory (doc, &xmlbuff, &buffersize, 1);
+
+  if (!g_file_set_contents (flatpak_file_get_path_cached (file),
+                            (gchar *)xmlbuff, buffersize,
+                            error))
+    return FALSE;
+
+  return TRUE;
+}
+
 gboolean
 builder_manifest_cleanup (BuilderManifest *self,
                           BuilderCache    *cache,
@@ -2117,6 +2195,12 @@ builder_manifest_cleanup (BuilderManifest *self,
 
           g_print ("Renaming %s to %s\n", self->rename_appdata_file, appdata_basename);
           if (!g_file_move (src, appdata_file, 0, NULL, NULL, NULL, error))
+            return FALSE;
+        }
+
+      if (self->appdata_license != NULL && self->appdata_license[0] != 0)
+        {
+          if (!rewrite_appdata (appdata_file, self->appdata_license, error))
             return FALSE;
         }
 
