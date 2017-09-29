@@ -937,6 +937,24 @@ builder_module_extract_sources (BuilderModule  *self,
   return TRUE;
 }
 
+void
+builder_module_finish_sources (BuilderModule  *self,
+                               GPtrArray      *args,
+                               BuilderContext *context)
+{
+  GList *l;
+
+  for (l = self->sources; l != NULL; l = l->next)
+    {
+      BuilderSource *source = l->data;
+
+      if (!builder_source_is_enabled (source, context))
+        continue;
+
+      builder_source_finish (source, args, context);
+    }
+}
+
 gboolean
 builder_module_bundle_sources (BuilderModule  *self,
                                BuilderContext *context,
