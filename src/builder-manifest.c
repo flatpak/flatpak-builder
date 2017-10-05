@@ -2106,6 +2106,41 @@ rewrite_appdata (GFile *file,
   return TRUE;
 }
 
+static GFile *
+builder_manifest_find_appdata_file (BuilderManifest *self,
+				    GFile *app_root)
+{
+  const char *extensions[] = {
+    ".metainfo.xml",
+    ".appdata.xml",
+  };
+  const char *dirs[] = {
+    "share/metainfo",
+    "share/appdata",
+  };
+  g_autoptr(GFile) source = NULL;
+
+  int i, j;
+  for (j = 0; j < G_N_ELEMENTS (dirs); j++)
+    {
+      g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, dirs[j]);
+      for (i = 0; i < G_N_ELEMENTS (extensions); i++)
+	{
+	  g_autofree char *basename = NULL;
+
+	  if (self->rename_appdata_file != NULL)
+	    basename = g_strdup (self->rename_appdata_file);
+	  else
+	    basename = g_strconcat (self->id, extensions[i], NULL);
+
+	  source = g_file_get_child (appdata_dir, basename);
+	  if (g_file_query_exists (source, NULL))
+	    return g_steal_pointer (&source);
+	}
+    }
+  return NULL;
+}
+
 gboolean
 builder_manifest_cleanup (BuilderManifest *self,
                           BuilderCache    *cache,
@@ -2115,8 +2150,6 @@ builder_manifest_cleanup (BuilderManifest *self,
   g_autoptr(GFile) app_root = NULL;
   GList *l;
   g_auto(GStrv) env = NULL;
-  g_autoptr(GFile) appdata_dir = NULL;
-  g_autofree char *appdata_basename = NULL;
   g_autoptr(GFile) appdata_file = NULL;
   g_autoptr(GFile) appdata_source = NULL;
   int i;
@@ -2179,30 +2212,32 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       app_root = g_file_get_child (app_dir, "files");
 
-      appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
-      appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
-      appdata_source = g_file_get_child (appdata_dir, self->rename_appdata_file ? self->rename_appdata_file : appdata_basename);
-      if (!g_file_query_exists (appdata_source, NULL))
-        {
-          g_object_unref (appdata_dir);
-          appdata_dir = g_file_resolve_relative_path (app_root, "share/metainfo");
-        }
-      appdata_file = g_file_get_child (appdata_dir, appdata_basename);
+      appdata_source = builder_manifest_find_appdata_file (self, app_root);
+      if (appdata_source)
+	{
+	  /* We always use the old name / dir, in case the runtime has older appdata tools */
+	  g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
+	  g_autofree char *appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
 
-      if (self->rename_appdata_file != NULL)
-        {
-          g_autoptr(GFile) src = g_file_get_child (appdata_dir, self->rename_appdata_file);
+	  appdata_file = g_file_get_child (appdata_dir, appdata_basename);
 
-          g_print ("Renaming %s to %s\n", self->rename_appdata_file, appdata_basename);
-          if (!g_file_move (src, appdata_file, 0, NULL, NULL, NULL, error))
-            return FALSE;
-        }
+	  if (!g_file_equal (appdata_source, appdata_file))
+	    {
+	      g_autofree char *src_basename = g_file_get_basename (appdata_source);
+	      g_print ("Renaming %s to share/appdata/%s\n", src_basename, appdata_basename);
 
-      if (self->appdata_license != NULL && self->appdata_license[0] != 0)
-        {
-          if (!rewrite_appdata (appdata_file, self->appdata_license, error))
-            return FALSE;
-        }
+              if (!flatpak_mkdir_p (appdata_dir, NULL, error))
+                return FALSE;
+	      if (!g_file_move (appdata_source, appdata_file, 0, NULL, NULL, NULL, error))
+		return FALSE;
+	    }
+
+	  if (self->appdata_license != NULL && self->appdata_license[0] != 0)
+	    {
+	      if (!rewrite_appdata (appdata_file, self->appdata_license, error))
+		return FALSE;
+	    }
+	}
 
       if (self->rename_desktop_file != NULL)
         {
@@ -2215,7 +2250,7 @@ builder_manifest_cleanup (BuilderManifest *self,
           if (!g_file_move (src, dest, 0, NULL, NULL, NULL, error))
             return FALSE;
 
-          if (g_file_query_exists (appdata_file, NULL))
+          if (appdata_file != NULL)
             {
               g_autofree char *contents;
               const char *to_replace;
@@ -2361,8 +2396,7 @@ builder_manifest_cleanup (BuilderManifest *self,
             return FALSE;
         }
 
-      if (self->appstream_compose &&
-          g_file_query_exists (appdata_file, NULL))
+      if (self->appstream_compose && appdata_file != NULL)
         {
           g_autofree char *basename_arg = g_strdup_printf ("--basename=%s", self->id);
           g_print ("Running appstream-compose\n");
