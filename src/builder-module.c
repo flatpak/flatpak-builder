@@ -1653,7 +1653,11 @@ builder_module_build_helper (BuilderModule  *self,
   else if (!builder_options_get_no_debuginfo (self->build_options, context) &&
            /* No support for debuginfo for extensions atm */
            !builder_context_get_build_extension (context))
-    post_process_flags |= BUILDER_POST_PROCESS_FLAGS_DEBUGINFO;
+    {
+      post_process_flags |= BUILDER_POST_PROCESS_FLAGS_DEBUGINFO;
+      if (!builder_options_get_no_debuginfo_compression (self->build_options, context))
+	post_process_flags |= BUILDER_POST_PROCESS_FLAGS_DEBUGINFO_COMPRESSION;
+    }
 
   if (!builder_post_process (post_process_flags, app_dir,
                              cache, context, error))

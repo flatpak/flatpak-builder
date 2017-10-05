@@ -38,6 +38,7 @@ struct BuilderOptions
 
   gboolean    strip;
   gboolean    no_debuginfo;
+  gboolean    no_debuginfo_compression;
   char       *cflags;
   char       *cppflags;
   char       *cxxflags;
@@ -73,6 +74,7 @@ enum {
   PROP_ENV,
   PROP_STRIP,
   PROP_NO_DEBUGINFO,
+  PROP_NO_DEBUGINFO_COMPRESSION,
   PROP_ARCH,
   PROP_BUILD_ARGS,
   PROP_CONFIG_OPTS,
@@ -176,6 +178,10 @@ builder_options_get_property (GObject    *object,
       g_value_set_boolean (value, self->no_debuginfo);
       break;
 
+    case PROP_NO_DEBUGINFO_COMPRESSION:
+      g_value_set_boolean (value, self->no_debuginfo_compression);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -269,6 +275,10 @@ builder_options_set_property (GObject      *object,
 
     case PROP_NO_DEBUGINFO:
       self->no_debuginfo = g_value_get_boolean (value);
+      break;
+
+    case PROP_NO_DEBUGINFO_COMPRESSION:
+      self->no_debuginfo_compression = g_value_get_boolean (value);
       break;
 
     default:
@@ -386,6 +396,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_NO_DEBUGINFO,
                                    g_param_spec_boolean ("no-debuginfo",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_NO_DEBUGINFO_COMPRESSION,
+                                   g_param_spec_boolean ("no-debuginfo-compression",
                                                          "",
                                                          "",
                                                          FALSE,
@@ -775,6 +792,22 @@ builder_options_get_no_debuginfo (BuilderOptions *self, BuilderContext *context)
   return FALSE;
 }
 
+gboolean
+builder_options_get_no_debuginfo_compression (BuilderOptions *self, BuilderContext *context)
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      if (o->no_debuginfo_compression)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 char **
 builder_options_get_env (BuilderOptions *self, BuilderContext *context)
 {
@@ -953,6 +986,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_strv (cache, self->make_install_args);
   builder_cache_checksum_boolean (cache, self->strip);
   builder_cache_checksum_boolean (cache, self->no_debuginfo);
+  builder_cache_checksum_compat_boolean (cache, self->no_debuginfo_compression);
 
   arch_options = g_hash_table_lookup (self->arch, builder_context_get_arch (context));
   if (arch_options)
