@@ -37,6 +37,8 @@ gboolean strip (GError **error,
                 ...);
 gboolean eu_strip (GError **error,
                    ...);
+gboolean eu_elfcompress (GError **error,
+			 ...);
 
 gboolean is_elf_file (const char *path,
                       gboolean   *is_shared,
