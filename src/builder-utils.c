@@ -159,6 +159,21 @@ eu_strip (GError **error,
   return res;
 }
 
+gboolean
+eu_elfcompress (GError **error,
+		...)
+{
+  gboolean res;
+  va_list ap;
+
+  va_start (ap, error);
+  res = flatpak_spawn (NULL, NULL, error, "eu-elfcompress", ap);
+  va_end (ap);
+
+  return res;
+}
+
+
 static gboolean
 elf_has_symtab (Elf *elf)
 {

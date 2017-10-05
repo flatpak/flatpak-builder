@@ -301,7 +301,6 @@ builder_post_process_python_time_stamp (GFile *app_dir,
   return TRUE;
 }
 
-
 static gboolean
 builder_post_process_strip (GFile *app_dir,
                             GPtrArray *changed,
@@ -341,6 +340,7 @@ builder_post_process_strip (GFile *app_dir,
 static gboolean
 builder_post_process_debuginfo (GFile          *app_dir,
                                 GPtrArray      *changed,
+				BuilderPostProcessFlags flags,
                                 BuilderContext *context,
                                 GError        **error)
 {
@@ -453,13 +453,28 @@ builder_post_process_debuginfo (GFile          *app_dir,
                 }
             }
 
-          g_print ("stripping %s to %s\n", path, debug_path);
-
           /* Some files are hardlinked and eu-strip modifies in-place,
              which breaks rofiles-fuse. Unlink them */
           if (!flatpak_break_hardlink (file, error))
             return FALSE;
 
+	  if (flags & BUILDER_POST_PROCESS_FLAGS_DEBUGINFO_COMPRESSION)
+	    {
+	      g_autoptr(GError) my_error = NULL;
+	      g_print ("compressing debuginfo in: %s\n", path);
+	      if (!eu_elfcompress (&my_error, "-t", "zlib-gnu", "-v", path, NULL))
+		{
+		  if (g_error_matches (my_error, G_SPAWN_ERROR, G_SPAWN_ERROR_NOENT))
+		    g_print ("Warning: eu-elfcompress not installed, will not compress debuginfo\n");
+		  else
+		    {
+		      g_propagate_error (error, g_steal_pointer (&my_error));
+		      return FALSE;
+		    }
+		}
+	    }
+
+          g_print ("stripping %s to %s\n", path, debug_path);
           if (!eu_strip (error, "--remove-comment", "--reloc-debug-sections",
                          "-f", debug_path,
                          "-F", real_debug_path,
@@ -496,7 +511,7 @@ builder_post_process (BuilderPostProcessFlags flags,
     }
   else if (flags & BUILDER_POST_PROCESS_FLAGS_DEBUGINFO)
     {
-      if (!builder_post_process_debuginfo (app_dir, changed, context, error))
+      if (!builder_post_process_debuginfo (app_dir, changed, flags, context, error))
         return FALSE;
     }
 

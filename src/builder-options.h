@@ -66,6 +66,8 @@ void        builder_options_checksum (BuilderOptions *self,
                                       BuilderContext *context);
 gboolean    builder_options_get_no_debuginfo (BuilderOptions *self,
                                               BuilderContext *context);
+gboolean    builder_options_get_no_debuginfo_compression (BuilderOptions *self,
+							  BuilderContext *context);
 gboolean    builder_options_get_strip (BuilderOptions *self,
                                        BuilderContext *context);
 

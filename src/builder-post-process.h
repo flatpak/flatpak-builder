@@ -31,6 +31,7 @@ typedef enum {
   BUILDER_POST_PROCESS_FLAGS_PYTHON_TIMESTAMPS  = 1<<0,
   BUILDER_POST_PROCESS_FLAGS_STRIP              = 1<<1,
   BUILDER_POST_PROCESS_FLAGS_DEBUGINFO          = 1<<2,
+  BUILDER_POST_PROCESS_FLAGS_DEBUGINFO_COMPRESSION = 1<<3,
 } BuilderPostProcessFlags;
 
 gboolean builder_post_process (BuilderPostProcessFlags   flags,

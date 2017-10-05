@@ -302,6 +302,10 @@
                     and puts this in an extension. If you want to disable this, set no-debuginfo to true.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>no-debuginfo-compression</option> (boolean)</term>
+                    <listitem><para>By default when extracting debuginfo we compress the debug sections. If you want to disable this, set no-debuginfo-compression to true.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>arch</option> (object)</term>
                     <listitem><para>This is a dictionary defining for each arch a separate build options object that override the main one.</para></listitem>
                 </varlistentry>
