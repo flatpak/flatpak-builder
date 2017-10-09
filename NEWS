@@ -1,3 +1,17 @@
+Major changes in 0.9.99
+=======================
+
+ * Fix git source bundling on older git version
+ * New property: appdata-license lets you easily modify the appstream license field
+ * New source type "extra-data" which makes it easier to use extra-data apps
+ * We now automatically compress debuginfo unless the no-debuginfo-compression
+   option is specified.
+ * Appstream files called .metainfo.xml are now recognized.
+ * New prepare-platform-commands property, similar to cleanup-platform-commands,
+   but run before importing all the changes from the SDK.
+ * We now apply all the deletions that happened in the SDK on the base when creating
+   the platform.
+
 Major changes in 0.9.98
 =======================
 
