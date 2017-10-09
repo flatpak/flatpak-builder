@@ -2990,6 +2990,7 @@ builder_manifest_create_platform (BuilderManifest *self,
           builder_module_cleanup_collect (m, TRUE, context, to_remove_ht);
         }
 
+      /* This returns both additiona and removals */
       changes = builder_cache_get_all_changes (cache, error);
       if (changes == NULL)
         return FALSE;
@@ -3009,27 +3010,39 @@ builder_manifest_create_platform (BuilderManifest *self,
               !g_str_equal (changed, "usr/lib/debug/app"))
             continue;
 
-          if (g_hash_table_contains (to_remove_ht, changed))
-            {
-              g_print ("Ignoring %s\n", changed);
-              continue;
-            }
-
           src = g_file_resolve_relative_path (app_dir, changed);
           dest = g_file_resolve_relative_path (platform_dir, changed + strlen ("usr/"));
 
           info = g_file_query_info (src, "standard::type,standard::symlink-target",
                                     G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                     NULL, &my_error);
-          if (info == NULL)
+          if (info == NULL &&
+              !g_error_matches (my_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
             {
-              if (g_error_matches (my_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
-                continue;
-
               g_propagate_error (error, g_steal_pointer (&my_error));
               return FALSE;
             }
           g_clear_error (&my_error);
+
+          if (info == NULL)
+            {
+              /* File was removed from sdk, remove from platform also if it exists there */
+
+              if (!g_file_delete (dest, NULL, &my_error) &&
+                  !g_error_matches (my_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+                {
+                  g_propagate_error (error, g_steal_pointer (&my_error));
+                  return FALSE;
+                }
+
+              continue;
+            }
+
+          if (g_hash_table_contains (to_remove_ht, changed))
+            {
+              g_print ("Ignoring %s\n", changed);
+              continue;
+            }
 
           if (g_file_info_get_file_type (info) == G_FILE_TYPE_DIRECTORY)
             {

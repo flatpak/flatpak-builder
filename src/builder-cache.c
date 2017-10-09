@@ -1005,6 +1005,53 @@ get_changes (BuilderCache *self,
 }
 
 
+/* This returns removals too */
+static GPtrArray *
+get_all_changes (BuilderCache *self,
+                 GFile       *from,
+                 GFile       *to,
+                 GError      **error)
+{
+  g_autoptr(GPtrArray) added = g_ptr_array_new_with_free_func (g_object_unref);
+  g_autoptr(GPtrArray) modified = g_ptr_array_new_with_free_func ((GDestroyNotify) ostree_diff_item_unref);
+  g_autoptr(GPtrArray) removed = g_ptr_array_new_with_free_func (g_object_unref);
+  g_autoptr(GPtrArray) changed_paths = g_ptr_array_new_with_free_func (g_free);
+  int i;
+
+  if (!ostree_diff_dirs (OSTREE_DIFF_FLAGS_NONE,
+                         from,
+                         to,
+                         modified,
+                         removed,
+                         added,
+                         NULL, error))
+    return NULL;
+
+  for (i = 0; i < added->len; i++)
+    {
+      char *path = g_file_get_relative_path (to, g_ptr_array_index (added, i));
+      g_ptr_array_add (changed_paths, path);
+    }
+
+  for (i = 0; i < modified->len; i++)
+    {
+      OstreeDiffItem *modified_item = g_ptr_array_index (modified, i);
+      char *path = g_file_get_relative_path (to, modified_item->target);
+      g_ptr_array_add (changed_paths, path);
+    }
+
+  for (i = 0; i < removed->len; i++)
+    {
+      char *path = g_file_get_relative_path (to, g_ptr_array_index (removed, i));
+      g_ptr_array_add (changed_paths, path);
+    }
+
+  g_ptr_array_sort (changed_paths, cmpstringp);
+
+  return g_steal_pointer (&changed_paths);
+}
+
+/* This returns removals too */
 GPtrArray *
 builder_cache_get_all_changes (BuilderCache *self,
                                GError      **error)
@@ -1028,7 +1075,7 @@ builder_cache_get_all_changes (BuilderCache *self,
   if (!ostree_repo_read_commit (self->repo, finish_commit, &finish_root, NULL, NULL, error))
     return NULL;
 
-  return get_changes (self, init_root, finish_root, error);
+  return get_all_changes (self, init_root, finish_root, error);
 }
 
 static GPtrArray   *
