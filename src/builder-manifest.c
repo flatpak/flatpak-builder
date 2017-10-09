@@ -1584,7 +1584,7 @@ builder_manifest_checksum_for_cleanup (BuilderManifest *self,
   builder_cache_checksum_strv (cache, self->cleanup_commands);
   builder_cache_checksum_str (cache, self->rename_desktop_file);
   builder_cache_checksum_str (cache, self->rename_appdata_file);
-  builder_cache_checksum_compat_str (cache, self->appdata_license);
+  builder_cache_checksum_str (cache, self->appdata_license);
   builder_cache_checksum_str (cache, self->rename_icon);
   builder_cache_checksum_boolean (cache, self->copy_icon);
   builder_cache_checksum_str (cache, self->desktop_file_name_prefix);

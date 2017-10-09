@@ -986,7 +986,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_strv (cache, self->make_install_args);
   builder_cache_checksum_boolean (cache, self->strip);
   builder_cache_checksum_boolean (cache, self->no_debuginfo);
-  builder_cache_checksum_compat_boolean (cache, self->no_debuginfo_compression);
+  builder_cache_checksum_boolean (cache, self->no_debuginfo_compression);
 
   arch_options = g_hash_table_lookup (self->arch, builder_context_get_arch (context));
   if (arch_options)
