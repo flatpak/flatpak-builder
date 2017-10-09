@@ -191,6 +191,10 @@
                     <term><option>cleanup-platform-commands</option> (array of strings)</term>
                     <listitem><para>An array of commandlines that are run during the cleanup phase of the platform.</para></listitem>
                 </varlistentry>
+                <varlistentry>
+                    <term><option>prepare-platform-commands</option> (array of strings)</term>
+                    <listitem><para>An array of commandlines that are run after importing the base platform, but before applying the new files from the sdk. This is a good place to e.g. delete things from the base that may conflict with the files added in the sdk. </para></listitem>
+                </varlistentry>
                <varlistentry>
                     <term><option>finish-args</option> (array of strings)</term>
                     <listitem><para>An array of arguments passed to the <command>flatpak build-finish</command> command.</para></listitem>

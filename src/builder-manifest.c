@@ -80,6 +80,7 @@ struct BuilderManifest
   char          **cleanup_commands;
   char          **cleanup_platform;
   char          **cleanup_platform_commands;
+  char          **prepare_platform_commands;
   char          **finish_args;
   char          **inherit_extensions;
   char          **tags;
@@ -138,6 +139,7 @@ enum {
   PROP_CLEANUP_COMMANDS,
   PROP_CLEANUP_PLATFORM_COMMANDS,
   PROP_CLEANUP_PLATFORM,
+  PROP_PREPARE_PLATFORM_COMMANDS,
   PROP_BUILD_RUNTIME,
   PROP_BUILD_EXTENSION,
   PROP_SEPARATE_LOCALES,
@@ -188,6 +190,7 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->cleanup_commands);
   g_strfreev (self->cleanup_platform);
   g_strfreev (self->cleanup_platform_commands);
+  g_strfreev (self->prepare_platform_commands);
   g_strfreev (self->finish_args);
   g_strfreev (self->inherit_extensions);
   g_strfreev (self->tags);
@@ -350,6 +353,10 @@ builder_manifest_get_property (GObject    *object,
 
     case PROP_CLEANUP_PLATFORM_COMMANDS:
       g_value_set_boxed (value, self->cleanup_platform_commands);
+      break;
+
+    case PROP_PREPARE_PLATFORM_COMMANDS:
+      g_value_set_boxed (value, self->prepare_platform_commands);
       break;
 
     case PROP_FINISH_ARGS:
@@ -563,6 +570,12 @@ builder_manifest_set_property (GObject      *object,
     case PROP_CLEANUP_PLATFORM_COMMANDS:
       tmp = self->cleanup_platform_commands;
       self->cleanup_platform_commands = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_PREPARE_PLATFORM_COMMANDS:
+      tmp = self->prepare_platform_commands;
+      self->prepare_platform_commands = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -831,6 +844,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_CLEANUP_PLATFORM_COMMANDS,
                                    g_param_spec_boxed ("cleanup-platform-commands",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_PREPARE_PLATFORM_COMMANDS,
+                                   g_param_spec_boxed ("prepare-platform-commands",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -1633,6 +1653,7 @@ builder_manifest_checksum_for_platform (BuilderManifest *self,
   builder_cache_checksum_str (cache, self->metadata_platform);
   builder_cache_checksum_strv (cache, self->cleanup_platform);
   builder_cache_checksum_strv (cache, self->cleanup_platform_commands);
+  builder_cache_checksum_strv (cache, self->prepare_platform_commands);
   builder_cache_checksum_strv (cache, self->platform_extensions);
 
   if (self->metadata_platform)
@@ -2943,6 +2964,22 @@ builder_manifest_create_platform (BuilderManifest *self,
             {
               g_prefix_error (error, "Can't save metadata.platform: ");
               return FALSE;
+            }
+        }
+
+      if (self->prepare_platform_commands)
+        {
+          g_auto(GStrv) env = builder_options_get_env (self->build_options, context);
+          g_auto(GStrv) build_args = builder_options_get_build_args (self->build_options, context, error);
+          if (!build_args)
+            return FALSE;
+          char *platform_args[] = { "--sdk-dir=platform", "--metadata=metadata.platform", NULL };
+          g_auto(GStrv) extra_args = strcatv (build_args, platform_args);
+
+          for (i = 0; self->prepare_platform_commands[i] != NULL; i++)
+            {
+              if (!command (app_dir, env, extra_args, self->prepare_platform_commands[i], error))
+                return FALSE;
             }
         }
 
