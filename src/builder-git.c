@@ -50,6 +50,71 @@ git (GFile   *dir,
   return res;
 }
 
+static GHashTable *
+git_ls_remote (GFile *repo_dir,
+               const char *remote,
+               GError **error)
+{
+  char *output = NULL;
+  g_autoptr(GHashTable) refs = NULL;
+  g_auto(GStrv) lines = NULL;
+  int i;
+
+  if (!git (repo_dir, &output, 0, error,
+            "ls-remote", remote, NULL))
+    return NULL;
+
+  refs = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_free);
+  lines = g_strsplit (output, "\n", -1);
+  for (i = 0; lines[i] != NULL; i++)
+    {
+      g_autofree char **line = g_strsplit (lines[i], "\t", 2);
+      if (line[0] != NULL && line[1] != NULL)
+        g_hash_table_insert (refs, line[1], line[0]);
+    }
+
+  return g_steal_pointer (&refs);
+}
+
+static char *
+lookup_full_ref (GHashTable *refs, const char *ref)
+{
+  int i;
+  const char *prefixes[] = {
+    "",
+    "refs/",
+    "refs/tags/",
+    "refs/heads/"
+  };
+  GHashTableIter iter;
+  gpointer key, value;
+  g_autofree char *lowered = NULL;
+
+  for (i = 0; i < G_N_ELEMENTS(prefixes); i++)
+    {
+      g_autofree char *full_ref = g_strconcat (prefixes[i], ref, NULL);
+      if (g_hash_table_contains (refs, full_ref))
+        return g_steal_pointer (&full_ref);
+    }
+
+  g_hash_table_iter_init (&iter, refs);
+  while (g_hash_table_iter_next (&iter, &key, &value))
+    {
+      const char *key_ref = key;
+      const char *commit = value;
+
+      if (g_ascii_strncasecmp (commit, ref, strlen (ref)) == 0)
+        {
+          char *full_ref = g_strdup (key_ref);
+          if (g_str_has_suffix (full_ref, "^{}"))
+            full_ref[strlen (full_ref) - 3] = 0;
+          return full_ref;
+        }
+    }
+
+  return NULL;
+}
+
 static GFile *
 git_get_mirror_dir (const char     *url_or_path,
                     BuilderContext *context)
@@ -236,6 +301,13 @@ git_mirror_submodules (const char     *repo_location,
   return TRUE;
 }
 
+/* This mirrors the repo given by repo_location in a local
+   directory. It tries to mirror only "ref", in a shallow way.
+   However, this only works if ref is a tag or branch, or
+   a commit id that is currently at the tip of a remote ref.
+   If it is just a random commit id then we're forced to do
+   a deep fetch of the entire remote repo.
+*/
 gboolean
 builder_git_mirror_repo (const char     *repo_location,
                          const char     *destination_path,
@@ -249,6 +321,8 @@ builder_git_mirror_repo (const char     *repo_location,
   g_autoptr(GFile) cache_mirror_dir = NULL;
   g_autoptr(GFile) mirror_dir = NULL;
   g_autofree char *current_commit = NULL;
+  g_autoptr(GHashTable) refs = NULL;
+  gboolean already_exists = FALSE;
 
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
@@ -265,32 +339,28 @@ builder_git_mirror_repo (const char     *repo_location,
 
   if (!g_file_query_exists (mirror_dir, NULL))
     {
-      g_autofree char *filename = g_file_get_basename (mirror_dir);
-      g_autoptr(GFile) parent = g_file_get_parent (mirror_dir);
-      g_autofree char *mirror_path = g_file_get_path (mirror_dir);
-      g_autofree char *path_tmp = g_strconcat (mirror_path, ".clone_XXXXXX", NULL);
-      g_autofree char *filename_tmp = NULL;
-      g_autoptr(GFile) mirror_dir_tmp = NULL;
+      if (!git (NULL, NULL, 0, error,
+                "init", "--bare",
+                (char *)flatpak_file_get_path_cached (mirror_dir), NULL))
+        return FALSE;
+
+      if (!git (mirror_dir, NULL, 0, error,
+                "remote", "add", "--mirror=fetch", "origin",
+                repo_location, NULL))
+        return FALSE;
+    }
+
+  if (git (mirror_dir, NULL, G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL,
+           "cat-file", "-e", ref, NULL))
+    already_exists = TRUE;
+
+  if (update || !already_exists)
+    {
+      g_autofree char *full_ref = NULL;
       g_autoptr(GFile) cached_git_dir = NULL;
-      gboolean res;
-      g_autoptr(GPtrArray) args = g_ptr_array_new ();
-
-      if (g_mkdtemp_full (path_tmp, 0755) == NULL)
-        return flatpak_fail (error, "Can't create temporary directory");
-
-      mirror_dir_tmp = g_file_new_for_path (path_tmp);
-      filename_tmp = g_file_get_basename (mirror_dir_tmp);
-
-      g_ptr_array_add (args, "git");
-      g_ptr_array_add (args, "clone");
-
-      if (!disable_fsck)
-        {
-          g_ptr_array_add (args, "-c");
-          g_ptr_array_add (args, "transfer.fsckObjects=1");
-        }
-
-      g_ptr_array_add (args, "--mirror");
+      g_autofree char *origin = NULL;
+      g_autoptr(GFile) alternates = NULL;
+      g_autofree char *filename = g_file_get_basename (mirror_dir);
 
       /* If we're doing a regular download, look for cache sources */
       if (destination_path == NULL)
@@ -298,53 +368,65 @@ builder_git_mirror_repo (const char     *repo_location,
       else
         cached_git_dir = g_object_ref (cache_mirror_dir);
 
-      g_print ("Cloning git repo %s\n", repo_location);
-
-      if (cached_git_dir && update)
-        {
-          g_ptr_array_add (args, "--reference");
-          g_ptr_array_add (args, (char *)flatpak_file_get_path_cached (cached_git_dir));
-        }
-
-      /* Non-updating use of caches we just pull from the cache to avoid network i/o */
-      if (cached_git_dir && !update)
-        g_ptr_array_add (args, (char *)flatpak_file_get_path_cached (cached_git_dir));
+      /* If we're not updating, only pull from cache to avoid network i/o */
+      if (!update && cached_git_dir)
+        origin = g_file_get_uri (cached_git_dir);
       else
-        g_ptr_array_add (args, (char *)repo_location);
+        origin = g_strdup ("origin");
 
-      g_ptr_array_add (args, filename_tmp);
-      g_ptr_array_add (args, NULL);
-
-      res = flatpak_spawnv (parent, NULL, 0, error,
-                            (const gchar * const *) args->pdata);
-
-      if (cached_git_dir && !update &&
-          !git (mirror_dir_tmp, NULL, 0, error,
-                "config", "--local", "remote.origin.url",
-                repo_location, NULL))
+      refs = git_ls_remote (mirror_dir, origin, error);
+      if (refs == NULL)
         return FALSE;
 
-      /* Ensure we copy the files from the cache, to be safe if the extra source changes */
-      if (cached_git_dir && update)
+      if (update && cached_git_dir)
         {
-          g_autoptr(GFile) alternates = g_file_resolve_relative_path (mirror_dir_tmp, "objects/info/alternates");
+          const char *data = flatpak_file_get_path_cached (cached_git_dir);
+          /* If we're updating, use the cache as a source of git objects */
+          alternates = g_file_resolve_relative_path (mirror_dir, "objects/info/alternates");
+          if (!g_file_replace_contents (alternates,
+                                        data, strlen (data),
+                                        NULL, FALSE,
+                                        G_FILE_CREATE_REPLACE_DESTINATION,
+                                        NULL, NULL, error))
+            return FALSE;
+        }
 
-          if (!git (mirror_dir_tmp, NULL, 0, error,
+      full_ref = lookup_full_ref (refs, ref);
+      if (full_ref)
+        {
+          g_autofree char *full_ref_mapping = g_strdup_printf ("+%s:%s", full_ref, full_ref);
+
+          if (!git (mirror_dir, NULL, 0, error,
+                    "config", "transfer.fsckObjects", disable_fsck ? "0" : "1", NULL))
+            return FALSE;
+
+          g_print ("Fetching git repo %s, ref %s\n", repo_location, full_ref);
+          if (!git (mirror_dir, NULL, 0, error,
+                    "fetch", "-p", "--no-recurse-submodules", "--no-tags", "--depth=1", "-f",
+                    origin, full_ref_mapping, NULL))
+            return FALSE;
+
+        }
+      else if (!already_exists)
+        /* We don't fetch everything if it already exists, because
+           since it failed to resolve to full_ref it is a commit id
+           which can't change and thus need no updates */
+        {
+          g_print ("Fetching full git repo %s\n", repo_location);
+          if (!git (mirror_dir, NULL, 0, error,
+                    "fetch", "-p", "--no-recurse-submodules", "--tags", origin, NULL))
+            return FALSE;
+        }
+
+      if (alternates)
+        {
+          /* Ensure we copy the files from the cache, to be safe if the extra source changes */
+          if (!git (mirror_dir, NULL, 0, error,
                     "repack", "-a", "-d", NULL))
             return FALSE;
 
           g_file_delete (alternates, NULL, NULL);
         }
-
-      if (!res || !g_file_move (mirror_dir_tmp, mirror_dir, 0, NULL, NULL, NULL, error))
-        return FALSE;
-    }
-  else if (update)
-    {
-      g_print ("Fetching git repo %s\n", repo_location);
-      if (!git (mirror_dir, NULL, 0, error,
-                "fetch", "-p", NULL))
-        return FALSE;
     }
 
   if (mirror_submodules)
@@ -361,6 +443,10 @@ builder_git_mirror_repo (const char     *repo_location,
   return TRUE;
 }
 
+/* In contrast with builder_git_mirror_repo this always does a shallow
+   mirror. However, it only works for sources that are local, because
+   it handles the case builder_git_mirror_repo fails at by creating refs
+   in the source repo. */
 gboolean
 builder_git_shallow_mirror_ref (const char     *repo_location,
                                 const char     *destination_path,
