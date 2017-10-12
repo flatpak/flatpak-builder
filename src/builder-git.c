@@ -88,7 +88,6 @@ lookup_full_ref (GHashTable *refs, const char *ref)
   };
   GHashTableIter iter;
   gpointer key, value;
-  g_autofree char *lowered = NULL;
 
   for (i = 0; i < G_N_ELEMENTS(prefixes); i++)
     {
