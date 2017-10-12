@@ -406,9 +406,10 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
   if (*full_ref == 0)
     {
       g_free (full_ref);
-      full_ref = g_strdup_printf ("flatpak-builder/ref-%s", ref);
+      /* We can't pull the commit id, so we create a ref we can pull */
+      full_ref = g_strdup_printf ("refs/flatpak/ref-%s", ref);
       if (!git (cache_mirror_dir, NULL, 0, NULL,
-                "branch", "-f", full_ref, ref, NULL))
+                "update-ref", full_ref, ref, NULL))
         return FALSE;
     }
 
