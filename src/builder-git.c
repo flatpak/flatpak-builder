@@ -36,6 +36,7 @@
 static gboolean
 git (GFile   *dir,
      char   **output,
+     GSubprocessFlags flags,
      GError **error,
      ...)
 {
@@ -43,7 +44,7 @@ git (GFile   *dir,
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (dir, output, 0, error, "git", ap);
+  res = flatpak_spawn (dir, output, flags, error, "git", ap);
   va_end (ap);
 
   return res;
@@ -83,7 +84,7 @@ git_get_current_commit (GFile          *repo_dir,
   else
     arg = g_strdup (branch);
 
-  if (!git (repo_dir, &output, error,
+  if (!git (repo_dir, &output, 0, error,
             "rev-parse", arg, NULL))
     return NULL;
 
@@ -165,10 +166,10 @@ git_mirror_submodules (const char     *repo_location,
   g_autofree gchar *gitmodules = g_strconcat (revision, ":.gitmodules", NULL);
   gsize num_submodules;
 
-  if (!git (mirror_dir, &rev_parse_output, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
+  if (!git (mirror_dir, &rev_parse_output, 0, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
     return TRUE;
 
-  if (git (mirror_dir, &submodule_data, NULL, "show", gitmodules, NULL))
+  if (git (mirror_dir, &submodule_data, 0, NULL, "show", gitmodules, NULL))
     {
       if (!g_key_file_load_from_data (key_file, submodule_data, -1,
                                       G_KEY_FILE_NONE, error))
@@ -203,7 +204,7 @@ git_mirror_submodules (const char     *repo_location,
           if (absolute_url == NULL)
             return FALSE;
 
-          if (!git (mirror_dir, &ls_tree, error, "ls-tree", revision, path, NULL))
+          if (!git (mirror_dir, &ls_tree, 0, error, "ls-tree", revision, path, NULL))
             return FALSE;
 
           lines = g_strsplit (g_strstrip (ls_tree), "\n", 0);
@@ -318,7 +319,7 @@ builder_git_mirror_repo (const char     *repo_location,
                             (const gchar * const *) args->pdata);
 
       if (cached_git_dir && !update &&
-          !git (mirror_dir_tmp, NULL, error,
+          !git (mirror_dir_tmp, NULL, 0, error,
                 "config", "--local", "remote.origin.url",
                 repo_location, NULL))
         return FALSE;
@@ -328,7 +329,7 @@ builder_git_mirror_repo (const char     *repo_location,
         {
           g_autoptr(GFile) alternates = g_file_resolve_relative_path (mirror_dir_tmp, "objects/info/alternates");
 
-          if (!git (mirror_dir_tmp, NULL, error,
+          if (!git (mirror_dir_tmp, NULL, 0, error,
                     "repack", "-a", "-d", NULL))
             return FALSE;
 
@@ -341,7 +342,7 @@ builder_git_mirror_repo (const char     *repo_location,
   else if (update)
     {
       g_print ("Fetching git repo %s\n", repo_location);
-      if (!git (mirror_dir, NULL, error,
+      if (!git (mirror_dir, NULL, 0, error,
                 "fetch", "-p", NULL))
         return FALSE;
     }
@@ -386,16 +387,16 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
 
   if (!g_file_query_exists (mirror_dir, NULL))
     {
-      if (!git (NULL, NULL, error,
+      if (!git (NULL, NULL, 0, error,
                 "init", "--bare", destination_file_path, NULL))
         return FALSE;
-      if (!git (mirror_dir, NULL, error,
+      if (!git (mirror_dir, NULL, 0, error,
                 "remote", "add", "--mirror=fetch", "origin",
                 (char *)flatpak_file_get_path_cached (cache_mirror_dir), NULL))
         return FALSE;
     }
 
-  if (!git (cache_mirror_dir, &full_ref, NULL,
+  if (!git (cache_mirror_dir, &full_ref, 0, NULL,
             "rev-parse", "--symbolic-full-name", ref, NULL))
     return FALSE;
 
@@ -406,13 +407,13 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
     {
       g_free (full_ref);
       full_ref = g_strdup_printf ("flatpak-builder/ref-%s", ref);
-      if (!git (cache_mirror_dir, NULL, NULL,
+      if (!git (cache_mirror_dir, NULL, 0, NULL,
                 "branch", "-f", full_ref, ref, NULL))
         return FALSE;
     }
 
   full_ref_colon_full_ref = g_strdup_printf ("%s:%s", full_ref, full_ref);
-  if (!git (mirror_dir, NULL, error,
+  if (!git (mirror_dir, NULL, 0, error,
             "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
     return FALSE;
 
@@ -444,10 +445,10 @@ git_extract_submodule (const char     *repo_location,
   g_autofree gchar *gitmodules = g_strconcat (revision, ":.gitmodules", NULL);
   gsize num_submodules;
 
-  if (!git (checkout_dir, &rev_parse_output, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
+  if (!git (checkout_dir, &rev_parse_output, 0, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
     return TRUE;
 
-  if (git (checkout_dir, &submodule_data, NULL, "show", gitmodules, NULL))
+  if (git (checkout_dir, &submodule_data, 0, NULL, "show", gitmodules, NULL))
     {
       if (!g_key_file_load_from_data (key_file, submodule_data, -1,
                                       G_KEY_FILE_NONE, error))
@@ -496,7 +497,7 @@ git_extract_submodule (const char     *repo_location,
           if (absolute_url == NULL)
             return FALSE;
 
-          if (!git (checkout_dir, &ls_tree, error, "ls-tree", revision, path, NULL))
+          if (!git (checkout_dir, &ls_tree, 0, error, "ls-tree", revision, path, NULL))
             return FALSE;
 
           lines = g_strsplit (g_strstrip (ls_tree), "\n", 0);
@@ -515,11 +516,11 @@ git_extract_submodule (const char     *repo_location,
           mirror_dir_as_url = g_file_get_uri (mirror_dir);
           option = g_strdup_printf ("submodule.%s.url", name);
 
-          if (!git (checkout_dir, NULL, error,
+          if (!git (checkout_dir, NULL, 0, error,
                     "config", option, mirror_dir_as_url, NULL))
             return FALSE;
 
-          if (!git (checkout_dir, NULL, error,
+          if (!git (checkout_dir, NULL, 0, error,
                     "submodule", "update", "--init", path, NULL))
             return FALSE;
 
@@ -550,11 +551,11 @@ builder_git_checkout_dir (const char     *repo_location,
   mirror_dir_path = g_file_get_path (mirror_dir);
   dest_path = g_file_get_path (dest);
 
-  if (!git (NULL, NULL, error,
+  if (!git (NULL, NULL, 0, error,
             "clone", "-n", mirror_dir_path, dest_path, NULL))
     return FALSE;
 
-  if (!git (dest, NULL, error,
+  if (!git (dest, NULL, 0, error,
             "checkout", branch, "--", dir ? dir : ".", NULL))
     return FALSE;
 
@@ -577,18 +578,18 @@ builder_git_checkout (const char     *repo_location,
   mirror_dir_path = g_file_get_path (mirror_dir);
   dest_path = g_file_get_path (dest);
 
-  if (!git (NULL, NULL, error,
+  if (!git (NULL, NULL, 0, error,
             "clone", mirror_dir_path, dest_path, NULL))
     return FALSE;
 
-  if (!git (dest, NULL, error,
+  if (!git (dest, NULL, 0, error,
             "checkout", branch, NULL))
     return FALSE;
 
   if (!git_extract_submodule (repo_location, dest, branch, context, error))
     return FALSE;
 
-  if (!git (dest, NULL, error,
+  if (!git (dest, NULL, 0, error,
             "config", "--local", "remote.origin.url",
             repo_location, NULL))
     return FALSE;
