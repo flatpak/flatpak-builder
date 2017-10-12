@@ -1317,7 +1317,7 @@ flatpak (GError **error,
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (NULL, &output, error, "flatpak", ap);
+  res = flatpak_spawn (NULL, &output, 0, error, "flatpak", ap);
   va_end (ap);
 
   if (res)
