@@ -139,7 +139,7 @@ strip (GError **error,
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (NULL, NULL, error, "strip", ap);
+  res = flatpak_spawn (NULL, NULL, 0, error, "strip", ap);
   va_end (ap);
 
   return res;
@@ -153,7 +153,7 @@ eu_strip (GError **error,
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (NULL, NULL, error, "eu-strip", ap);
+  res = flatpak_spawn (NULL, NULL, 0, error, "eu-strip", ap);
   va_end (ap);
 
   return res;
@@ -161,13 +161,13 @@ eu_strip (GError **error,
 
 gboolean
 eu_elfcompress (GError **error,
-		...)
+                ...)
 {
   gboolean res;
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (NULL, NULL, error, "eu-elfcompress", ap);
+  res = flatpak_spawn (NULL, NULL, 0, error, "eu-elfcompress", ap);
   va_end (ap);
 
   return res;

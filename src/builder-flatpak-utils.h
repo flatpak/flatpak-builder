@@ -203,6 +203,7 @@ gboolean flatpak_file_arg_has_suffix (const char *arg, const char *suffix);
 
 gboolean            flatpak_spawn (GFile       *dir,
                                    char       **output,
+                                   GSubprocessFlags flags,
                                    GError     **error,
                                    const gchar *argv0,
                                    va_list      args);

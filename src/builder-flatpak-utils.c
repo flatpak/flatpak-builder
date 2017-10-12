@@ -519,6 +519,7 @@ flatpak_quote_argv (const char *argv[])
 gboolean
 flatpak_spawn (GFile       *dir,
                char       **output,
+               GSubprocessFlags flags,
                GError     **error,
                const gchar *argv0,
                va_list      ap)
@@ -533,7 +534,7 @@ flatpak_spawn (GFile       *dir,
     g_ptr_array_add (args, (gchar *) arg);
   g_ptr_array_add (args, NULL);
 
-  res = flatpak_spawnv (dir, output, 0, error, (const gchar * const *) args->pdata);
+  res = flatpak_spawnv (dir, output, flags, error, (const gchar * const *) args->pdata);
 
   g_ptr_array_free (args, TRUE);
 
