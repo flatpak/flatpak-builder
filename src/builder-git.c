@@ -658,14 +658,24 @@ builder_git_checkout (const char     *repo_location,
   g_autoptr(GFile) mirror_dir = NULL;
   g_autofree char *mirror_dir_path = NULL;
   g_autofree char *dest_path = NULL;
+  g_autofree char *dest_path_git = NULL;
 
   mirror_dir = git_get_mirror_dir (repo_location, context);
 
   mirror_dir_path = g_file_get_path (mirror_dir);
   dest_path = g_file_get_path (dest);
+  dest_path_git = g_build_filename (dest_path, ".git", NULL);
 
+  /* We need to clone with --mirror so that we get all refs, including non-branch/tags */
   if (!git (NULL, NULL, 0, error,
-            "clone", mirror_dir_path, dest_path, NULL))
+            "clone",
+            "--mirror",
+            mirror_dir_path, dest_path_git, NULL))
+    return FALSE;
+
+  /* Then we need to convert to regular */
+  if (!git (dest, NULL, 0, error,
+            "config", "--bool", "core.bare", "false", NULL))
     return FALSE;
 
   if (!git (dest, NULL, 0, error,
