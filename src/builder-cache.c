@@ -46,6 +46,7 @@ struct BuilderCache
   char       *stage;
   GHashTable *unused_stages;
   char       *last_parent;
+  char       *current_checksum;
   OstreeRepo *repo;
   gboolean    disabled;
   OstreeRepoDevInoCache *devino_to_csum_cache;
@@ -86,6 +87,7 @@ builder_cache_finalize (GObject *object)
   g_free (self->branch);
   g_free (self->last_parent);
   g_free (self->stage);
+  g_free (self->current_checksum);
   if (self->unused_stages)
     g_hash_table_unref (self->unused_stages);
 
@@ -291,14 +293,6 @@ builder_cache_open (BuilderCache *self,
   return TRUE;
 }
 
-static char *
-builder_cache_get_current (BuilderCache *self)
-{
-  g_autoptr(GChecksum) copy = g_checksum_copy (self->checksum);
-
-  return g_strdup (g_checksum_get_string (copy));
-}
-
 static gboolean
 builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_dir, GError **error)
 {
@@ -382,7 +376,6 @@ gboolean
 builder_cache_lookup (BuilderCache *self,
                       const char   *stage)
 {
-  g_autofree char *current = NULL;
   g_autofree char *commit = NULL;
   g_autofree char *ref = NULL;
 
@@ -391,6 +384,13 @@ builder_cache_lookup (BuilderCache *self,
 
   g_hash_table_remove (self->unused_stages, stage);
 
+  g_free (self->current_checksum);
+  self->current_checksum = g_strdup (g_checksum_get_string (self->checksum));
+
+  /* Reset the checksum, but feed it previous checksum so we chain it */
+  g_checksum_reset (self->checksum);
+  builder_cache_checksum_str (self, self->current_checksum);
+
   if (self->disabled)
     return FALSE;
 
@@ -398,7 +398,6 @@ builder_cache_lookup (BuilderCache *self,
   if (!ostree_repo_resolve_rev (self->repo, ref, TRUE, &commit, NULL))
     goto checkout;
 
-  current = builder_cache_get_current (self);
 
   if (commit != NULL)
     {
@@ -412,7 +411,7 @@ builder_cache_lookup (BuilderCache *self,
       g_variant_get (variant, "(a{sv}aya(say)&s&stayay)", NULL, NULL, NULL,
                      &subject, NULL, NULL, NULL, NULL);
 
-      if (strcmp (subject, current) == 0)
+      if (strcmp (subject, self->current_checksum) == 0)
         {
           g_free (self->last_parent);
           self->last_parent = g_steal_pointer (&commit);
@@ -531,7 +530,7 @@ builder_cache_commit (BuilderCache *self,
                       const char   *body,
                       GError      **error)
 {
-  g_autofree char *current = NULL;
+  const char *current = NULL;
   OstreeRepoCommitModifier *modifier = NULL;
 
   g_autoptr(OstreeMutableTree) mtree = NULL;
@@ -575,7 +574,7 @@ builder_cache_commit (BuilderCache *self,
   g_variant_dict_insert_value (metadata_dict, "changes",
                                g_variant_new_strv ((const gchar * const  *) changes->pdata, changes->len));
 
-  current = builder_cache_get_current (self);
+  current = self->current_checksum;
 
   if (!ostree_repo_write_commit (self->repo, self->last_parent, current, body, g_variant_dict_end (metadata_dict),
                                  OSTREE_REPO_FILE (root),
