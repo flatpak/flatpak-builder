@@ -72,6 +72,7 @@ enum {
 
 static GPtrArray   *builder_cache_get_changes_to (BuilderCache *self,
                                                   GFile        *current_root,
+                                                  GPtrArray   **removals,
                                                   GError      **error);
 
 
@@ -542,7 +543,9 @@ builder_cache_commit (BuilderCache *self,
   g_autoptr(GFile) last_root = NULL;
   g_autoptr(GFile) new_root = NULL;
   g_autoptr(GPtrArray) changes = NULL;
+  g_autoptr(GPtrArray) removals = NULL;
   g_autoptr(GVariantDict) metadata_dict = NULL;
+  g_autoptr(GVariant) metadata = NULL;
 
   g_print ("Committing stage %s to cache\n", self->stage);
 
@@ -569,14 +572,17 @@ builder_cache_commit (BuilderCache *self,
   if (!ostree_repo_write_mtree (self->repo, mtree, &root, NULL, error))
     goto out;
 
-  changes = builder_cache_get_changes_to (self, root, NULL);
+  changes = builder_cache_get_changes_to (self, root, &removals, NULL);
   metadata_dict = g_variant_dict_new (NULL);
   g_variant_dict_insert_value (metadata_dict, "changes",
                                g_variant_new_strv ((const gchar * const  *) changes->pdata, changes->len));
+  g_variant_dict_insert_value (metadata_dict, "removals",
+                               g_variant_new_strv ((const gchar * const  *) removals->pdata, removals->len));
+  metadata = g_variant_ref_sink (g_variant_dict_end (metadata_dict));
 
   current = self->current_checksum;
 
-  if (!ostree_repo_write_commit (self->repo, self->last_parent, current, body, g_variant_dict_end (metadata_dict),
+  if (!ostree_repo_write_commit (self->repo, self->last_parent, current, body, metadata,
                                  OSTREE_REPO_FILE (root),
                                  &commit_checksum, NULL, error))
     goto out;
@@ -594,7 +600,7 @@ builder_cache_commit (BuilderCache *self,
   if (!ostree_repo_write_mtree (self->repo, mtree, &new_root, NULL, error))
     goto out;
 
-  if (!ostree_repo_write_commit (self->repo, NULL, current, body, NULL,
+  if (!ostree_repo_write_commit (self->repo, NULL, current, body, metadata,
                                  OSTREE_REPO_FILE (new_root),
                                  &new_commit_checksum, NULL, error))
     goto out;
@@ -968,6 +974,7 @@ static GPtrArray *
 get_changes (BuilderCache *self,
              GFile       *from,
              GFile       *to,
+             GPtrArray  **removed_out,
              GError      **error)
 {
   g_autoptr(GPtrArray) added = g_ptr_array_new_with_free_func (g_object_unref);
@@ -999,6 +1006,18 @@ get_changes (BuilderCache *self,
     }
 
   g_ptr_array_sort (changed_paths, cmpstringp);
+
+  if (removed_out)
+    {
+      GPtrArray *removed_paths = g_ptr_array_new_with_free_func (g_free);
+
+      for (i = 0; i < removed->len; i++)
+        {
+          char *path = g_file_get_relative_path (to, g_ptr_array_index (removed, i));
+          g_ptr_array_add (removed_paths, path);
+        }
+      *removed_out = removed_paths;
+    }
 
   return g_steal_pointer (&changed_paths);
 }
@@ -1080,6 +1099,7 @@ builder_cache_get_all_changes (BuilderCache *self,
 static GPtrArray   *
 builder_cache_get_changes_to (BuilderCache *self,
                               GFile        *current_root,
+                              GPtrArray   **removals,
                               GError      **error)
 {
   g_autoptr(GFile) parent_root = NULL;
@@ -1088,7 +1108,7 @@ builder_cache_get_changes_to (BuilderCache *self,
       !ostree_repo_read_commit (self->repo, self->last_parent, &parent_root, NULL, NULL, error))
     return FALSE;
 
-  return get_changes (self, parent_root, current_root, error);
+  return get_changes (self, parent_root, current_root, removals, error);
 }
 
 GPtrArray   *
@@ -1134,7 +1154,7 @@ builder_cache_get_changes (BuilderCache *self,
         return FALSE;
     }
 
-  return get_changes (self, parent_root, current_root, error);
+  return get_changes (self, parent_root, current_root, NULL, error);
 }
 
 GPtrArray   *
@@ -1146,7 +1166,7 @@ builder_cache_get_files (BuilderCache *self,
   if (!ostree_repo_read_commit (self->repo, self->last_parent, &current_root, NULL, NULL, error))
     return NULL;
 
-  return get_changes (self, NULL, current_root, error);
+  return get_changes (self, NULL, current_root, NULL, error);
 }
 
 void
