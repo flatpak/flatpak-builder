@@ -1,3 +1,11 @@
+Major changes in 0.10.0
+=======================
+
+ * We now do shallow clones of git repos when downloading if
+   possible.
+ * The way the cache works internally was slightly tweaked
+   which will cause all existing caches to be rebuilt.
+
 Major changes in 0.9.99
 =======================
 
