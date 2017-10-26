@@ -3427,7 +3427,6 @@ builder_manifest_run (BuilderManifest *self,
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
-  g_ptr_array_add (args, g_strdup ("--die-with-parent"));
   g_ptr_array_add (args, g_strdup ("--with-appdir"));
 
   build_dir_path = g_file_get_path (builder_context_get_build_dir (context));
