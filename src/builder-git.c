@@ -405,6 +405,21 @@ builder_git_mirror_repo (const char     *repo_location,
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
+	  /* It turns out that older versions of git (at least 2.7.4)
+	   * cannot check out a commit unless a real tag/branch points
+	   * to it, which is not the case for e.g. gitbug pull requests.
+	   * So, to make this work we fake a branch for these cases.
+	   * See https://github.com/flatpak/flatpak/issues/1133
+	   */
+	  if (!g_str_has_prefix (full_ref, "refs/heads") &&
+	      !g_str_has_prefix (full_ref, "refs/tags"))
+	    {
+	      g_autofree char *fake_ref = g_strdup_printf ("refs/heads/flatpak-builder-internal/%s", full_ref);
+
+	      if (!git (mirror_dir, NULL, 0, NULL,
+			"update-ref", fake_ref, full_ref, NULL))
+		return FALSE;
+	    }
         }
       else if (!already_exists)
         /* We don't fetch everything if it already exists, because
@@ -492,7 +507,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
     {
       g_free (full_ref);
       /* We can't pull the commit id, so we create a ref we can pull */
-      full_ref = g_strdup_printf ("refs/flatpak/ref-%s", ref);
+      full_ref = g_strdup_printf ("refs/heads/flatpak-builder-internal/commit/%s", ref);
       if (!git (cache_mirror_dir, NULL, 0, NULL,
                 "update-ref", full_ref, ref, NULL))
         return FALSE;
