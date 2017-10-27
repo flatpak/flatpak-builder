@@ -1,3 +1,11 @@
+Major changes in 0.10.1
+=======================
+
+ * Fix handling of shallow git clones with older versions of git
+ * Fix issue where flatpak-builder --run could exit if some
+   thread in the parent process exited, exposeb by e.g.
+   gnome-builder.
+
 Major changes in 0.10.0
 =======================
 
