@@ -1,3 +1,10 @@
+Major changes in 0.10.2
+=======================
+
+ * Even more fixes for shallow git clones with older versions of git
+ * New property for git sources, disable-shallow-clone which falls
+   back to cloning the entire remote.
+
 Major changes in 0.10.1
 =======================
 
