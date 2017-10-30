@@ -321,9 +321,11 @@ builder_git_mirror_repo (const char     *repo_location,
 {
   g_autoptr(GFile) cache_mirror_dir = NULL;
   g_autoptr(GFile) mirror_dir = NULL;
+  g_autoptr(GFile) shallow_file = NULL;
   g_autofree char *current_commit = NULL;
   g_autoptr(GHashTable) refs = NULL;
   gboolean already_exists = FALSE;
+  gboolean was_shallow = FALSE;
 
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
@@ -350,6 +352,10 @@ builder_git_mirror_repo (const char     *repo_location,
                 repo_location, NULL))
         return FALSE;
     }
+
+  shallow_file = g_file_get_child (mirror_dir, "shallow");
+  if (g_file_query_exists (shallow_file, NULL))
+    was_shallow = TRUE;
 
   if (git (mirror_dir, NULL, G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL,
            "cat-file", "-e", ref, NULL))
@@ -431,7 +437,9 @@ builder_git_mirror_repo (const char     *repo_location,
         {
           g_print ("Fetching full git repo %s\n", repo_location);
           if (!git (mirror_dir, NULL, 0, error,
-                    "fetch", "-p", "--no-recurse-submodules", "--tags", origin, NULL))
+                    "fetch", "-p", "--no-recurse-submodules", "--tags", origin,
+                    was_shallow ? "--unshallow" : NULL,
+                    NULL))
             return FALSE;
         }
 
