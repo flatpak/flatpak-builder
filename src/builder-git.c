@@ -219,6 +219,7 @@ git_mirror_submodules (const char     *repo_location,
                        gboolean        update,
                        GFile          *mirror_dir,
                        gboolean        disable_fsck,
+                       gboolean        disable_shallow,
                        const char     *revision,
                        BuilderContext *context,
                        GError        **error)
@@ -291,7 +292,7 @@ git_mirror_submodules (const char     *repo_location,
             }
           else
             {
-              if (!builder_git_mirror_repo (absolute_url, destination_path, update, TRUE, disable_fsck, words[2], context, error))
+              if (!builder_git_mirror_repo (absolute_url, destination_path, update, TRUE, disable_fsck, disable_shallow, words[2], context, error))
                 return FALSE;
             }
         }
@@ -313,6 +314,7 @@ builder_git_mirror_repo (const char     *repo_location,
                          gboolean        update,
                          gboolean        mirror_submodules,
                          gboolean        disable_fsck,
+                         gboolean        disable_shallow,
                          const char     *ref,
                          BuilderContext *context,
                          GError        **error)
@@ -390,14 +392,15 @@ builder_git_mirror_repo (const char     *repo_location,
             return FALSE;
         }
 
-      full_ref = lookup_full_ref (refs, ref);
+      if (!git (mirror_dir, NULL, 0, error,
+                "config", "transfer.fsckObjects", disable_fsck ? "0" : "1", NULL))
+        return FALSE;
+
+      if (!disable_shallow)
+        full_ref = lookup_full_ref (refs, ref);
       if (full_ref)
         {
           g_autofree char *full_ref_mapping = g_strdup_printf ("+%s:%s", full_ref, full_ref);
-
-          if (!git (mirror_dir, NULL, 0, error,
-                    "config", "transfer.fsckObjects", disable_fsck ? "0" : "1", NULL))
-            return FALSE;
 
           g_print ("Fetching git repo %s, ref %s\n", repo_location, full_ref);
           if (!git (mirror_dir, NULL, 0, error,
@@ -421,8 +424,8 @@ builder_git_mirror_repo (const char     *repo_location,
 		return FALSE;
 	    }
         }
-      else if (!already_exists)
-        /* We don't fetch everything if it already exists, because
+      else if (!already_exists || disable_shallow)
+        /* We don't fetch everything if it already exists (and we're not disabling shallow), because
            since it failed to resolve to full_ref it is a commit id
            which can't change and thus need no updates */
         {
@@ -450,7 +453,7 @@ builder_git_mirror_repo (const char     *repo_location,
         return FALSE;
 
       if (!git_mirror_submodules (repo_location, destination_path, FALSE, update,
-                                  mirror_dir, disable_fsck, current_commit, context, error))
+                                  mirror_dir, disable_fsck, disable_shallow, current_commit, context, error))
         return FALSE;
     }
 
@@ -525,7 +528,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
         return FALSE;
 
       if (!git_mirror_submodules (repo_location, destination_path, TRUE, FALSE,
-                                  mirror_dir, TRUE, current_commit, context, error))
+                                  mirror_dir, TRUE, FALSE, current_commit, context, error))
         return FALSE;
     }
 

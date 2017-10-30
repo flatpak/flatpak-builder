@@ -30,6 +30,7 @@ gboolean builder_git_mirror_repo        (const char      *repo_location,
                                          gboolean         update,
                                          gboolean         mirror_submodules,
                                          gboolean         disable_fsck,
+                                         gboolean         disable_shallow,
                                          const char      *ref,
                                          BuilderContext  *context,
                                          GError         **error);
