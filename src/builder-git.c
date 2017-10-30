@@ -325,7 +325,9 @@ builder_git_mirror_repo (const char     *repo_location,
   g_autofree char *current_commit = NULL;
   g_autoptr(GHashTable) refs = NULL;
   gboolean already_exists = FALSE;
+  gboolean created = FALSE;
   gboolean was_shallow = FALSE;
+  gboolean do_disable_shallow = FALSE;
 
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
@@ -351,6 +353,8 @@ builder_git_mirror_repo (const char     *repo_location,
                 "remote", "add", "--mirror=fetch", "origin",
                 repo_location, NULL))
         return FALSE;
+
+      created = TRUE;
     }
 
   shallow_file = g_file_get_child (mirror_dir, "shallow");
@@ -360,6 +364,13 @@ builder_git_mirror_repo (const char     *repo_location,
   if (git (mirror_dir, NULL, G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL,
            "cat-file", "-e", ref, NULL))
     already_exists = TRUE;
+
+  do_disable_shallow = disable_shallow;
+
+  /* If we ever pulled non-shallow, then keep doing so, because
+     otherwise old git clients break */
+  if (!created && !was_shallow)
+    do_disable_shallow = TRUE;
 
   if (update || !already_exists)
     {
@@ -402,7 +413,7 @@ builder_git_mirror_repo (const char     *repo_location,
                 "config", "transfer.fsckObjects", disable_fsck ? "0" : "1", NULL))
         return FALSE;
 
-      if (!disable_shallow)
+      if (!do_disable_shallow)
         full_ref = lookup_full_ref (refs, ref);
       if (full_ref)
         {
@@ -430,7 +441,7 @@ builder_git_mirror_repo (const char     *repo_location,
 		return FALSE;
 	    }
         }
-      else if (!already_exists || disable_shallow)
+      else if (!already_exists || do_disable_shallow)
         /* We don't fetch everything if it already exists (and we're not disabling shallow), because
            since it failed to resolve to full_ref it is a commit id
            which can't change and thus need no updates */
