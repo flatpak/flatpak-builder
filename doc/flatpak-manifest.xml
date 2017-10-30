@@ -552,6 +552,10 @@
                         <term><option>disable-fsckobjects</option> (boolean)</term>
                         <listitem><para>Don't use transfer.fsckObjects=1 to mirror git repository. This may be needed for some (broken) repositories.</para></listitem>
                     </varlistentry>
+                    <varlistentry>
+                        <term><option>disable-shallow-clone</option> (boolean)</term>
+                        <listitem><para>Don't optimize by making a shallow clone when downloading the git repo.</para></listitem>
+                    </varlistentry>
                 </variablelist>
             </refsect3>
             <refsect3>

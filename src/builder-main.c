@@ -434,7 +434,7 @@ main (int    argc,
 
       if (!builder_git_mirror_repo (opt_from_git,
                                     NULL,
-                                    !opt_disable_updates, FALSE, FALSE,
+                                    !opt_disable_updates, FALSE, FALSE, FALSE,
                                     git_branch, build_context, &error))
         {
           g_printerr ("Can't clone manifest repo: %s\n", error->message);

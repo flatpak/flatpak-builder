@@ -45,6 +45,7 @@ struct BuilderSourceGit
   char         *commit;
   char         *orig_ref;
   gboolean      disable_fsckobjects;
+  gboolean      disable_shallow_clone;
 };
 
 typedef struct
@@ -62,6 +63,7 @@ enum {
   PROP_TAG,
   PROP_COMMIT,
   PROP_DISABLE_FSCKOBJECTS,
+  PROP_DISABLE_SHALLOW_CLONE,
   LAST_PROP
 };
 
@@ -114,6 +116,10 @@ builder_source_git_get_property (GObject    *object,
       g_value_set_boolean (value, self->disable_fsckobjects);
       break;
 
+    case PROP_DISABLE_SHALLOW_CLONE:
+      g_value_set_boolean (value, self->disable_shallow_clone);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -156,6 +162,10 @@ builder_source_git_set_property (GObject      *object,
 
     case PROP_DISABLE_FSCKOBJECTS:
       self->disable_fsckobjects = g_value_get_boolean (value);
+      break;
+
+    case PROP_DISABLE_SHALLOW_CLONE:
+      self->disable_shallow_clone = g_value_get_boolean (value);
       break;
 
     default:
@@ -226,7 +236,7 @@ builder_source_git_download (BuilderSource  *source,
 
   if (!builder_git_mirror_repo (location,
                                 NULL,
-                                update_vcs, TRUE, self->disable_fsckobjects,
+                                update_vcs, TRUE, self->disable_fsckobjects, self->disable_shallow_clone,
                                 get_branch (self),
                                 context,
                                 error))
@@ -316,6 +326,8 @@ builder_source_git_checksum (BuilderSource  *source,
   builder_cache_checksum_str (cache, self->branch);
   builder_cache_checksum_str (cache, self->commit);
   builder_cache_checksum_boolean (cache, self->disable_fsckobjects);
+  /* We don't checksum disable_shallow_clone, because it doesn't have
+     any effect on the resultant build */
 
   location = get_url_or_path (self, context, &error);
   if (location != NULL)
@@ -414,6 +426,13 @@ builder_source_git_class_init (BuilderSourceGitClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_DISABLE_FSCKOBJECTS,
                                    g_param_spec_boolean ("disable-fsckobjects",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_DISABLE_SHALLOW_CLONE,
+                                   g_param_spec_boolean ("disable-shallow-clone",
                                                          "",
                                                          "",
                                                          FALSE,
