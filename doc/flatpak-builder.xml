@@ -319,7 +319,7 @@
 
                 <listitem><para>
                     Always remove the sources and build after having built each module, even if the build
-                    failed. The default is to keep failed build directories but remote successful ones.
+                    failed. The default is to keep failed build directories but remove successful ones.
                     This is useful in e.g. automatic build systems.
                 </para></listitem>
             </varlistentry>
