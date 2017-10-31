@@ -1,3 +1,10 @@
+Major changes in 0.10.3
+=======================
+
+ * Yet more fixed or older versions of git.  In particular, we disable
+   fsck during transfer when doing a shallow clone and the git version
+   is less than 1.8.3.2.
+
 Major changes in 0.10.2
 =======================
 
