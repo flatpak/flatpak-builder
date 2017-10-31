@@ -81,7 +81,6 @@ lookup_full_ref (GHashTable *refs, const char *ref)
 {
   int i;
   const char *prefixes[] = {
-    "",
     "refs/",
     "refs/tags/",
     "refs/heads/"
@@ -102,7 +101,8 @@ lookup_full_ref (GHashTable *refs, const char *ref)
       const char *key_ref = key;
       const char *commit = value;
 
-      if (g_ascii_strncasecmp (commit, ref, strlen (ref)) == 0)
+      if (g_str_has_prefix (key_ref, "refs/") &&
+          g_ascii_strncasecmp (commit, ref, strlen (ref)) == 0)
         {
           char *full_ref = g_strdup (key_ref);
           if (g_str_has_suffix (full_ref, "^{}"))
