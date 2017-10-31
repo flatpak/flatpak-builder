@@ -51,6 +51,20 @@ git (GFile   *dir,
 }
 
 static gboolean
+cp (GError **error,
+     ...)
+{
+  gboolean res;
+  va_list ap;
+
+  va_start (ap, error);
+  res = flatpak_spawn (NULL, NULL, 0, error, "cp", ap);
+  va_end (ap);
+
+  return res;
+}
+
+static gboolean
 git_get_version (GError **error,
                  int *major,
                  int *minor,
@@ -754,14 +768,24 @@ builder_git_checkout_dir (const char     *repo_location,
   g_autoptr(GFile) mirror_dir = NULL;
   g_autofree char *mirror_dir_path = NULL;
   g_autofree char *dest_path = NULL;
+  g_autofree char *dest_path_git = NULL;
 
   mirror_dir = git_get_mirror_dir (repo_location, context);
 
   mirror_dir_path = g_file_get_path (mirror_dir);
   dest_path = g_file_get_path (dest);
+  dest_path_git = g_build_filename (dest_path, ".git", NULL);
 
-  if (!git (NULL, NULL, 0, error,
-            "clone", "-n", mirror_dir_path, dest_path, NULL))
+  g_mkdir_with_parents (dest_path, 0755);
+
+  if (!cp (error,
+           "-al",
+           mirror_dir_path, dest_path_git, NULL))
+    return FALSE;
+
+  /* Then we need to convert to regular */
+  if (!git (dest, NULL, 0, error,
+            "config", "--bool", "core.bare", "false", NULL))
     return FALSE;
 
   if (!git (dest, NULL, 0, error,
@@ -789,11 +813,11 @@ builder_git_checkout (const char     *repo_location,
   dest_path = g_file_get_path (dest);
   dest_path_git = g_build_filename (dest_path, ".git", NULL);
 
-  /* We need to clone with --mirror so that we get all refs, including non-branch/tags */
-  if (!git (NULL, NULL, 0, error,
-            "clone",
-            "--mirror",
-            mirror_dir_path, dest_path_git, NULL))
+  g_mkdir_with_parents (dest_path, 0755);
+
+  if (!cp (error,
+           "-al",
+           mirror_dir_path, dest_path_git, NULL))
     return FALSE;
 
   /* Then we need to convert to regular */
@@ -806,11 +830,6 @@ builder_git_checkout (const char     *repo_location,
     return FALSE;
 
   if (!git_extract_submodule (repo_location, dest, branch, context, error))
-    return FALSE;
-
-  if (!git (dest, NULL, 0, error,
-            "config", "--local", "remote.origin.url",
-            repo_location, NULL))
     return FALSE;
 
   return TRUE;
