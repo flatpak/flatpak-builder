@@ -431,15 +431,6 @@ main (int    argc,
       const char *git_branch = opt_from_git_branch ? opt_from_git_branch : "master";
       g_autoptr(GFile) build_subdir = NULL;
 
-      if (!builder_git_mirror_repo (opt_from_git,
-                                    NULL,
-                                    !opt_disable_updates, FALSE, FALSE, FALSE,
-                                    git_branch, build_context, &error))
-        {
-          g_printerr ("Can't clone manifest repo: %s\n", error->message);
-          return 1;
-        }
-
       build_subdir = builder_context_allocate_build_subdir (build_context, manifest_basename, &error);
       if (build_subdir == NULL)
         {
@@ -448,6 +439,15 @@ main (int    argc,
         }
 
       cleanup_manifest_dir = g_object_ref (build_subdir);
+
+      if (!builder_git_mirror_repo (opt_from_git,
+                                    NULL,
+                                    !opt_disable_updates, FALSE, FALSE, FALSE,
+                                    git_branch, build_context, &error))
+        {
+          g_printerr ("Can't clone manifest repo: %s\n", error->message);
+          return 1;
+        }
 
       if (!builder_git_checkout_dir (opt_from_git,
                                      git_branch,
