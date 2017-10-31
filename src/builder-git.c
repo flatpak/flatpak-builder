@@ -50,12 +50,96 @@ git (GFile   *dir,
   return res;
 }
 
+static gboolean
+git_get_version (GError **error,
+                 int *major,
+                 int *minor,
+                 int *micro,
+                 int *extra)
+{
+  g_autofree char *output = NULL;
+  char *p;
+
+  *major = *minor = *micro = *extra = 0;
+
+  if (!git (NULL, &output, 0, error,
+            "--version", NULL))
+    return FALSE;
+
+  /* Trim trailing whitespace */
+  g_strchomp (output);
+
+  if (!g_str_has_prefix (output, "git version "))
+    return flatpak_fail (error, "Unexpected git --version output");
+
+  p = output + strlen ("git version ");
+
+  *major = strtol (p, &p, 10);
+  while (*p == '.')
+    p++;
+  *minor = strtol (p, &p, 10);
+  while (*p == '.')
+    p++;
+  *micro = strtol (p, &p, 10);
+  while (*p == '.')
+    p++;
+  *extra = strtol (p, &p, 10);
+  while (*p == '.')
+    p++;
+
+  return TRUE;
+}
+
+static gboolean
+git_has_version (int major,
+                 int minor,
+                 int micro,
+                 int extra)
+{
+  g_autoptr(GError) error = NULL;
+  int git_major, git_minor, git_micro, git_extra;
+
+  if (!git_get_version (&error, &git_major, &git_minor, &git_micro, &git_extra))
+    {
+      g_warning ("Failed to get git version: %s\n", error->message);
+      return FALSE;
+    }
+
+  g_debug ("Git version: %d.%d.%d.%d", git_major, git_minor, git_micro, git_extra);
+
+  if (git_major > major)
+    return TRUE;
+  if (git_major < major)
+    return FALSE;
+  /* git_major == major */
+
+  if (git_minor > minor)
+    return TRUE;
+  if (git_minor < minor)
+    return FALSE;
+  /* git_minor == minor */
+
+  if (git_micro > micro)
+    return TRUE;
+  if (git_micro < micro)
+    return FALSE;
+  /* git_micro == micro */
+
+  if (git_extra > extra)
+    return TRUE;
+  if (git_extra < extra)
+    return FALSE;
+  /* git_extra == extra */
+
+  return TRUE;
+}
+
 static GHashTable *
 git_ls_remote (GFile *repo_dir,
                const char *remote,
                GError **error)
 {
-  char *output = NULL;
+  g_autofree char *output = NULL;
   g_autoptr(GHashTable) refs = NULL;
   g_auto(GStrv) lines = NULL;
   int i;
@@ -329,6 +413,8 @@ builder_git_mirror_repo (const char     *repo_location,
   gboolean was_shallow = FALSE;
   gboolean do_disable_shallow = FALSE;
 
+  gboolean git_supports_fsck_and_shallow = git_has_version (1,8,3,2);
+
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
   if (destination_path != NULL)
@@ -410,7 +496,7 @@ builder_git_mirror_repo (const char     *repo_location,
         }
 
       if (!git (mirror_dir, NULL, 0, error,
-                "config", "transfer.fsckObjects", disable_fsck ? "0" : "1", NULL))
+                "config", "transfer.fsckObjects", (disable_fsck || (!git_supports_fsck_and_shallow && !do_disable_shallow)) ? "0" : "1", NULL))
         return FALSE;
 
       if (!do_disable_shallow)
