@@ -245,10 +245,16 @@ builder_cache_open (BuilderCache *self,
     {
       g_autoptr(GFile) parent = g_file_get_parent (builder_context_get_cache_dir (self->context));
 
+      OstreeRepoMode mode = OSTREE_REPO_MODE_BARE_USER;
+      const char *mode_env = g_getenv ("FLATPAK_OSTREE_REPO_MODE");
+
+      if (g_strcmp0 (mode_env, "user-only") == 0)
+        mode = OSTREE_REPO_MODE_BARE_USER_ONLY;
+
       if (!flatpak_mkdir_p (parent, NULL, error))
         return FALSE;
 
-      if (!ostree_repo_create (self->repo, OSTREE_REPO_MODE_BARE_USER, NULL, error))
+      if (!ostree_repo_create (self->repo, mode, NULL, error))
         return FALSE;
     }
 
