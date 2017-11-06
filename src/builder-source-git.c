@@ -242,6 +242,8 @@ builder_source_git_download (BuilderSource  *source,
     flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK;
   if (self->disable_shallow_clone)
     flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW;
+  if (builder_context_get_bundle_sources (context))
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM;
 
   if (!builder_git_mirror_repo (location, NULL, flags,
                                 get_branch (self),
