@@ -521,7 +521,7 @@ builder_git_mirror_repo (const char     *repo_location,
 
           g_print ("Fetching git repo %s, ref %s\n", repo_location, full_ref);
           if (!git (mirror_dir, NULL, 0, error,
-                    "fetch", "-p", "--no-recurse-submodules", "--no-tags", "--depth=1", "-f",
+                    "fetch", "-p", "--no-recurse-submodules", "--depth=1", "-f",
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
@@ -535,9 +535,10 @@ builder_git_mirror_repo (const char     *repo_location,
 	      !g_str_has_prefix (full_ref, "refs/tags"))
 	    {
 	      g_autofree char *fake_ref = g_strdup_printf ("refs/heads/flatpak-builder-internal/%s", full_ref);
+	      g_autofree char *peeled_full_ref = g_strdup_printf ("%s^{}", full_ref);
 
 	      if (!git (mirror_dir, NULL, 0, NULL,
-			"update-ref", fake_ref, full_ref, NULL))
+			"update-ref", fake_ref, peeled_full_ref, NULL))
 		return FALSE;
 	    }
         }
@@ -627,11 +628,13 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
 
   if (*full_ref == 0)
     {
+      g_autofree char *peeled_ref = g_strdup_printf ("%s^{}", ref);
+
       g_free (full_ref);
       /* We can't pull the commit id, so we create a ref we can pull */
       full_ref = g_strdup_printf ("refs/heads/flatpak-builder-internal/commit/%s", ref);
       if (!git (cache_mirror_dir, NULL, 0, error,
-                "update-ref", full_ref, ref, NULL))
+                "update-ref", full_ref, peeled_ref, NULL))
         return FALSE;
     }
 
