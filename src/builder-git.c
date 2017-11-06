@@ -201,6 +201,7 @@ lookup_full_ref (GHashTable *refs, const char *ref)
 {
   int i;
   const char *prefixes[] = {
+    "",
     "refs/",
     "refs/tags/",
     "refs/heads/"
