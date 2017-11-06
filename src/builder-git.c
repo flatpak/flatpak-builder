@@ -349,10 +349,8 @@ git_mirror_submodules (const char     *repo_location,
   g_autofree gchar *gitmodules = g_strconcat (revision, ":.gitmodules", NULL);
   gsize num_submodules;
 
-  /* Older versions of git can't fetch from shallow repos, so always clone submodule
-     repos deeply so git submodule update works */
-  if (!git_version_supports_fetch_from_shallow ())
-    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW;
+  /* The submodule update will fetch from this repo */
+  flags |= FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM;
 
   if (!git (mirror_dir, &rev_parse_output, 0, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
     return TRUE;
@@ -493,7 +491,16 @@ builder_git_mirror_repo (const char     *repo_location,
   if (!created && !was_shallow)
     do_disable_shallow = TRUE;
 
-  if (update || !already_exists)
+  /* Older versions of git can't fetch from shallow repos, so for
+     those, always clone deeply anything we will later fetch from.
+     (This is typically submodules and regular repos if we're bundling
+     sources) */
+  if ((flags & FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM) != 0 &&
+      !git_version_supports_fetch_from_shallow ())
+    {
+      do_disable_shallow = TRUE;
+    }
+
     {
       g_autofree char *full_ref = NULL;
       g_autoptr(GFile) cached_git_dir = NULL;
