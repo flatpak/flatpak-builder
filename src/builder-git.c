@@ -154,6 +154,12 @@ git_version_supports_fsck_and_shallow (void)
   return git_has_version (1,8,3,2);
 }
 
+static gboolean
+git_version_supports_fetch_from_shallow (void)
+{
+  return git_has_version (1,9,0,0);
+}
+
 static GHashTable *
 git_ls_remote (GFile *repo_dir,
                const char *remote,
@@ -334,6 +340,11 @@ git_mirror_submodules (const char     *repo_location,
   g_autofree gchar **submodules = NULL;
   g_autofree gchar *gitmodules = g_strconcat (revision, ":.gitmodules", NULL);
   gsize num_submodules;
+
+  /* Older versions of git can't fetch from shallow repos, so always clone submodule
+     repos deeply so git submodule update works */
+  if (!git_version_supports_fetch_from_shallow ())
+    disable_shallow = TRUE;
 
   if (!git (mirror_dir, &rev_parse_output, 0, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
     return TRUE;
