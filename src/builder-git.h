@@ -25,12 +25,17 @@
 
 G_BEGIN_DECLS
 
+typedef enum {
+  FLATPAK_GIT_MIRROR_FLAGS_UPDATE = 1 << 0,
+  FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES = 1 << 1,
+  FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK = 1 << 2,
+  FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW = 1 << 3,
+  FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM = 1 << 4,
+} FlatpakGitMirrorFlags;
+
 gboolean builder_git_mirror_repo        (const char      *repo_location,
                                          const char      *destination_path,
-                                         gboolean         update,
-                                         gboolean         mirror_submodules,
-                                         gboolean         disable_fsck,
-                                         gboolean         disable_shallow,
+                                         FlatpakGitMirrorFlags flags,
                                          const char      *ref,
                                          BuilderContext  *context,
                                          GError         **error);
@@ -52,7 +57,6 @@ gboolean builder_git_checkout_dir       (const char      *repo_location,
                                          GError         **error);
 gboolean builder_git_shallow_mirror_ref (const char     *repo_location,
                                          const char     *destination_path,
-                                         gboolean        mirror_submodules,
                                          const char     *ref,
                                          BuilderContext *context,
                                          GError        **error);
