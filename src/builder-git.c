@@ -618,7 +618,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
         return FALSE;
     }
 
-  if (!git (cache_mirror_dir, &full_ref, 0, NULL,
+  if (!git (cache_mirror_dir, &full_ref, 0, error,
             "rev-parse", "--symbolic-full-name", ref, NULL))
     return FALSE;
 
@@ -630,7 +630,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
       g_free (full_ref);
       /* We can't pull the commit id, so we create a ref we can pull */
       full_ref = g_strdup_printf ("refs/heads/flatpak-builder-internal/commit/%s", ref);
-      if (!git (cache_mirror_dir, NULL, 0, NULL,
+      if (!git (cache_mirror_dir, NULL, 0, error,
                 "update-ref", full_ref, ref, NULL))
         return FALSE;
     }
