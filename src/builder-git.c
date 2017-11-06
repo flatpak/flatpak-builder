@@ -336,10 +336,8 @@ static gboolean
 git_mirror_submodules (const char     *repo_location,
                        const char     *destination_path,
                        gboolean        shallow,
-                       gboolean        update,
+                       FlatpakGitMirrorFlags flags,
                        GFile          *mirror_dir,
-                       gboolean        disable_fsck,
-                       gboolean        disable_shallow,
                        const char     *revision,
                        BuilderContext *context,
                        GError        **error)
@@ -354,7 +352,7 @@ git_mirror_submodules (const char     *repo_location,
   /* Older versions of git can't fetch from shallow repos, so always clone submodule
      repos deeply so git submodule update works */
   if (!git_version_supports_fetch_from_shallow ())
-    disable_shallow = TRUE;
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW;
 
   if (!git (mirror_dir, &rev_parse_output, 0, NULL, "rev-parse", "--verify", "--quiet", gitmodules, NULL))
     return TRUE;
@@ -412,12 +410,12 @@ git_mirror_submodules (const char     *repo_location,
           g_debug ("mirror submodule %s at revision %s\n", absolute_url, words[2]);
           if (shallow)
             {
-              if (!builder_git_shallow_mirror_ref (absolute_url, destination_path, TRUE, words[2], context, error))
+              if (!builder_git_shallow_mirror_ref (absolute_url, destination_path, words[2], context, error))
                 return FALSE;
             }
           else
             {
-              if (!builder_git_mirror_repo (absolute_url, destination_path, update, TRUE, disable_fsck, disable_shallow, words[2], context, error))
+              if (!builder_git_mirror_repo (absolute_url, destination_path, flags, words[2], context, error))
                 return FALSE;
             }
         }
@@ -436,10 +434,7 @@ git_mirror_submodules (const char     *repo_location,
 gboolean
 builder_git_mirror_repo (const char     *repo_location,
                          const char     *destination_path,
-                         gboolean        update,
-                         gboolean        mirror_submodules,
-                         gboolean        disable_fsck,
-                         gboolean        disable_shallow,
+                         FlatpakGitMirrorFlags flags,
                          const char     *ref,
                          BuilderContext *context,
                          GError        **error)
@@ -452,6 +447,8 @@ builder_git_mirror_repo (const char     *repo_location,
   gboolean created = FALSE;
   gboolean was_shallow = FALSE;
   gboolean do_disable_shallow = FALSE;
+  gboolean update = (flags & FLATPAK_GIT_MIRROR_FLAGS_UPDATE) != 0;
+  gboolean disable_fsck = (flags & FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK) != 0;
 
   gboolean git_supports_fsck_and_shallow = git_version_supports_fsck_and_shallow ();
 
@@ -489,7 +486,7 @@ builder_git_mirror_repo (const char     *repo_location,
            "cat-file", "-e", ref, NULL))
     already_exists = TRUE;
 
-  do_disable_shallow = disable_shallow;
+  do_disable_shallow = (flags & FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW) != 0;
 
   /* If we ever pulled non-shallow, then keep doing so, because
      otherwise old git clients break */
@@ -590,14 +587,14 @@ builder_git_mirror_repo (const char     *repo_location,
         }
     }
 
-  if (mirror_submodules)
+  if (flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
     {
       current_commit = git_get_current_commit (mirror_dir, ref, FALSE, context, error);
       if (current_commit == NULL)
         return FALSE;
 
-      if (!git_mirror_submodules (repo_location, destination_path, FALSE, update,
-                                  mirror_dir, disable_fsck, disable_shallow, current_commit, context, error))
+      if (!git_mirror_submodules (repo_location, destination_path, FALSE, flags,
+                                  mirror_dir, current_commit, context, error))
         return FALSE;
     }
 
@@ -611,7 +608,6 @@ builder_git_mirror_repo (const char     *repo_location,
 gboolean
 builder_git_shallow_mirror_ref (const char     *repo_location,
                                 const char     *destination_path,
-                                gboolean        mirror_submodules,
                                 const char     *ref,
                                 BuilderContext *context,
                                 GError        **error)
@@ -667,16 +663,15 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
             "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
     return FALSE;
 
-  if (mirror_submodules)
-    {
-      current_commit = git_get_current_commit (mirror_dir, ref, FALSE, context, error);
-      if (current_commit == NULL)
-        return FALSE;
+  /* Always mirror submodules */
+  current_commit = git_get_current_commit (mirror_dir, ref, FALSE, context, error);
+  if (current_commit == NULL)
+    return FALSE;
 
-      if (!git_mirror_submodules (repo_location, destination_path, TRUE, FALSE,
-                                  mirror_dir, TRUE, FALSE, current_commit, context, error))
-        return FALSE;
-    }
+  if (!git_mirror_submodules (repo_location, destination_path, TRUE,
+                              FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES | FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK,
+                              mirror_dir, current_commit, context, error))
+    return FALSE;
 
   return TRUE;
 }

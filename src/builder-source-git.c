@@ -226,6 +226,7 @@ builder_source_git_download (BuilderSource  *source,
 {
   BuilderSourceGit *self = BUILDER_SOURCE_GIT (source);
   g_autofree char *location = NULL;
+  FlatpakGitMirrorFlags flags;
 
   location = get_url_or_path (self, context, error);
   if (location == NULL)
@@ -234,9 +235,15 @@ builder_source_git_download (BuilderSource  *source,
   if (self->tag != NULL && self->branch != NULL)
     return flatpak_fail (error, "Both tag (%s) and branch (%s) specified for git source", self->tag, self->branch);
 
-  if (!builder_git_mirror_repo (location,
-                                NULL,
-                                update_vcs, TRUE, self->disable_fsckobjects, self->disable_shallow_clone,
+  flags = FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+  if (update_vcs)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
+  if (self->disable_fsckobjects)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK;
+  if (self->disable_shallow_clone)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW;
+
+  if (!builder_git_mirror_repo (location, NULL, flags,
                                 get_branch (self),
                                 context,
                                 error))
@@ -302,7 +309,6 @@ builder_source_git_bundle (BuilderSource  *source,
 
   if (!builder_git_shallow_mirror_ref (location,
                                        flatpak_file_get_path_cached (mirror_dir),
-                                       TRUE,
                                        self->orig_ref,
                                        context,
                                        error))
