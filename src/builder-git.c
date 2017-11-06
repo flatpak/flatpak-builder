@@ -148,6 +148,12 @@ git_has_version (int major,
   return TRUE;
 }
 
+static gboolean
+git_version_supports_fsck_and_shallow (void)
+{
+  return git_has_version (1,8,3,2);
+}
+
 static GHashTable *
 git_ls_remote (GFile *repo_dir,
                const char *remote,
@@ -427,7 +433,7 @@ builder_git_mirror_repo (const char     *repo_location,
   gboolean was_shallow = FALSE;
   gboolean do_disable_shallow = FALSE;
 
-  gboolean git_supports_fsck_and_shallow = git_has_version (1,8,3,2);
+  gboolean git_supports_fsck_and_shallow = git_version_supports_fsck_and_shallow ();
 
   cache_mirror_dir = git_get_mirror_dir (repo_location, context);
 
