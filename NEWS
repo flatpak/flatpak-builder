@@ -1,3 +1,10 @@
+Major changes in 0.10.4
+=======================
+
+ * Fixed source bundling of git repos with older versions of git
+ * Allow git sources to use "HEAD" branch
+ * Fixed crashes in some cases of git failure
+
 Major changes in 0.10.3
 =======================
 
