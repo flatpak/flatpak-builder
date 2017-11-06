@@ -160,6 +160,16 @@ git_version_supports_fetch_from_shallow (void)
   return git_has_version (1,9,0,0);
 }
 
+static gboolean
+git_repo_is_shallow (GFile *repo_dir)
+{
+  g_autoptr(GFile) shallow_file = g_file_get_child (repo_dir, "shallow");
+  if (g_file_query_exists (shallow_file, NULL))
+    return TRUE;
+
+  return FALSE;
+}
+
 static GHashTable *
 git_ls_remote (GFile *repo_dir,
                const char *remote,
@@ -436,7 +446,6 @@ builder_git_mirror_repo (const char     *repo_location,
 {
   g_autoptr(GFile) cache_mirror_dir = NULL;
   g_autoptr(GFile) mirror_dir = NULL;
-  g_autoptr(GFile) shallow_file = NULL;
   g_autofree char *current_commit = NULL;
   g_autoptr(GHashTable) refs = NULL;
   gboolean already_exists = FALSE;
@@ -474,9 +483,7 @@ builder_git_mirror_repo (const char     *repo_location,
       created = TRUE;
     }
 
-  shallow_file = g_file_get_child (mirror_dir, "shallow");
-  if (g_file_query_exists (shallow_file, NULL))
-    was_shallow = TRUE;
+  was_shallow = git_repo_is_shallow (mirror_dir);
 
   if (git (mirror_dir, NULL, G_SUBPROCESS_FLAGS_STDERR_SILENCE, NULL,
            "cat-file", "-e", ref, NULL))
