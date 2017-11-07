@@ -578,7 +578,7 @@ builder_git_mirror_repo (const char     *repo_location,
         {
           g_print ("Fetching full git repo %s\n", repo_location);
           if (!git (mirror_dir, NULL, 0, error,
-                    "fetch", "-p", "--no-recurse-submodules", "--tags", origin, "*:*",
+                    "fetch", "-f", "-p", "--no-recurse-submodules", "--tags", origin, "*:*",
                     was_shallow ? "--unshallow" : NULL,
                     NULL))
             return FALSE;
