@@ -76,6 +76,8 @@ static char *opt_install_deps_from;
 static gboolean opt_install_deps_only;
 static gboolean opt_user;
 static char *opt_installation;
+static gboolean opt_log_session_bus;
+static gboolean opt_log_system_bus;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -130,6 +132,8 @@ static GOptionEntry run_entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
   { "arch", 0, 0, G_OPTION_ARG_STRING, &opt_arch, "Architecture to build for (must be host compatible)", "ARCH" },
   { "run", 0, 0, G_OPTION_ARG_NONE, &opt_run, "Run a command in the build directory", NULL },
+  { "log-session-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_session_bus, N_("Log session bus calls"), NULL },
+  { "log-system-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_system_bus, N_("Log system bus calls"), NULL },
   { "ccache", 0, 0, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache", NULL },
   { NULL }
 };
@@ -555,7 +559,9 @@ main (int    argc,
 
       if (!builder_manifest_run (manifest, build_context, arg_context,
                                  orig_argv + first_non_arg + 2,
-                                 orig_argc - first_non_arg - 2, &error))
+                                 orig_argc - first_non_arg - 2,
+                                 opt_log_session_bus, opt_log_system_bus,
+                                 &error))
         {
           g_printerr ("Error running %s: %s\n", argv[3], error->message);
           return 1;

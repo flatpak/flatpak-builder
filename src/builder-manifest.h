@@ -100,6 +100,8 @@ gboolean        builder_manifest_run (BuilderManifest *self,
                                       FlatpakContext  *arg_context,
                                       char           **argv,
                                       int              argc,
+                                      gboolean         log_session_bus,
+                                      gboolean         log_system_bus,
                                       GError         **error);
 gboolean        builder_manifest_show_deps (BuilderManifest *self,
                                             BuilderContext  *context,
