@@ -2131,7 +2131,7 @@ static GFile *
 builder_manifest_find_appdata_file (BuilderManifest *self,
 				    GFile *app_root)
 {
-  /* We order these so that share/appdata/*.appdata.xml if found
+  /* We order these so that share/appdata/XXX.appdata.xml if found
      first, as this is the target name, and apps may have both, which will
      cause issues with the rename. */
   const char *extensions[] = {
