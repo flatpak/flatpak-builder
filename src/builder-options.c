@@ -45,6 +45,7 @@ struct BuilderOptions
   char       *ldflags;
   char       *append_path;
   char       *append_ld_library_path;
+  char       *append_pkg_config_path;
   char       *prefix;
   char      **env;
   char      **build_args;
@@ -82,6 +83,7 @@ enum {
   PROP_MAKE_INSTALL_ARGS,
   PROP_APPEND_PATH,
   PROP_APPEND_LD_LIBRARY_PATH,
+  PROP_APPEND_PKG_CONFIG_PATH,
   LAST_PROP
 };
 
@@ -97,6 +99,7 @@ builder_options_finalize (GObject *object)
   g_free (self->ldflags);
   g_free (self->append_path);
   g_free (self->append_ld_library_path);
+  g_free (self->append_pkg_config_path);
   g_free (self->prefix);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
@@ -140,6 +143,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_APPEND_LD_LIBRARY_PATH:
       g_value_set_string (value, self->append_ld_library_path);
+      break;
+
+    case PROP_APPEND_PKG_CONFIG_PATH:
+      g_value_set_string (value, self->append_pkg_config_path);
       break;
 
     case PROP_PREFIX:
@@ -226,6 +233,11 @@ builder_options_set_property (GObject      *object,
     case PROP_APPEND_LD_LIBRARY_PATH:
       g_clear_pointer (&self->append_ld_library_path, g_free);
       self->append_ld_library_path = g_value_dup_string (value);
+      break;
+
+    case PROP_APPEND_PKG_CONFIG_PATH:
+      g_clear_pointer (&self->append_pkg_config_path, g_free);
+      self->append_pkg_config_path = g_value_dup_string (value);
       break;
 
     case PROP_PREFIX:
@@ -333,6 +345,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_APPEND_LD_LIBRARY_PATH,
                                    g_param_spec_string ("append-ld-library-path",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_APPEND_PKG_CONFIG_PATH,
+                                   g_param_spec_string ("append-pkg-config-path",
                                                         "",
                                                         "",
                                                         NULL,
@@ -730,6 +749,24 @@ builder_options_update_ld_path (BuilderOptions *self, BuilderContext *context, c
 }
 
 static char **
+builder_options_update_pkg_config_path (BuilderOptions *self, BuilderContext *context, char **envp)
+{
+  g_autofree char *path = NULL;
+  const char *old = NULL;
+
+  old = g_environ_getenv (envp, "PKG_CONFIG_PATH");
+  if (old == NULL)
+    old = "/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig";
+
+  path = builder_options_get_appended_path (self, context, old,
+                                            G_STRUCT_OFFSET (BuilderOptions, append_pkg_config_path));
+  if (path)
+    envp = g_environ_setenv (envp, "PKG_CONFIG_PATH", path, TRUE);
+
+  return envp;
+}
+
+static char **
 builder_options_update_path (BuilderOptions *self, BuilderContext *context, char **envp)
 {
   g_autofree char *path = NULL;
@@ -865,6 +902,7 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
 
   envp = builder_options_update_path (self, context, envp);
   envp = builder_options_update_ld_path (self, context, envp);
+  envp = builder_options_update_pkg_config_path (self, context, envp);
 
   return envp;
 }
@@ -987,6 +1025,10 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_boolean (cache, self->strip);
   builder_cache_checksum_boolean (cache, self->no_debuginfo);
   builder_cache_checksum_boolean (cache, self->no_debuginfo_compression);
+
+  builder_cache_checksum_compat_str (cache, self->append_path);
+  builder_cache_checksum_compat_str (cache, self->append_ld_library_path);
+  builder_cache_checksum_compat_str (cache, self->append_pkg_config_path);
 
   arch_options = g_hash_table_lookup (self->arch, builder_context_get_arch (context));
   if (arch_options)

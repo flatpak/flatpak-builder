@@ -277,6 +277,11 @@
                     needed).</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>append-pkg-config-path</option> (string)</term>
+                    <listitem><para>This will get appended to PKG_CONFIG_PATH in the build environment (with an leading colon if
+                    needed).</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>env</option> (object)</term>
                     <listitem><para>This is a dictionary defining environment variables to be set during the build. Elements in this override the properties that set the environment, like cflags and ldflags.</para></listitem>
                 </varlistentry>
