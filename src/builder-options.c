@@ -49,6 +49,7 @@ struct BuilderOptions
   char       *prefix;
   char      **env;
   char      **build_args;
+  char      **test_args;
   char      **config_opts;
   char      **make_args;
   char      **make_install_args;
@@ -78,6 +79,7 @@ enum {
   PROP_NO_DEBUGINFO_COMPRESSION,
   PROP_ARCH,
   PROP_BUILD_ARGS,
+  PROP_TEST_ARGS,
   PROP_CONFIG_OPTS,
   PROP_MAKE_ARGS,
   PROP_MAKE_INSTALL_ARGS,
@@ -103,6 +105,7 @@ builder_options_finalize (GObject *object)
   g_free (self->prefix);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
+  g_strfreev (self->test_args);
   g_strfreev (self->config_opts);
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
@@ -163,6 +166,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_BUILD_ARGS:
       g_value_set_boxed (value, self->build_args);
+      break;
+
+    case PROP_TEST_ARGS:
+      g_value_set_boxed (value, self->test_args);
       break;
 
     case PROP_CONFIG_OPTS:
@@ -260,6 +267,12 @@ builder_options_set_property (GObject      *object,
     case PROP_BUILD_ARGS:
       tmp = self->build_args;
       self->build_args = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_TEST_ARGS:
+      tmp = self->test_args;
+      self->test_args = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -380,6 +393,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_BUILD_ARGS,
                                    g_param_spec_boxed ("build-args",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_TEST_ARGS,
+                                   g_param_spec_boxed ("test-args",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -942,6 +962,44 @@ builder_options_get_build_args (BuilderOptions *self,
   return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
 }
 
+char **
+builder_options_get_test_args (BuilderOptions *self,
+                               BuilderContext *context,
+                               GError **error)
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+  int i;
+  g_autoptr(GPtrArray) array = g_ptr_array_new_with_free_func (g_free);
+
+  /* Last argument wins, so reverse the list for per-module to win */
+  options = g_list_reverse (options);
+
+  /* Always run tests readonly */
+  g_ptr_array_add (array, g_strdup ("--readonly"));
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+
+      if (o->test_args)
+        {
+          for (i = 0; o->test_args[i] != NULL; i++)
+            g_ptr_array_add (array, g_strdup (o->test_args[i]));
+        }
+    }
+
+  if (array->len > 0 && builder_context_get_sandboxed (context))
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't specify test-args in sandboxed build");
+      return NULL;
+    }
+
+  g_ptr_array_add (array, NULL);
+
+  return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
+}
+
 static char **
 builder_options_get_strv (BuilderOptions *self,
                           BuilderContext *context,
@@ -1019,6 +1077,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_str (cache, self->prefix);
   builder_cache_checksum_strv (cache, self->env);
   builder_cache_checksum_strv (cache, self->build_args);
+  builder_cache_checksum_compat_strv (cache, self->test_args);
   builder_cache_checksum_strv (cache, self->config_opts);
   builder_cache_checksum_strv (cache, self->make_args);
   builder_cache_checksum_strv (cache, self->make_install_args);
