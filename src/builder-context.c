@@ -75,6 +75,7 @@ struct BuilderContext
   gboolean        rebuild_on_sdk_change;
   gboolean        use_rofiles;
   gboolean        have_rofiles;
+  gboolean        run_tests;
 };
 
 typedef struct
@@ -824,6 +825,19 @@ builder_context_set_use_rofiles (BuilderContext *self,
                                  gboolean use_rofiles)
 {
   self->use_rofiles = use_rofiles;
+}
+
+gboolean
+builder_context_get_run_tests (BuilderContext *self)
+{
+  return self->run_tests;
+}
+
+void
+builder_context_set_run_tests (BuilderContext *self,
+                               gboolean run_tests)
+{
+  self->run_tests = run_tests;
 }
 
 gboolean

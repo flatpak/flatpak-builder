@@ -290,6 +290,10 @@
                     <listitem><para>This is an array containing extra options to pass to flatpak build.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>test-args</option> (array of strings)</term>
+                    <listitem><para>Similar to build-args but affects the tests, not the normal build.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>config-opts</option> (array of strings)</term>
                     <listitem><para>This is an array containing extra options to pass to configure.</para></listitem>
                 </varlistentry>
@@ -469,6 +473,18 @@
                 <varlistentry>
                     <term><option>cleanup-platform</option> (array of strings)</term>
                     <listitem><para>Extra files to clean up in the platform.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>run-tests</option> (boolean)</term>
+                    <listitem><para>If true this will run the tests after installing.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>test-rule</option> (string)</term>
+                    <listitem><para>The target to build when running the tests. Defaults to "check" for make and "test" for ninja. Set to empty to disable.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>test-commands</option> (arrya of string)</term>
+                    <listitem><para>Array of commands to run during the tests.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>modules</option> (array of objects or strings)</term>

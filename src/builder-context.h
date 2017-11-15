@@ -125,6 +125,9 @@ gboolean        builder_context_get_rofiles_active (BuilderContext *self);
 gboolean        builder_context_get_use_rofiles (BuilderContext *self);
 void            builder_context_set_use_rofiles (BuilderContext *self,
                                                  gboolean use_rofiles);
+gboolean        builder_context_get_run_tests (BuilderContext *self);
+void            builder_context_set_run_tests (BuilderContext *self,
+                                               gboolean run_tests);
 char **         builder_context_extend_env (BuilderContext *self,
                                             char          **envp);
 

@@ -204,6 +204,14 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--disable-tests</option></term>
+
+                <listitem><para>
+                    Don't run any of the tests.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--run</option></term>
 
                 <listitem><para>

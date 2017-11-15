@@ -49,6 +49,7 @@ struct BuilderModule
   char          **make_args;
   char          **make_install_args;
   char           *install_rule;
+  char           *test_rule;
   char           *buildsystem;
   char          **ensure_writable;
   char          **only_arches;
@@ -61,6 +62,7 @@ struct BuilderModule
   gboolean        no_python_timestamp_fix;
   gboolean        cmake;
   gboolean        builddir;
+  gboolean        run_tests;
   BuilderOptions *build_options;
   GPtrArray      *changes;
   char          **cleanup;
@@ -68,6 +70,7 @@ struct BuilderModule
   GList          *sources;
   GList          *modules;
   char          **build_commands;
+  char          **test_commands;
 };
 
 typedef struct
@@ -92,6 +95,7 @@ enum {
   PROP_NO_PYTHON_TIMESTAMP_FIX,
   PROP_CMAKE,
   PROP_INSTALL_RULE,
+  PROP_TEST_RULE,
   PROP_BUILDSYSTEM,
   PROP_BUILDDIR,
   PROP_CONFIG_OPTS,
@@ -99,6 +103,7 @@ enum {
   PROP_MAKE_INSTALL_ARGS,
   PROP_ENSURE_WRITABLE,
   PROP_ONLY_ARCHES,
+  PROP_RUN_TESTS,
   PROP_SKIP_ARCHES,
   PROP_SOURCES,
   PROP_BUILD_OPTIONS,
@@ -107,6 +112,7 @@ enum {
   PROP_POST_INSTALL,
   PROP_MODULES,
   PROP_BUILD_COMMANDS,
+  PROP_TEST_COMMANDS,
   LAST_PROP
 };
 
@@ -134,6 +140,7 @@ builder_module_finalize (GObject *object)
   g_free (self->name);
   g_free (self->subdir);
   g_free (self->install_rule);
+  g_free (self->test_rule);
   g_free (self->buildsystem);
   g_strfreev (self->post_install);
   g_strfreev (self->config_opts);
@@ -148,6 +155,7 @@ builder_module_finalize (GObject *object)
   g_strfreev (self->cleanup_platform);
   g_list_free_full (self->modules, g_object_unref);
   g_strfreev (self->build_commands);
+  g_strfreev (self->test_commands);
 
   if (self->changes)
     g_ptr_array_unref (self->changes);
@@ -209,6 +217,10 @@ builder_module_get_property (GObject    *object,
       g_value_set_string (value, self->install_rule);
       break;
 
+    case PROP_TEST_RULE:
+      g_value_set_string (value, self->test_rule);
+      break;
+
     case PROP_BUILDDIR:
       g_value_set_boolean (value, self->builddir);
       break;
@@ -263,6 +275,14 @@ builder_module_get_property (GObject    *object,
 
     case PROP_BUILD_COMMANDS:
       g_value_set_boxed (value, self->build_commands);
+      break;
+
+    case PROP_TEST_COMMANDS:
+      g_value_set_boxed (value, self->test_commands);
+      break;
+
+    case PROP_RUN_TESTS:
+      g_value_set_boolean (value, self->run_tests);
       break;
 
     default:
@@ -331,6 +351,11 @@ builder_module_set_property (GObject      *object,
     case PROP_INSTALL_RULE:
       g_free (self->install_rule);
       self->install_rule = g_value_dup_string (value);
+      break;
+
+    case PROP_TEST_RULE:
+      g_free (self->test_rule);
+      self->test_rule = g_value_dup_string (value);
       break;
 
     case PROP_BUILDDIR:
@@ -411,6 +436,16 @@ builder_module_set_property (GObject      *object,
       tmp = self->build_commands;
       self->build_commands = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
+      break;
+
+    case PROP_TEST_COMMANDS:
+      tmp = self->test_commands;
+      self->test_commands = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_RUN_TESTS:
+      self->run_tests = g_value_get_boolean (value);
       break;
 
     default:
@@ -500,6 +535,13 @@ builder_module_class_init (BuilderModuleClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_INSTALL_RULE,
                                    g_param_spec_string ("install-rule",
+                                                         "",
+                                                         "",
+                                                         NULL,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_TEST_RULE,
+                                   g_param_spec_string ("test-rule",
                                                          "",
                                                          "",
                                                          NULL,
@@ -600,6 +642,20 @@ builder_module_class_init (BuilderModuleClass *klass)
                                                        "",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_TEST_COMMANDS,
+                                   g_param_spec_boxed ("test-commands",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_RUN_TESTS,
+                                   g_param_spec_boolean ("run-tests",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
 }
 
 static void
@@ -1256,6 +1312,7 @@ builder_module_build_helper (BuilderModule  *self,
   g_autofree char *make_j = NULL;
   g_autofree char *make_l = NULL;
   const char *make_cmd = NULL;
+  const char *test_arg = NULL;
 
   gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE;
   g_autoptr(GFile) configure_file = NULL;
@@ -1583,11 +1640,20 @@ builder_module_build_helper (BuilderModule  *self,
   builder_set_term_title (_("Installing %s"), self->name);
 
   if (meson || cmake_ninja)
-    make_cmd = "ninja";
+    {
+      make_cmd = "ninja";
+      test_arg = "test";
+    }
   else if (simple)
     make_cmd = NULL;
   else
-    make_cmd = "make";
+    {
+      make_cmd = "make";
+      test_arg = "check";
+    }
+
+  if (self->test_rule)
+    test_arg = self->test_rule;
 
   if (make_cmd)
     {
@@ -1642,6 +1708,41 @@ builder_module_build_helper (BuilderModule  *self,
           if (!build (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error,
                       "/bin/sh", "-c", self->post_install[i], NULL))
             return FALSE;
+        }
+    }
+
+  /* Run unit tests */
+
+  if (self->run_tests && builder_context_get_run_tests (context))
+    {
+      g_auto(GStrv) test_args = NULL;
+
+      builder_set_term_title (_("Testing %s"), self->name);
+      g_print ("Running tests\n");
+
+      test_args = builder_options_get_test_args (self->build_options, context, error);
+      if (test_args == NULL)
+        return FALSE;
+
+      if (make_cmd && test_arg && *test_arg != 0)
+        {
+          if (!build (app_dir, self->name, context, source_dir, build_dir_relative, test_args, env, error,
+                      make_cmd, test_arg, NULL))
+            {
+              g_prefix_error (error, "Running %s %s failed: ", make_cmd, test_arg);
+              return FALSE;
+            }
+        }
+
+      for (i = 0; self->test_commands != NULL && self->test_commands[i] != NULL; i++)
+        {
+          g_print ("Running: %s\n", self->test_commands[i]);
+          if (!build (app_dir, self->name, context, source_dir, build_dir_relative, test_args, env, error,
+                      "/bin/sh", "-c", self->test_commands[i], NULL))
+            {
+              g_prefix_error (error, "Running test command '%s' failed: ", self->test_commands[i]);
+              return FALSE;
+            }
         }
     }
 
@@ -1793,6 +1894,7 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_strv (cache, self->build_commands);
   builder_cache_checksum_str (cache, self->buildsystem);
   builder_cache_checksum_str (cache, self->install_rule);
+  builder_cache_checksum_compat_boolean (cache, self->run_tests);
 
   if (self->build_options)
     builder_options_checksum (self->build_options, cache, context);
