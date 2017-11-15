@@ -56,6 +56,7 @@ static gboolean opt_allow_missing_runtimes;
 static gboolean opt_sandboxed;
 static gboolean opt_rebuild_on_sdk_change;
 static gboolean opt_skip_if_unchanged;
+static char *opt_state_dir;
 static char *opt_from_git;
 static char *opt_from_git_branch;
 static char *opt_stop_at;
@@ -125,6 +126,7 @@ static GOptionEntry entries[] = {
   { "user", 0, 0, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in user installations", NULL },
   { "system", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in system-wide installations (default)", NULL },
   { "installation", 0, 0, G_OPTION_ARG_STRING, &opt_installation, "Install dependencies in a specific system-wide installation", "NAME" },
+  { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { NULL }
 };
 
@@ -264,6 +266,7 @@ main (int    argc,
   g_autoptr(GFile) app_dir = NULL;
   g_autoptr(BuilderCache) cache = NULL;
   g_autofree char *cache_branch = NULL;
+  g_autofree char *escaped_cache_branch = NULL;
   g_autoptr(GFileEnumerator) dir_enum = NULL;
   g_autoptr(GFileEnumerator) dir_enum2 = NULL;
   g_autofree char *cwd = NULL;
@@ -279,6 +282,7 @@ main (int    argc,
   g_autofree char *manifest_basename = NULL;
   int i, first_non_arg, orig_argc;
   int argnr;
+  char *p;
 
   setlocale (LC_ALL, "");
 
@@ -374,7 +378,7 @@ main (int    argc,
   cwd = g_get_current_dir ();
   cwd_dir = g_file_new_for_path (cwd);
 
-  build_context = builder_context_new (cwd_dir, app_dir);
+  build_context = builder_context_new (cwd_dir, app_dir, opt_state_dir);
 
   builder_context_set_use_rofiles (build_context, !opt_disable_rofiles);
   builder_context_set_keep_build_dirs (build_context, opt_keep_build_dirs);
@@ -604,6 +608,22 @@ main (int    argc,
         }
     }
 
+  /* Verify that cache and build dir is on same filesystem */
+  {
+    g_autoptr(GFile) app_parent = g_file_get_parent (builder_context_get_app_dir (build_context));
+    struct stat buf1, buf2;
+
+    if (stat (flatpak_file_get_path_cached (app_parent), &buf1) == 0 &&
+        stat (flatpak_file_get_path_cached (builder_context_get_state_dir (build_context)), &buf2) == 0 &&
+        buf1.st_dev != buf2.st_dev)
+      {
+        g_printerr ("The state dir (%s) is not on the same filesystem as the target dir (%s)\n",
+                    flatpak_file_get_path_cached (builder_context_get_state_dir (build_context)),
+                    flatpak_file_get_path_cached (app_parent));
+        return 1;
+      }
+  }
+
   builder_context_set_checksum_for (build_context, manifest_basename, json_sha256);
 
   if (!builder_manifest_start (manifest, opt_allow_missing_runtimes, build_context, &error))
@@ -635,9 +655,23 @@ main (int    argc,
       return 0;
     }
 
-  cache_branch = g_strconcat (builder_context_get_arch (build_context), "-", manifest_basename, NULL);
+  if (opt_state_dir)
+    {
+      /* If the state dir can be shared we need to use a global identifier for the key */
+      g_autofree char *manifest_path = g_file_get_path (manifest_file);
+      cache_branch = g_strconcat (builder_context_get_arch (build_context), "-", manifest_path + 1, NULL);
+    }
+  else
+    cache_branch = g_strconcat (builder_context_get_arch (build_context), "-", manifest_basename, NULL);
 
-  cache = builder_cache_new (build_context, app_dir, cache_branch);
+  escaped_cache_branch = g_uri_escape_string (cache_branch, "", TRUE);
+  for (p = escaped_cache_branch; *p; p++)
+    {
+      if (*p == '%')
+        *p = '_';
+    }
+
+  cache = builder_cache_new (build_context, app_dir, escaped_cache_branch);
   if (!builder_cache_open (cache, &error))
     {
       g_printerr ("Error opening cache: %s\n", error->message);

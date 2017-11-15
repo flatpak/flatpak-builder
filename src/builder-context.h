@@ -114,7 +114,8 @@ void            builder_context_set_checksum_for (BuilderContext *self,
                                                   const char *checksum);
 
 BuilderContext *builder_context_new (GFile *run_dir,
-                                     GFile *app_dir);
+                                     GFile *app_dir,
+                                     const char *state_subdir);
 gboolean        builder_context_enable_ccache (BuilderContext *self,
                                                GError        **error);
 gboolean        builder_context_enable_rofiles (BuilderContext *self,
