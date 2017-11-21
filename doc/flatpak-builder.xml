@@ -314,6 +314,16 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--state-dir=PATH</option></term>
+
+                <listitem><para>
+                  Use this directory for storing state (downloads, build dirs, build cache, etc) rather than
+                  .flatpak-builder. This can be an absolute or relative path, but must be on the
+                  same filesystem as the specified target <arg choice="plain">DIRECTORY</arg>.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--keep-build-dirs</option></term>
 
                 <listitem><para>
@@ -571,15 +581,15 @@
         <title>Caching</title>
 
         <para>
-            flatpak-builder caches sources and partial build results in
-            the .flatpak-builder subdirectory of the current directory. If you
-            use <option>--keep-build-dirs</option>, build directories for each
-            module are also stored here.
+            flatpak-builder caches sources and partial build results
+            in the state directory (defaulting to the .flatpak-builder
+            subdirectory of the current directory). If you use
+            <option>--keep-build-dirs</option>, build directories for
+            each module are also stored here.
         </para>
 
         <para>
-            It is safe to remove the contents of the .flatpak-builder
-            directory. This will force a full build the next time you build.
+            It is safe to remove the state directory. This will force a full build the next time you build.
         </para>
 
     </refsect1>
