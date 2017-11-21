@@ -610,16 +610,16 @@ main (int    argc,
 
   /* Verify that cache and build dir is on same filesystem */
   {
+    g_autofree char *state_path = g_file_get_path (builder_context_get_state_dir (build_context));
     g_autoptr(GFile) app_parent = g_file_get_parent (builder_context_get_app_dir (build_context));
+    g_autofree char *app_parent_path = g_file_get_path (app_parent);
     struct stat buf1, buf2;
 
-    if (stat (flatpak_file_get_path_cached (app_parent), &buf1) == 0 &&
-        stat (flatpak_file_get_path_cached (builder_context_get_state_dir (build_context)), &buf2) == 0 &&
+    if (stat (app_parent_path, &buf1) == 0 && stat (state_path, &buf2) == 0 &&
         buf1.st_dev != buf2.st_dev)
       {
         g_printerr ("The state dir (%s) is not on the same filesystem as the target dir (%s)\n",
-                    flatpak_file_get_path_cached (builder_context_get_state_dir (build_context)),
-                    flatpak_file_get_path_cached (app_parent));
+                    state_path, app_parent_path);
         return 1;
       }
   }
