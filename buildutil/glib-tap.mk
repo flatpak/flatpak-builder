@@ -118,7 +118,8 @@ installed_testcases = $(test_programs) $(installed_test_programs) \
 installed_test_meta_DATA = $(installed_testcases:=.test)
 
 %.test: %$(EXEEXT) Makefile
-	$(AM_V_GEN) (echo '[Test]' > $@.tmp; \
+	$(AM_V_GEN) (mkdir -p $(@D); \
+	echo '[Test]' > $@.tmp; \
 	echo 'Type=session' >> $@.tmp; \
 	echo 'Exec=env G_TEST_SRCDIR=$(installed_testdir) G_TEST_BUILDDIR=$(installed_testdir)  $(installed_testdir)/$(notdir $<) --tap' >> $@.tmp; \
 	echo 'Output=TAP' >> $@.tmp; \
