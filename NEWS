@@ -1,3 +1,14 @@
+Major changes in 0.10.5
+=======================
+
+ * Add support for running tests during the build (disable with --disable-tests).
+ * New build-option append-pkg-config to append to PKG_CONFIG_PATH
+ * --state-dir option lets you reuse a single directory instead of scattered
+   .flatpak-builder dirs for builds, downloads and cache data.
+ * git: Allow updates with non-fastforwarded branched
+ * Don't fail if app ships both appdata and metainfo file
+ * Support --log-system/session-bus in --run
+
 Major changes in 0.10.4
 =======================
 
