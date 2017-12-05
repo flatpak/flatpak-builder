@@ -425,18 +425,19 @@ builder_context_get_checksum_for (BuilderContext *self,
   return g_steal_pointer (&checksum);
 }
 
-void
-builder_context_set_checksum_for (BuilderContext *self,
-                                  const char *name,
-                                  const char *checksum)
+gboolean
+builder_context_set_checksum_for (BuilderContext  *self,
+                                  const char      *name,
+                                  const char      *checksum,
+                                  GError         **error)
 {
   g_autoptr(GFile) checksum_file = g_file_get_child (self->checksums_dir, name);
 
   if (!flatpak_mkdir_p (self->checksums_dir,
-                        NULL, NULL))
-    return;
+                        NULL, error))
+    return FALSE;
 
-  g_file_set_contents (flatpak_file_get_path_cached (checksum_file), checksum, -1, NULL);
+  return g_file_set_contents (flatpak_file_get_path_cached (checksum_file), checksum, -1, error);
 }
 
 GFile *
