@@ -586,12 +586,16 @@ builder_git_mirror_repo (const char     *repo_location,
 
       if (alternates)
         {
+          g_autoptr(GError) local_error = NULL;
+
           /* Ensure we copy the files from the cache, to be safe if the extra source changes */
           if (!git (mirror_dir, NULL, 0, error,
                     "repack", "-a", "-d", NULL))
             return FALSE;
 
-          g_file_delete (alternates, NULL, NULL);
+          if (!g_file_delete (alternates, NULL, &local_error) &&
+              !g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+            g_debug ("Error deleting alternates file: %s", local_error->message);
         }
     }
 

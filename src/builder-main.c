@@ -627,7 +627,11 @@ main (int    argc,
       }
   }
 
-  builder_context_set_checksum_for (build_context, manifest_basename, json_sha256);
+  if (!builder_context_set_checksum_for (build_context, manifest_basename, json_sha256, &error))
+    {
+      g_printerr ("Failed to set checksum for ‘%s’: %s\n", manifest_basename, error->message);
+      return 1;
+    }
 
   if (!builder_manifest_start (manifest, opt_allow_missing_runtimes, build_context, &error))
     {
