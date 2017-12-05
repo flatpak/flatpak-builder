@@ -201,6 +201,7 @@ flatpak_path_match_prefix (const char *pattern,
   return NULL; /* Should not be reached */
 }
 
+#if !defined(__i386__) && !defined(__x86_64__) && !defined(__aarch64__) && !defined(__arm__)
 static const char *
 flatpak_get_kernel_arch (void)
 {
@@ -250,6 +251,7 @@ flatpak_get_kernel_arch (void)
 
   return arch;
 }
+#endif  /* !__i386__ && !__x86_64__ && !__aarch64__ && !__arm__ */
 
 /* This maps the kernel-reported uname to a single string representing
  * the cpu family, in the sense that all members of this family would
@@ -279,8 +281,9 @@ flatpak_get_arch (void)
 #else
   return "armeb";
 #endif
-#endif
+#else
   return flatpak_get_kernel_arch ();
+#endif
 }
 
 gboolean
