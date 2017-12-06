@@ -291,6 +291,15 @@ run_sh () {
     ${CMD_PREFIX} flatpak run --command=bash ${ARGS-} org.test.Hello -c "$*"
 }
 
+# fuse support is needed (and the kernel module needs to be loaded) for several
+# flatpak-builder tests
+skip_without_fuse () {
+    if [ ! -w /dev/fuse ] || ! command -v fusermount >/dev/null; then
+        echo "1..0 # SKIP this test requires fuse support"
+        exit 0
+    fi
+}
+
 skip_without_python2 () {
     if ! test -f /usr/bin/python2 || ! /usr/bin/python2 -c "import sys; sys.exit(0 if sys.version_info >= (2, 7) else 1)" ; then
         echo "1..0 # SKIP this test requires /usr/bin/python2 (2.7) support"

@@ -21,6 +21,7 @@ set -euo pipefail
 
 . $(dirname $0)/libtest.sh
 
+skip_without_fuse
 skip_without_python2
 
 echo "1..2"
