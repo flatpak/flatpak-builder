@@ -38,7 +38,10 @@ struct BuilderSourceFile
 
   char         *path;
   char         *url;
+  char         *md5;
+  char         *sha1;
   char         *sha256;
+  char         *sha512;
   char         *dest_filename;
 };
 
@@ -53,7 +56,10 @@ enum {
   PROP_0,
   PROP_PATH,
   PROP_URL,
+  PROP_MD5,
+  PROP_SHA1,
   PROP_SHA256,
+  PROP_SHA512,
   PROP_DEST_FILENAME,
   LAST_PROP
 };
@@ -65,7 +71,10 @@ builder_source_file_finalize (GObject *object)
 
   g_free (self->path);
   g_free (self->url);
+  g_free (self->md5);
+  g_free (self->sha1);
   g_free (self->sha256);
+  g_free (self->sha512);
   g_free (self->dest_filename);
 
   G_OBJECT_CLASS (builder_source_file_parent_class)->finalize (object);
@@ -89,8 +98,20 @@ builder_source_file_get_property (GObject    *object,
       g_value_set_string (value, self->url);
       break;
 
+    case PROP_MD5:
+      g_value_set_string (value, self->md5);
+      break;
+
+    case PROP_SHA1:
+      g_value_set_string (value, self->sha1);
+      break;
+
     case PROP_SHA256:
       g_value_set_string (value, self->sha256);
+      break;
+
+    case PROP_SHA512:
+      g_value_set_string (value, self->sha512);
       break;
 
     case PROP_DEST_FILENAME:
@@ -122,9 +143,24 @@ builder_source_file_set_property (GObject      *object,
       self->url = g_value_dup_string (value);
       break;
 
+    case PROP_MD5:
+      g_free (self->md5);
+      self->md5 = g_value_dup_string (value);
+      break;
+
+    case PROP_SHA1:
+      g_free (self->sha1);
+      self->sha1 = g_value_dup_string (value);
+      break;
+
     case PROP_SHA256:
       g_free (self->sha256);
       self->sha256 = g_value_dup_string (value);
+      break;
+
+    case PROP_SHA512:
+      g_free (self->sha512);
+      self->sha512 = g_value_dup_string (value);
       break;
 
     case PROP_DEST_FILENAME:
@@ -168,6 +204,8 @@ get_download_location (BuilderSourceFile *self,
   const char *path;
   g_autofree char *base_name = NULL;
   g_autoptr(GFile) file = NULL;
+  const char *checksums[BUILDER_CHECKSUMS_LEN];
+  GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN];
 
   uri = get_uri (self, error);
   if (uri == NULL)
@@ -184,22 +222,28 @@ get_download_location (BuilderSourceFile *self,
 
   base_name = g_path_get_basename (path);
 
-  if (self->sha256 == NULL || *self->sha256 == 0)
+  builder_get_all_checksums (checksums, checksums_type,
+                             self->md5,
+                             self->sha1,
+                             self->sha256,
+                             self->sha512);
+
+  if (checksums[0] == NULL)
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Sha256 not specified");
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "No checksum specified for file source %s", base_name);
       return FALSE;
     }
 
   file = builder_context_find_in_sources_dirs (context,
                                                "downloads",
-                                               self->sha256,
+                                               checksums[0],
                                                base_name,
                                                NULL);
   if (file != NULL)
     return g_steal_pointer (&file);
 
   file = flatpak_build_file (builder_context_get_download_dir (context),
-                             self->sha256,
+                             checksums[0],
                              base_name,
                              NULL);
   return g_steal_pointer (&file);
@@ -285,8 +329,9 @@ builder_source_file_download (BuilderSource  *source,
 
   g_autoptr(GFile) file = NULL;
   gboolean is_local, is_inline;
-  g_autofree char *sha256 = NULL;
   g_autofree char *base_name = NULL;
+  const char *checksums[BUILDER_CHECKSUMS_LEN];
+  GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN];
 
   file = get_source_file (self, context, &is_local, &is_inline, error);
   if (file == NULL)
@@ -294,9 +339,15 @@ builder_source_file_download (BuilderSource  *source,
 
   base_name = g_file_get_basename (file);
 
+  builder_get_all_checksums (checksums, checksums_type,
+                             self->md5,
+                             self->sha1,
+                             self->sha256,
+                             self->sha512);
+
   if (g_file_query_exists (file, NULL))
     {
-      if (is_local && self->sha256 != NULL && *self->sha256 != 0)
+      if (is_local && checksums[0] != NULL)
         {
           g_autofree char *data = NULL;
           gsize len;
@@ -304,13 +355,11 @@ builder_source_file_download (BuilderSource  *source,
           if (!g_file_load_contents (file, NULL, &data, &len, NULL, error))
             return FALSE;
 
-          sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, data, len);
-          if (strcmp (sha256, self->sha256) != 0)
-            {
-              g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                           "Wrong sha256 for %s, expected %s, was %s", base_name, self->sha256, sha256);
-              return FALSE;
-            }
+          if (!builder_verify_checksums (base_name,
+                                         data, len,
+                                         checksums, checksums_type,
+                                         error))
+            return FALSE;
         }
       return TRUE;
     }
@@ -330,7 +379,8 @@ builder_source_file_download (BuilderSource  *source,
   if (!builder_context_download_uri (context,
                                      self->url,
                                      file,
-                                     self->sha256,
+                                     checksums,
+                                     checksums_type,
                                      error))
     return FALSE;
 
@@ -422,6 +472,8 @@ builder_source_file_bundle (BuilderSource  *source,
   g_autoptr(GFile) destination_dir = NULL;
   g_autofree char *file_name = NULL;
   gboolean is_local, is_inline;
+  const char *checksums[BUILDER_CHECKSUMS_LEN];
+  GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN];
 
   file = get_source_file (self, context, &is_local, &is_inline, error);
   if (file == NULL)
@@ -430,6 +482,12 @@ builder_source_file_bundle (BuilderSource  *source,
   /* Inline URIs (data://) need not be bundled */
   if (is_inline)
     return TRUE;
+
+  builder_get_all_checksums (checksums, checksums_type,
+                             self->md5,
+                             self->sha1,
+                             self->sha256,
+                             self->sha512);
 
   if (is_local)
     {
@@ -450,7 +508,7 @@ builder_source_file_bundle (BuilderSource  *source,
       file_name = g_file_get_basename (file);
       destination_file = flatpak_build_file (builder_context_get_app_dir (context),
                                              "sources/downloads",
-                                             self->sha256,
+                                             checksums[0],
                                              file_name,
                                              NULL);
     }
@@ -500,6 +558,9 @@ builder_source_file_checksum (BuilderSource  *source,
   builder_cache_checksum_str (cache, self->path);
   builder_cache_checksum_str (cache, self->url);
   builder_cache_checksum_str (cache, self->sha256);
+  builder_cache_checksum_compat_str (cache, self->md5);
+  builder_cache_checksum_compat_str (cache, self->sha1);
+  builder_cache_checksum_compat_str (cache, self->sha512);
   builder_cache_checksum_str (cache, self->dest_filename);
 }
 
@@ -535,8 +596,29 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_MD5,
+                                   g_param_spec_string ("md5",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SHA1,
+                                   g_param_spec_string ("sha1",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_SHA256,
                                    g_param_spec_string ("sha256",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SHA512,
+                                   g_param_spec_string ("sha512",
                                                         "",
                                                         "",
                                                         NULL,

@@ -29,6 +29,9 @@
 
 G_BEGIN_DECLS
 
+#define BUILDER_N_CHECKSUMS 4 /* We currently support 4 checksum types */
+#define BUILDER_CHECKSUMS_LEN (BUILDER_N_CHECKSUMS + 1) /* One more for null termination */
+
 typedef struct BuilderUtils BuilderUtils;
 
 char *builder_uri_to_filename (const char *uri);
@@ -69,9 +72,24 @@ gboolean builder_maybe_host_spawnv (GFile                *dir,
 
 gboolean builder_download_uri (SoupURI        *uri,
                                GFile          *dest,
-                               char           *sha256,
+                               const char     *checksums[BUILDER_CHECKSUMS_LEN],
+                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                SoupSession    *soup_session,
                                GError        **error);
+
+gsize builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
+                                 GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
+                                 const char *md5,
+                                 const char *sha1,
+                                 const char *sha256,
+                                 const char *sha512);
+
+gboolean builder_verify_checksums (const char *name,
+                                   const char *data,
+                                   gsize len,
+                                   const char *checksums[BUILDER_CHECKSUMS_LEN],
+                                   GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
+                                   GError **error);
 
 GParamSpec * builder_serializable_find_property_with_error (JsonSerializable *serializable,
                                                             const char       *name);

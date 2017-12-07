@@ -354,7 +354,8 @@ gboolean
 builder_context_download_uri (BuilderContext *self,
                               const char     *url,
                               GFile          *dest,
-                              char           *sha256,
+                              const char     *checksums[BUILDER_CHECKSUMS_LEN],
+                              GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                               GError        **error)
 {
   int i;
@@ -368,7 +369,7 @@ builder_context_download_uri (BuilderContext *self,
   if (self->sources_urls != NULL)
     {
       g_autofree char *base_name = g_path_get_basename (soup_uri_get_path (original_uri));
-      g_autofree char *rel = g_build_filename ("downloads", sha256, base_name, NULL);
+      g_autofree char *rel = g_build_filename ("downloads", checksums[0], base_name, NULL);
 
       for (i = 0; i < self->sources_urls->len; i++)
         {
@@ -380,7 +381,7 @@ builder_context_download_uri (BuilderContext *self,
 
           if (builder_download_uri (mirror_uri,
                                     dest,
-                                    sha256,
+                                    checksums, checksums_type,
                                     builder_context_get_soup_session (self),
                                     &my_error))
             return TRUE;
@@ -392,7 +393,7 @@ builder_context_download_uri (BuilderContext *self,
 
   if (!builder_download_uri (original_uri,
                              dest,
-                             sha256,
+                             checksums, checksums_type,
                              builder_context_get_soup_session (self),
                              error))
     return FALSE;

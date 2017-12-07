@@ -1615,6 +1615,113 @@ builder_maybe_host_spawnv (GFile                *dir,
   return flatpak_spawnv (dir, output, 0, error, argv);
 }
 
+/**
+ * builder_get_all_checksums:
+ *
+ * Collect all the non-empty/null checksums into a single array with
+ * their type.
+ *
+ * The checksum are returned in order such that the first one is the
+ * one to use by default if using a single one. That is typically the
+ * longest checksum except it defaults to sha256 if set because
+ * that was historically the one flatpak-builder used
+ */
+gsize
+builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
+                           GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
+                           const char *md5,
+                           const char *sha1,
+                           const char *sha256,
+                           const char *sha512)
+{
+  gsize i = 0;
+
+
+  if (sha256 != NULL && *sha256 != 0)
+    {
+      g_assert (i < BUILDER_CHECKSUMS_LEN);
+      checksums[i] = sha256;
+      checksums_type[i] = G_CHECKSUM_SHA256;
+      i++;
+    }
+
+  if (sha512 != NULL && *sha512 != 0)
+    {
+      g_assert (i < BUILDER_CHECKSUMS_LEN);
+      checksums[i] = sha512;
+      checksums_type[i] = G_CHECKSUM_SHA512;
+      i++;
+    }
+
+  if (sha1 != NULL && *sha1 != 0)
+    {
+      g_assert (i < BUILDER_CHECKSUMS_LEN);
+      checksums[i] = sha1;
+      checksums_type[i] = G_CHECKSUM_SHA1;
+      i++;
+    }
+
+  if (md5 != NULL && *md5 != 0)
+    {
+      g_assert (i < BUILDER_CHECKSUMS_LEN);
+      checksums[i] = md5;
+      checksums_type[i] = G_CHECKSUM_MD5;
+      i++;
+    }
+
+  g_assert (i < BUILDER_CHECKSUMS_LEN);
+  checksums[i++] = 0;
+
+  return i;
+}
+
+static gboolean
+compare_checksum (const char *name,
+                  const char *expected_checksum,
+                  GChecksumType checksum_type,
+                  const char *measured_checksum,
+                  GError **error)
+{
+  const char *type_names[] = { "md5", "sha1", "sha256", "sha512", "sha384" }; /* In GChecksumType order */
+  const char *type_name;
+
+  if (checksum_type < G_N_ELEMENTS (type_names))
+    type_name = type_names[checksum_type];
+  else
+    type_name = "unknown";
+
+  if (strcmp (expected_checksum, measured_checksum) != 0)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Wrong %s checksum for %s, expected %s, was %s", type_name, name,
+                   expected_checksum, measured_checksum);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+gboolean
+builder_verify_checksums (const char *name,
+                          const char *data,
+                          gsize len,
+                          const char *checksums[BUILDER_CHECKSUMS_LEN],
+                          GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
+                          GError **error)
+{
+  gsize i;
+
+  for (i = 0; checksums[i] != NULL; i++)
+    {
+      g_autofree char *checksum = NULL;
+      checksum = g_compute_checksum_for_string (checksums_type[i], data, len);
+      if (!compare_checksum (name, checksums[i], checksums_type[i], checksum, error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
 typedef struct {
   int stage;
   gboolean printed_something;
@@ -1644,7 +1751,8 @@ download_progress_cleanup (DownloadPromptData *progress_data)
 gboolean
 builder_download_uri (SoupURI        *uri,
                       GFile          *dest,
-                      char           *sha256,
+                      const char     *checksums[BUILDER_CHECKSUMS_LEN],
+                      GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                       SoupSession    *session,
                       GError        **error)
 {
@@ -1653,10 +1761,15 @@ builder_download_uri (SoupURI        *uri,
   g_autoptr(GFileOutputStream) out = NULL;
   g_autoptr(GFile) tmp = NULL;
   g_autoptr(GFile) dir = NULL;
-  g_autoptr(GChecksum) checksum = g_checksum_new (G_CHECKSUM_SHA256);
+  g_autoptr(GPtrArray) checksum_array = g_ptr_array_new_with_free_func ((GDestroyNotify)g_checksum_free);
   DownloadPromptData progress_data = {0};
   g_autofree char *basename = g_file_get_basename (dest);
   g_autofree char *template = g_strconcat (".", basename, "XXXXXX", NULL);
+  gsize i;
+
+  for (i = 0; checksums[i] != NULL; i++)
+    g_ptr_array_add (checksum_array,
+                     g_checksum_new (checksums_type[i]));
 
   dir = g_file_get_parent (dest);
   g_mkdir_with_parents (flatpak_file_get_path_cached (dir), 0755);
@@ -1688,7 +1801,9 @@ builder_download_uri (SoupURI        *uri,
         }
     }
 
-  if (!flatpak_splice_update_checksum (G_OUTPUT_STREAM (out), input, checksum, download_progress, &progress_data, NULL, error))
+  if (!flatpak_splice_update_checksum (G_OUTPUT_STREAM (out), input,
+                                       (GChecksum **)checksum_array->pdata, checksum_array->len,
+                                       download_progress, &progress_data, NULL, error))
     {
       unlink (flatpak_file_get_path_cached (tmp));
       return FALSE;
@@ -1703,12 +1818,14 @@ builder_download_uri (SoupURI        *uri,
 
   download_progress_cleanup (&progress_data);
 
-  if (sha256 != NULL && strcmp (g_checksum_get_string (checksum), sha256) != 0)
+  for (i = 0; checksums[i] != NULL; i++)
     {
-      unlink (flatpak_file_get_path_cached (tmp));
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Wrong sha256 for %s, expected %s, was %s", basename, sha256, g_checksum_get_string (checksum));
-      return FALSE;
+      const char *checksum = g_checksum_get_string (g_ptr_array_index (checksum_array, i));
+      if (!compare_checksum (basename, checksums[i], checksums_type[i], checksum, error))
+        {
+          unlink (flatpak_file_get_path_cached (tmp));
+          return FALSE;
+        }
     }
 
   if (rename (flatpak_file_get_path_cached (tmp), flatpak_file_get_path_cached (dest)) != 0)
