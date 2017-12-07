@@ -276,6 +276,16 @@ flatpak_temp_dir_destroy (void *p)
 typedef GFile FlatpakTempDir;
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakTempDir, flatpak_temp_dir_destroy)
 
+static inline void
+builder_object_list_destroy (void *p)
+{
+  GList *list = p;
+
+  g_list_free_full (list, g_object_unref);
+}
+
+typedef GList BuilderObjectList;
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderObjectList, builder_object_list_destroy)
 
 #define AUTOLOCK(name) G_GNUC_UNUSED __attribute__((cleanup (flatpak_auto_unlock_helper))) GMutex * G_PASTE (auto_unlock, __LINE__) = flatpak_auto_lock_helper (&G_LOCK_NAME (name))
 
