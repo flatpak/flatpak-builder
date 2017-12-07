@@ -726,6 +726,69 @@ builder_module_serialize_property (JsonSerializable *serializable,
     }
 }
 
+static GList *
+load_sources_from_json (const char *sources_relpath)
+{
+  g_autoptr(BuilderObjectList) sources = NULL;
+  g_autoptr(GFile) saved_demarshal_base_dir = builder_manifest_get_demarshal_base_dir ();
+  g_autoptr(GFile) sources_file =
+    g_file_resolve_relative_path (saved_demarshal_base_dir, sources_relpath);
+  g_autoptr(GFile) sources_file_dir = g_file_get_parent (sources_file);
+  const char *sources_path = flatpak_file_get_path_cached (sources_file);
+  g_autofree char *sources_json = NULL;
+  g_autoptr(JsonNode) sources_root = NULL;
+  g_autoptr(GError) error = NULL;
+  BuilderSource *source;
+
+  if (!g_file_get_contents (sources_path, &sources_json, NULL, NULL))
+    {
+      g_printerr ("Can't open %s\n", sources_path);
+      return NULL;
+    }
+
+  builder_manifest_set_demarshal_base_dir (sources_file_dir);
+  sources_root = json_from_string (sources_json, &error);
+  if (sources_root == NULL)
+    {
+      g_printerr ("Error parsing %s: %s\n", sources_relpath, error->message);
+      return NULL;
+    }
+
+  if (JSON_NODE_TYPE (sources_root) == JSON_NODE_OBJECT)
+    {
+      source = builder_source_from_json (sources_root);
+      if (source == NULL)
+        return NULL;
+
+      sources = g_list_prepend (sources, source);
+    }
+  else if (JSON_NODE_TYPE (sources_root) == JSON_NODE_ARRAY)
+    {
+      JsonArray *array = json_node_get_array (sources_root);
+      guint i, array_len = json_array_get_length (array);
+
+      for (i = 0; i < array_len; i++)
+        {
+          JsonNode *array_element_node = json_array_get_element (array, i);
+          if (JSON_NODE_HOLDS_OBJECT (array_element_node))
+            {
+              source = builder_source_from_json (array_element_node);
+              if (source == NULL)
+                return NULL;
+
+              sources = g_list_prepend (sources, source);
+            }
+          else
+            return NULL;
+        }
+    }
+  else
+    return NULL;
+
+  return g_steal_pointer (&sources);
+}
+
+
 static gboolean
 builder_module_deserialize_property (JsonSerializable *serializable,
                                      const gchar      *property_name,
@@ -811,30 +874,34 @@ builder_module_deserialize_property (JsonSerializable *serializable,
         {
           JsonArray *array = json_node_get_array (property_node);
           guint i, array_len = json_array_get_length (array);
-          GList *sources = NULL;
+          g_autoptr(BuilderObjectList) sources = NULL;
           BuilderSource *source;
 
           for (i = 0; i < array_len; i++)
             {
               JsonNode *element_node = json_array_get_element (array, i);
 
-              if (JSON_NODE_TYPE (element_node) != JSON_NODE_OBJECT)
+              if (JSON_NODE_HOLDS_VALUE (element_node) &&
+                  json_node_get_value_type (element_node) == G_TYPE_STRING)
                 {
-                  g_list_free_full (sources, g_object_unref);
-                  return FALSE;
+                  GList *new_sources = load_sources_from_json (json_node_get_string (element_node));
+                  if (new_sources == NULL)
+                    return FALSE;
+                  sources = g_list_concat (new_sources, sources);
                 }
-
-              source = builder_source_from_json (element_node);
-              if (source == NULL)
+              else if (JSON_NODE_TYPE (element_node) == JSON_NODE_OBJECT)
                 {
-                  g_list_free_full (sources, g_object_unref);
-                  return FALSE;
-                }
+                  source = builder_source_from_json (element_node);
+                  if (source == NULL)
+                    return FALSE;
 
-              sources = g_list_prepend (sources, source);
+                  sources = g_list_prepend (sources, source);
+                }
+              else
+                return FALSE;
             }
 
-          g_value_set_pointer (value, g_list_reverse (sources));
+          g_value_set_pointer (value, g_list_reverse (g_steal_pointer (&sources)));
 
           return TRUE;
         }
