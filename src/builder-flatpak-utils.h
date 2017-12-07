@@ -94,14 +94,16 @@ gboolean flatpak_write_update_checksum (GOutputStream  *out,
                                         gconstpointer   data,
                                         gsize           len,
                                         gsize          *out_bytes_written,
-                                        GChecksum      *checksum,
+                                        GChecksum     **checksums,
+                                        int             n_checksums,
                                         GCancellable   *cancellable,
                                         GError        **error);
 
 
 gboolean flatpak_splice_update_checksum (GOutputStream  *out,
                                          GInputStream   *in,
-                                         GChecksum      *checksum,
+                                         GChecksum     **checksums,
+                                         int             n_checksums,
                                          FlatpakLoadUriProgress progress,
                                          gpointer        progress_data,
                                          GCancellable   *cancellable,

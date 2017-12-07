@@ -67,10 +67,13 @@ flatpak_write_update_checksum (GOutputStream  *out,
                                gconstpointer   data,
                                gsize           len,
                                gsize          *out_bytes_written,
-                               GChecksum      *checksum,
+                               GChecksum     **checksums,
+                               int             n_checksums,
                                GCancellable   *cancellable,
                                GError        **error)
 {
+  int i;
+
   if (out)
     {
       if (!g_output_stream_write_all (out, data, len, out_bytes_written,
@@ -82,8 +85,8 @@ flatpak_write_update_checksum (GOutputStream  *out,
       *out_bytes_written = len;
     }
 
-  if (checksum)
-    g_checksum_update (checksum, data, len);
+  for (i = 0; i < n_checksums; i++)
+    g_checksum_update (checksums[i], data, len);
 
   return TRUE;
 }
@@ -91,7 +94,8 @@ flatpak_write_update_checksum (GOutputStream  *out,
 gboolean
 flatpak_splice_update_checksum (GOutputStream  *out,
                                 GInputStream   *in,
-                                GChecksum      *checksum,
+                                GChecksum     **checksums,
+                                int             n_checksums,
                                 FlatpakLoadUriProgress progress,
                                 gpointer        progress_data,
                                 GCancellable   *cancellable,
@@ -108,7 +112,8 @@ flatpak_splice_update_checksum (GOutputStream  *out,
       if (!g_input_stream_read_all (in, buf, sizeof buf, &bytes_read, cancellable, error))
         return FALSE;
 
-      if (!flatpak_write_update_checksum (out, buf, bytes_read, &bytes_written, checksum,
+      if (!flatpak_write_update_checksum (out, buf, bytes_read, &bytes_written,
+                                          checksums, n_checksums,
                                           cancellable, error))
         return FALSE;
 

@@ -24,6 +24,7 @@
 #include <gio/gio.h>
 #include <libsoup/soup.h>
 #include "builder-options.h"
+#include "builder-utils.h"
 
 G_BEGIN_DECLS
 
@@ -62,7 +63,8 @@ void            builder_context_set_sources_urls (BuilderContext *self,
 gboolean        builder_context_download_uri (BuilderContext *self,
                                               const char     *url,
                                               GFile          *dest,
-                                              char           *sha256,
+                                              const char     *checksums[BUILDER_CHECKSUMS_LEN],
+                                              GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                               GError        **error);
 SoupSession *   builder_context_get_soup_session (BuilderContext *self);
 const char *    builder_context_get_arch (BuilderContext *self);
