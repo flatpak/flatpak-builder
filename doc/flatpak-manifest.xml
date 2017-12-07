@@ -533,11 +533,15 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>md5</option> (string)</term>
-                        <listitem><para>The md5 checksum of the file, verified after download</para></listitem>
+                        <listitem><para>The md5 checksum of the file, verified after download</para>
+                        <para>Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
+                        </listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>sha1</option> (string)</term>
-                        <listitem><para>The sha1 checksum of the file, verified after download</para></listitem>
+                        <listitem><para>The sha1 checksum of the file, verified after download</para>
+                        <para>Note that sha1 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
+                        </listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>sha256</option> (string)</term>
@@ -625,11 +629,15 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>md5</option> (string)</term>
-                        <listitem><para>The md5 checksum of the file, verified after download. This is optional for local files.</para></listitem>
+                        <listitem><para>The md5 checksum of the file, verified after download. This is optional for local files.</para>
+                        <para>Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
+                        </listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>sha1</option> (string)</term>
-                        <listitem><para>The sha1 checksum of the file, verified after download. This is optional for local files.</para></listitem>
+                        <listitem><para>The sha1 checksum of the file, verified after download. This is optional for local files.</para>
+                        <para>Note that sha1 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
+                        </listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>sha256</option> (string)</term>

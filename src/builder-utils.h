@@ -77,15 +77,15 @@ gboolean builder_download_uri (SoupURI        *uri,
                                SoupSession    *soup_session,
                                GError        **error);
 
-int builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
-                               GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
-                               const char *md5,
-                               const char *sha1,
-                               const char *sha256,
-                               const char *sha512);
+gsize builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
+                                 GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
+                                 const char *md5,
+                                 const char *sha1,
+                                 const char *sha256,
+                                 const char *sha512);
 
 gboolean builder_verify_checksums (const char *name,
-                                   char *data,
+                                   const char *data,
                                    gsize len,
                                    const char *checksums[BUILDER_CHECKSUMS_LEN],
                                    GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],

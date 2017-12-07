@@ -68,11 +68,11 @@ flatpak_write_update_checksum (GOutputStream  *out,
                                gsize           len,
                                gsize          *out_bytes_written,
                                GChecksum     **checksums,
-                               int             n_checksums,
+                               gsize           n_checksums,
                                GCancellable   *cancellable,
                                GError        **error)
 {
-  int i;
+  gsize i;
 
   if (out)
     {
@@ -95,7 +95,7 @@ gboolean
 flatpak_splice_update_checksum (GOutputStream  *out,
                                 GInputStream   *in,
                                 GChecksum     **checksums,
-                                int             n_checksums,
+                                gsize           n_checksums,
                                 FlatpakLoadUriProgress progress,
                                 gpointer        progress_data,
                                 GCancellable   *cancellable,
