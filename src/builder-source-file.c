@@ -370,7 +370,7 @@ builder_source_file_download (BuilderSource  *source,
       return FALSE;
     }
 
-  if (checksums[0] == NULL)
+  if (checksums[0] == NULL && !is_inline)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "No checksum specified for file source %s", base_name);
       return FALSE;
