@@ -370,9 +370,9 @@ builder_source_file_download (BuilderSource  *source,
       return FALSE;
     }
 
-  if ((self->sha256 == NULL || *self->sha256 == 0) && !is_inline)
+  if (checksums[0] == NULL)
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Sha256 not specified");
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "No checksum specified for file source %s", base_name);
       return FALSE;
     }
 
