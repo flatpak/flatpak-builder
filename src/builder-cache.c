@@ -248,7 +248,7 @@ builder_cache_open (BuilderCache *self,
       if (!flatpak_mkdir_p (parent, NULL, error))
         return FALSE;
 
-      if (!ostree_repo_create (self->repo, OSTREE_REPO_MODE_BARE_USER, NULL, error))
+      if (!ostree_repo_create (self->repo, OSTREE_REPO_MODE_BARE_USER_ONLY, NULL, error))
         return FALSE;
     }
 
