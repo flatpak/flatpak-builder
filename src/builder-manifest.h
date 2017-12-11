@@ -38,7 +38,7 @@ typedef struct BuilderManifest BuilderManifest;
 #define BUILDER_IS_MANIFEST(obj) (G_TYPE_CHECK_INSTANCE_TYPE ((obj), BUILDER_TYPE_MANIFEST))
 
 /* Bump this if format changes in incompatible ways to force rebuild */
-#define BUILDER_MANIFEST_CHECKSUM_VERSION "4"
+#define BUILDER_MANIFEST_CHECKSUM_VERSION "5"
 #define BUILDER_MANIFEST_CHECKSUM_CLEANUP_VERSION "1"
 #define BUILDER_MANIFEST_CHECKSUM_FINISH_VERSION "2"
 #define BUILDER_MANIFEST_CHECKSUM_BUNDLE_SOURCES_VERSION "1"

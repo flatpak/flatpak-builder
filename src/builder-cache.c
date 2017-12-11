@@ -523,6 +523,42 @@ mtree_prune_old_files (OstreeMutableTree *mtree,
   return TRUE;
 }
 
+static OstreeRepoCommitFilterResult
+commit_filter (OstreeRepo *repo,
+               const char *path,
+               GFileInfo  *file_info,
+               gpointer    commit_data)
+{
+  guint mode;
+
+  /* No user info */
+  g_file_info_set_attribute_uint32 (file_info, "unix::uid", 0);
+  g_file_info_set_attribute_uint32 (file_info, "unix::gid", 0);
+
+  /* In flatpak, there is no real reason for files to have different
+   * permissions based on the group or user really, everything is
+   * always used readonly for everyone. Having things be writeable
+   * for anyone but the user just causes risks for the system-installed
+   * case. So, we canonicalize the mode to writable only by the user,
+   * readable to all, and executable for all for directories and
+   * files that the user can execute.
+  */
+  mode = g_file_info_get_attribute_uint32 (file_info, "unix::mode");
+  if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
+    mode = 0755 | S_IFDIR;
+  else if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_REGULAR)
+    {
+      /* If use can execute, make executable by all */
+      if (mode & S_IXUSR)
+        mode = 0755 | S_IFREG;
+      else /* otherwise executable by none */
+        mode = 0644 | S_IFREG;
+    }
+  g_file_info_set_attribute_uint32 (file_info, "unix::mode", mode);
+
+  return OSTREE_REPO_COMMIT_FILTER_ALLOW;
+}
+
 gboolean
 builder_cache_commit (BuilderCache *self,
                       const char   *body,
@@ -558,7 +594,7 @@ builder_cache_commit (BuilderCache *self,
   mtree = ostree_mutable_tree_new ();
 
   modifier = ostree_repo_commit_modifier_new (OSTREE_REPO_COMMIT_MODIFIER_FLAGS_SKIP_XATTRS,
-                                              NULL, NULL, NULL);
+                                              (OstreeRepoCommitFilter) commit_filter, NULL, NULL);
   if (self->devino_to_csum_cache)
     ostree_repo_commit_modifier_set_devino_cache (modifier, self->devino_to_csum_cache);
 
