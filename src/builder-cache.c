@@ -298,7 +298,6 @@ static gboolean
 builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_dir, GError **error)
 {
   g_autoptr(GError) my_error = NULL;
-  OstreeRepoCheckoutMode mode = OSTREE_REPO_CHECKOUT_MODE_NONE;
   OstreeRepoCheckoutAtOptions options = { 0, };
 
   if (delete_dir)
@@ -314,16 +313,14 @@ builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_
         return FALSE;
     }
 
-  /* If rofiles-fuse is disabled, we check out without user mode, not
-     necessarily because we care about uids not owned by the user
-     (they are all from the build, so should be creatable by the user,
-     but because we want to force the checkout to not use
-     hardlinks. Hard links into the cache without rofiles-fuse are not
+  /* If rofiles-fuse is disabled, we check out with force_copy
+     because we want to force the checkout to not use
+     hardlinks. Hard links into the cache without rofiles-fuse are notx
      safe, as the build could mutate the cache. */
-  if (builder_context_get_use_rofiles (self->context))
-    mode = OSTREE_REPO_CHECKOUT_MODE_USER;
+  if (!builder_context_get_use_rofiles (self->context))
+    options.force_copy = TRUE;
 
-  options.mode = mode;
+  options.mode = OSTREE_REPO_CHECKOUT_MODE_USER;
   options.overwrite_mode = OSTREE_REPO_CHECKOUT_OVERWRITE_UNION_FILES;
   options.devino_to_csum_cache = self->devino_to_csum_cache;
 
@@ -333,9 +330,9 @@ builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_
     return FALSE;
 
   /* There is a bug in ostree (https://github.com/ostreedev/ostree/issues/326) that
-     causes it to not reset mtime to 0 in themismatching modes case. So we do that
+     causes it to not reset mtime to 0 in them force_copy case. So we do that
      manually */
-  if (mode == OSTREE_REPO_CHECKOUT_MODE_NONE &&
+  if (options.force_copy &&
       !flatpak_zero_mtime (AT_FDCWD, flatpak_file_get_path_cached (self->app_dir),
                            NULL, error))
     return FALSE;
