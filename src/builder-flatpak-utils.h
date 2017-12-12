@@ -130,8 +130,7 @@ char **flatpak_decompose_ref (const char *ref,
 char * flatpak_compose_ref (gboolean    app,
                             const char *name,
                             const char *branch,
-                            const char *arch,
-                            GError    **error);
+                            const char *arch);
 
 char * flatpak_build_untyped_ref (const char *runtime,
                                   const char *branch,
