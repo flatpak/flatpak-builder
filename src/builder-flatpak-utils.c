@@ -399,8 +399,7 @@ char *
 flatpak_compose_ref (gboolean    app,
                      const char *name,
                      const char *branch,
-                     const char *arch,
-                     GError    **error)
+                     const char *arch)
 {
   if (app)
     return flatpak_build_app_ref (name, branch, arch);

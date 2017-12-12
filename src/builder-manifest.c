@@ -2493,9 +2493,7 @@ builder_manifest_finish (BuilderManifest *self,
       ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
                                  builder_manifest_get_id (self),
                                  builder_manifest_get_branch (self),
-                                 builder_context_get_arch (context), error);
-      if (ref == NULL)
-        return FALSE;
+                                 builder_context_get_arch (context));
 
       if (self->metadata)
         {
@@ -2872,9 +2870,7 @@ builder_manifest_create_platform (BuilderManifest *self,
       ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
                                  builder_manifest_get_id_platform (self),
                                  builder_manifest_get_branch (self),
-                                 builder_context_get_arch (context), error);
-      if (ref == NULL)
-        return FALSE;
+                                 builder_context_get_arch (context));
 
       platform_dir = g_file_get_child (app_dir, "platform");
 
