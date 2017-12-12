@@ -57,6 +57,7 @@ static gboolean opt_allow_missing_runtimes;
 static gboolean opt_sandboxed;
 static gboolean opt_rebuild_on_sdk_change;
 static gboolean opt_skip_if_unchanged;
+static gboolean opt_install;
 static char *opt_state_dir;
 static char *opt_from_git;
 static char *opt_from_git_branch;
@@ -123,6 +124,7 @@ static GOptionEntry entries[] = {
   { "from-git", 0, 0, G_OPTION_ARG_STRING, &opt_from_git, "Get input files from git repo", "URL"},
   { "from-git-branch", 0, 0, G_OPTION_ARG_STRING, &opt_from_git_branch, "Branch to use in --from-git", "BRANCH"},
   { "mirror-screenshots-url", 0, 0, G_OPTION_ARG_STRING, &opt_mirror_screenshots_url, "Download and rewrite screenshots to match this url", "URL"},
+  { "install", 0, 0, G_OPTION_ARG_NONE, &opt_install, "Install if build succeeds", NULL},
   { "install-deps-from", 0, 0, G_OPTION_ARG_STRING, &opt_install_deps_from, "Install build dependencies from this remote", "REMOTE"},
   { "install-deps-only", 0, 0, G_OPTION_ARG_NONE, &opt_install_deps_only, "Stop after installing dependencies"},
   { "user", 0, 0, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in user installations", NULL },
@@ -248,6 +250,50 @@ do_export (BuilderContext *build_context,
   return TRUE;
 }
 
+static gboolean
+do_install (BuilderContext *build_context,
+            const gchar    *repodir,
+            const gchar    *id,
+            const gchar    *branch,
+            GError        **error)
+{
+  g_autofree char *ref = NULL;
+
+  g_autoptr(GPtrArray) args = NULL;
+  g_autoptr(GSubprocess) subp = NULL;
+
+  args = g_ptr_array_new_with_free_func (g_free);
+  g_ptr_array_add (args, g_strdup ("flatpak"));
+  g_ptr_array_add (args, g_strdup ("install"));
+
+  if (opt_user)
+    g_ptr_array_add (args, g_strdup ("--user"));
+  else if (opt_installation)
+    g_ptr_array_add (args, g_strdup_printf ("--installation=%s", opt_installation));
+  else
+    g_ptr_array_add (args, g_strdup ("--system"));
+
+  g_ptr_array_add (args, g_strdup ("--subpath="));
+
+  ref = flatpak_build_untyped_ref (id, branch,
+                                   builder_context_get_arch (build_context));
+
+  g_ptr_array_add (args, g_strdup (repodir));
+  g_ptr_array_add (args, g_strdup (ref));
+
+  g_ptr_array_add (args, NULL);
+
+  subp =
+    g_subprocess_newv ((const gchar * const *) args->pdata,
+                       G_SUBPROCESS_FLAGS_NONE,
+                       error);
+
+  if (subp == NULL ||
+      !g_subprocess_wait_check (subp, NULL, error))
+    return FALSE;
+
+  return TRUE;
+}
 
 int
 main (int    argc,
@@ -282,6 +328,7 @@ main (int    argc,
   g_autoptr(FlatpakContext) arg_context = NULL;
   g_autoptr(FlatpakTempDir) cleanup_manifest_dir = NULL;
   g_autofree char *manifest_basename = NULL;
+  const char *export_repo = NULL;
   int i, first_non_arg, orig_argc;
   int argnr;
   char *p;
@@ -792,19 +839,25 @@ main (int    argc,
       g_print ("Saved screenshots in %s\n", flatpak_file_get_path_cached (screenshots));
     }
 
-  if (!opt_build_only && opt_repo && (opt_export_only || builder_cache_has_checkout (cache)))
+  if (!opt_build_only &&
+      (opt_repo || opt_install) &&
+      (opt_export_only || builder_cache_has_checkout (cache)))
     {
       g_autoptr(GFile) debuginfo_metadata = NULL;
       g_autoptr(GFile) sourcesinfo_metadata = NULL;
       g_auto(GStrv) exclude_dirs = builder_manifest_get_exclude_dirs (manifest);
       GList *l;
 
+      export_repo = opt_repo;
+      if (opt_install && export_repo == NULL)
+        export_repo = flatpak_file_get_path_cached (builder_context_get_cache_dir (build_context));
+
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
       builder_set_term_title (_("Exporting to repository"));
 
       if (!do_export (build_context, &error,
                       FALSE,
-                      opt_repo, app_dir_path, exclude_dirs, builder_manifest_get_branch (manifest),
+                      export_repo, app_dir_path, exclude_dirs, builder_manifest_get_branch (manifest),
                       builder_manifest_get_collection_id (manifest),
                       "--exclude=/lib/debug/*",
                       "--include=/lib/debug/app",
@@ -837,7 +890,7 @@ main (int    argc,
           files_arg = g_strconcat (builder_context_get_build_runtime (build_context) ? "--files=usr" : "--files=files",
                                    "/share/runtime/locale/", NULL);
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg,
                           files_arg,
@@ -856,7 +909,7 @@ main (int    argc,
           g_print ("Exporting %s to repo\n", debug_id);
 
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.debuginfo",
                           builder_context_get_build_runtime (build_context) ? "--files=usr/lib/debug" : "--files=files/lib/debug",
@@ -886,7 +939,7 @@ main (int    argc,
                                        builder_extension_get_directory (e));
 
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg, files_arg,
                           NULL))
@@ -904,7 +957,7 @@ main (int    argc,
           g_print ("Exporting %s to repo\n", sources_id);
 
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.sources",
                           "--files=sources",
@@ -923,7 +976,7 @@ main (int    argc,
           g_print ("Exporting %s to repo\n", platform_id);
 
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.platform",
                           "--files=platform",
@@ -956,7 +1009,7 @@ main (int    argc,
           metadata_arg = g_strdup_printf ("--metadata=%s", name);
           files_arg = g_strconcat ("--files=platform/share/runtime/locale/", NULL);
           if (!do_export (build_context, &error, TRUE,
-                          opt_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          export_repo, app_dir_path, NULL, builder_manifest_get_branch (manifest),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg,
                           files_arg,
@@ -965,6 +1018,19 @@ main (int    argc,
               g_printerr ("Export failed: %s\n", error->message);
               return 1;
             }
+        }
+    }
+
+  if (opt_install)
+    {
+      g_assert (export_repo != NULL);
+      if (!do_install (build_context, export_repo,
+                       builder_manifest_get_id (manifest),
+                       builder_manifest_get_branch (manifest),
+                       &error))
+        {
+          g_printerr ("Install failed: %s\n", error->message);
+          return 1;
         }
     }
 
