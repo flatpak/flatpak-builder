@@ -558,7 +558,7 @@
                 <term><option>--system</option></term>
 
                 <listitem><para>
-                    Install the dependenceis in the default system-wide installation.
+                    Install the dependencies in the default system-wide installation.
                 </para></listitem>
             </varlistentry>
 
