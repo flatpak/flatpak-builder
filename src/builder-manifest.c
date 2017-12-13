@@ -2279,6 +2279,8 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_autofree char *contents;
               const char *to_replace;
               const char *match;
+              g_autofree char *replace_src = NULL;
+              g_autofree char *replace_dst = NULL;
               g_autoptr(GString) new_contents = NULL;
 
               if (!g_file_load_contents (appdata_file, NULL, &contents, NULL, NULL, error))
@@ -2288,11 +2290,17 @@ builder_manifest_cleanup (BuilderManifest *self,
 
               to_replace = contents;
 
-              while ((match = strstr (to_replace, self->rename_desktop_file)) != NULL)
+              /* We only want to replace entire matches to id tag, so add the brackets
+               * and the end-tag. That way we don't do partial matches, or match
+               * other tags, while still handling e.g. <id type="desktop">foo.desktop</id> */
+              replace_src = g_strdup_printf (">%s</id", self->rename_desktop_file);
+              replace_dst = g_strdup_printf (">%s</id", desktop_basename);
+
+              while ((match = strstr (to_replace, replace_src)) != NULL)
                 {
                   g_string_append_len (new_contents, to_replace, match - to_replace);
-                  g_string_append (new_contents, desktop_basename);
-                  to_replace = match + strlen (self->rename_desktop_file);
+                  g_string_append (new_contents, replace_dst);
+                  to_replace = match + strlen (replace_src);
                 }
 
               g_string_append (new_contents, to_replace);
