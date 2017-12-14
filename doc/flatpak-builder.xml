@@ -547,6 +547,14 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--install</option></term>
+
+                <listitem><para>
+                    When the build is finished, install the result locally.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--user</option></term>
 
                 <listitem><para>
@@ -558,7 +566,7 @@
                 <term><option>--system</option></term>
 
                 <listitem><para>
-                    Install the dependenceis in the default system-wide installation.
+                    Install the dependencies in the default system-wide installation.
                 </para></listitem>
             </varlistentry>
 
