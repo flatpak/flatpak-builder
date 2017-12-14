@@ -248,7 +248,7 @@ builder_cache_open (BuilderCache *self,
       if (!flatpak_mkdir_p (parent, NULL, error))
         return FALSE;
 
-      if (!ostree_repo_create (self->repo, OSTREE_REPO_MODE_BARE_USER, NULL, error))
+      if (!ostree_repo_create (self->repo, OSTREE_REPO_MODE_BARE_USER_ONLY, NULL, error))
         return FALSE;
     }
 
@@ -298,7 +298,6 @@ static gboolean
 builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_dir, GError **error)
 {
   g_autoptr(GError) my_error = NULL;
-  OstreeRepoCheckoutMode mode = OSTREE_REPO_CHECKOUT_MODE_NONE;
   OstreeRepoCheckoutAtOptions options = { 0, };
 
   if (delete_dir)
@@ -314,16 +313,14 @@ builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_
         return FALSE;
     }
 
-  /* If rofiles-fuse is disabled, we check out without user mode, not
-     necessarily because we care about uids not owned by the user
-     (they are all from the build, so should be creatable by the user,
-     but because we want to force the checkout to not use
-     hardlinks. Hard links into the cache without rofiles-fuse are not
+  /* If rofiles-fuse is disabled, we check out with force_copy
+     because we want to force the checkout to not use
+     hardlinks. Hard links into the cache without rofiles-fuse are notx
      safe, as the build could mutate the cache. */
-  if (builder_context_get_use_rofiles (self->context))
-    mode = OSTREE_REPO_CHECKOUT_MODE_USER;
+  if (!builder_context_get_use_rofiles (self->context))
+    options.force_copy = TRUE;
 
-  options.mode = mode;
+  options.mode = OSTREE_REPO_CHECKOUT_MODE_USER;
   options.overwrite_mode = OSTREE_REPO_CHECKOUT_OVERWRITE_UNION_FILES;
   options.devino_to_csum_cache = self->devino_to_csum_cache;
 
@@ -333,9 +330,9 @@ builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_
     return FALSE;
 
   /* There is a bug in ostree (https://github.com/ostreedev/ostree/issues/326) that
-     causes it to not reset mtime to 0 in themismatching modes case. So we do that
+     causes it to not reset mtime to 0 in them force_copy case. So we do that
      manually */
-  if (mode == OSTREE_REPO_CHECKOUT_MODE_NONE &&
+  if (options.force_copy &&
       !flatpak_zero_mtime (AT_FDCWD, flatpak_file_get_path_cached (self->app_dir),
                            NULL, error))
     return FALSE;
@@ -526,6 +523,42 @@ mtree_prune_old_files (OstreeMutableTree *mtree,
   return TRUE;
 }
 
+static OstreeRepoCommitFilterResult
+commit_filter (OstreeRepo *repo,
+               const char *path,
+               GFileInfo  *file_info,
+               gpointer    commit_data)
+{
+  guint mode;
+
+  /* No user info */
+  g_file_info_set_attribute_uint32 (file_info, "unix::uid", 0);
+  g_file_info_set_attribute_uint32 (file_info, "unix::gid", 0);
+
+  /* In flatpak, there is no real reason for files to have different
+   * permissions based on the group or user really, everything is
+   * always used readonly for everyone. Having things be writeable
+   * for anyone but the user just causes risks for the system-installed
+   * case. So, we canonicalize the mode to writable only by the user,
+   * readable to all, and executable for all for directories and
+   * files that the user can execute.
+  */
+  mode = g_file_info_get_attribute_uint32 (file_info, "unix::mode");
+  if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_DIRECTORY)
+    mode = 0755 | S_IFDIR;
+  else if (g_file_info_get_file_type (file_info) == G_FILE_TYPE_REGULAR)
+    {
+      /* If use can execute, make executable by all */
+      if (mode & S_IXUSR)
+        mode = 0755 | S_IFREG;
+      else /* otherwise executable by none */
+        mode = 0644 | S_IFREG;
+    }
+  g_file_info_set_attribute_uint32 (file_info, "unix::mode", mode);
+
+  return OSTREE_REPO_COMMIT_FILTER_ALLOW;
+}
+
 gboolean
 builder_cache_commit (BuilderCache *self,
                       const char   *body,
@@ -561,7 +594,7 @@ builder_cache_commit (BuilderCache *self,
   mtree = ostree_mutable_tree_new ();
 
   modifier = ostree_repo_commit_modifier_new (OSTREE_REPO_COMMIT_MODIFIER_FLAGS_SKIP_XATTRS,
-                                              NULL, NULL, NULL);
+                                              (OstreeRepoCommitFilter) commit_filter, NULL, NULL);
   if (self->devino_to_csum_cache)
     ostree_repo_commit_modifier_set_devino_cache (modifier, self->devino_to_csum_cache);
 
