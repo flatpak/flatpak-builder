@@ -1,3 +1,18 @@
+Major changes in 0.10.6
+=======================
+
+ * New checksum types for file/archive sources: md5, sha1, sha512
+ * Support including source snippets from another file, similar to
+   how module includes are supported.
+ * The app id renaming in the appdata file is now more careful to
+   avoid renaming other parts.
+ * The cache default repo format for new caches is now bare-user-only
+   which means building with flatpak-builder works on filesystems that
+   don't support xattrs.
+ * New --install argument will install the finished build using the
+   new flatpak install install-directly-from-local-repo feature.
+   This makes it easier to test local builds.
+
 Major changes in 0.10.5
 =======================
 
