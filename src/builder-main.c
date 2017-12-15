@@ -1030,11 +1030,14 @@ main (int    argc,
 
   if (opt_install)
     {
-      g_assert (export_repo != NULL);
-      if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
-                       builder_manifest_get_id (manifest),
-                       builder_manifest_get_branch (manifest),
-                       &error))
+      /* We may end here with a NULL export repo if --require-changes was
+         passed and there were no changes, do nothing in that case */
+      if (export_repo == NULL)
+        g_printerr ("NOTE: No export due to --require-changes, ignoring --install\n");
+      else if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
+                            builder_manifest_get_id (manifest),
+                            builder_manifest_get_branch (manifest),
+                            &error))
         {
           g_printerr ("Install failed: %s\n", error->message);
           return 1;
