@@ -852,7 +852,7 @@ main (int    argc,
 
       export_repo = g_file_new_for_path (opt_repo);
       if (opt_install && export_repo == NULL)
-        export_repo = builder_context_get_cache_dir (build_context);
+        export_repo = g_object_ref (builder_context_get_cache_dir (build_context));
 
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
       builder_set_term_title (_("Exporting to repository"));
