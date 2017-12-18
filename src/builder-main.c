@@ -850,8 +850,9 @@ main (int    argc,
       g_auto(GStrv) exclude_dirs = builder_manifest_get_exclude_dirs (manifest);
       GList *l;
 
-      export_repo = g_file_new_for_path (opt_repo);
-      if (opt_install && export_repo == NULL)
+      if (opt_repo)
+        export_repo = g_file_new_for_path (opt_repo);
+      else if (opt_install)
         export_repo = g_object_ref (builder_context_get_cache_dir (build_context));
 
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
