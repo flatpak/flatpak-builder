@@ -1867,7 +1867,7 @@ command (GFile      *app_dir,
   g_ptr_array_add (args, g_strdup (commandline));
   g_ptr_array_add (args, NULL);
 
-  return builder_maybe_host_spawnv (NULL, NULL, error, (const char * const *)args->pdata);
+  return builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata);
 }
 
 typedef gboolean (*ForeachFileFunc) (BuilderManifest *self,
@@ -2037,7 +2037,7 @@ appstream_compose (GFile   *app_dir,
   g_ptr_array_add (args, NULL);
   va_end (ap);
 
-  if (!builder_maybe_host_spawnv (NULL, NULL, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
     {
       g_prefix_error (error, "ERROR: appstream-compose failed: ");
       return FALSE;

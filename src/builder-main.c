@@ -830,6 +830,7 @@ main (int    argc,
         {
           if (!builder_maybe_host_spawnv (NULL,
                                           NULL,
+                                          0,
                                           &error,
                                           argv))
             {

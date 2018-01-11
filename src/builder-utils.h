@@ -63,10 +63,12 @@ gboolean builder_migrate_locale_dirs (GFile   *root_dir,
 
 gboolean builder_host_spawnv (GFile                *dir,
                               char                **output,
+                              GSubprocessFlags      flags,
                               GError              **error,
                               const gchar * const  *argv);
 gboolean builder_maybe_host_spawnv (GFile                *dir,
                                     char                **output,
+                                    GSubprocessFlags      flags,
                                     GError              **error,
                                     const gchar * const  *argv);
 

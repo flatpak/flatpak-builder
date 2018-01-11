@@ -1456,6 +1456,7 @@ sigint_handler (gpointer user_data)
 gboolean
 builder_host_spawnv (GFile                *dir,
                      char                **output,
+                     GSubprocessFlags      flags,
                      GError              **error,
                      const gchar * const  *argv)
 {
@@ -1611,13 +1612,14 @@ builder_host_spawnv (GFile                *dir,
 gboolean
 builder_maybe_host_spawnv (GFile                *dir,
                            char                **output,
+                           GSubprocessFlags      flags,
                            GError              **error,
                            const gchar * const  *argv)
 {
   if (flatpak_is_in_sandbox ())
-    return builder_host_spawnv (dir, output, error, argv);
+    return builder_host_spawnv (dir, output, 0, error, argv);
 
-  return flatpak_spawnv (dir, output, 0, error, argv);
+  return flatpak_spawnv (dir, output, flags, error, argv);
 }
 
 /**
