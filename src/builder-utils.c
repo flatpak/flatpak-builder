@@ -1464,7 +1464,7 @@ builder_host_spawnv (GFile                *dir,
   GVariantBuilder *fd_builder = g_variant_builder_new (G_VARIANT_TYPE("a{uh}"));
   GVariantBuilder *env_builder = g_variant_builder_new (G_VARIANT_TYPE("a{ss}"));
   g_autoptr(GUnixFDList) fd_list = g_unix_fd_list_new ();
-  gint stdout_handle, stdin_handle, stderr_handle;
+  gint stdout_handle, stdin_handle, stderr_handle = -1;
   g_autoptr(GDBusConnection) connection = NULL;
   g_autoptr(GVariant) ret = NULL;
   g_autoptr(GMainLoop) loop = NULL;
@@ -1535,13 +1535,16 @@ builder_host_spawnv (GFile                *dir,
         return FALSE;
     }
 
-  stderr_handle = g_unix_fd_list_append (fd_list, 2, error);
-  if (stderr_handle == -1)
-    return FALSE;
-
   g_variant_builder_add (fd_builder, "{uh}", 0, stdin_handle);
   g_variant_builder_add (fd_builder, "{uh}", 1, stdout_handle);
-  g_variant_builder_add (fd_builder, "{uh}", 2, stderr_handle);
+
+  if ((flags & G_SUBPROCESS_FLAGS_STDERR_SILENCE) == 0)
+    {
+      stderr_handle = g_unix_fd_list_append (fd_list, 2, error);
+      if (stderr_handle == -1)
+        return FALSE;
+      g_variant_builder_add (fd_builder, "{uh}", 2, stderr_handle);
+    }
 
   env_vars = g_listenv ();
   for (i = 0; env_vars[i] != NULL; i++)
