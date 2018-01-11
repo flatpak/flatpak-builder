@@ -1308,23 +1308,36 @@ builder_manifest_get_base_version (BuilderManifest *self)
   return self->base_version ? self->base_version : builder_manifest_get_branch (self);
 }
 
+G_GNUC_NULL_TERMINATED
 static char *
 flatpak (GError **error,
          ...)
 {
   gboolean res;
   g_autofree char *output = NULL;
+  g_autoptr(GPtrArray) ar = g_ptr_array_new ();
   va_list ap;
 
   va_start (ap, error);
-  res = flatpak_spawn (NULL, &output, 0, error, "flatpak", ap);
+  g_ptr_array_add (ar, "flatpak");
+  while (TRUE)
+    {
+      gchar *param = va_arg (ap, gchar *);
+      g_ptr_array_add (ar, param);
+      if (param == NULL)
+        break;
+    }
   va_end (ap);
+
+  res = builder_maybe_host_spawnv (NULL, &output, 0, error,
+                                   (const gchar * const *)ar->pdata);
 
   if (res)
     {
       g_strchomp (output);
       return g_steal_pointer (&output);
     }
+
   return NULL;
 }
 
@@ -1361,7 +1374,7 @@ flatpak_info (gboolean opt_user,
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
-  res = flatpak_spawnv (NULL, &output, G_SUBPROCESS_FLAGS_STDERR_SILENCE, error, (const char * const *)args->pdata);
+  res = builder_maybe_host_spawnv (NULL, &output, G_SUBPROCESS_FLAGS_STDERR_SILENCE, error, (const char * const *)args->pdata);
 
   if (res)
     {
@@ -3295,7 +3308,7 @@ builder_manifest_install_dep (BuilderManifest *self,
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
-  if (!flatpak_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
     return FALSE;
 
   return TRUE;
