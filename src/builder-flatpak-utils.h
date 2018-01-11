@@ -221,6 +221,11 @@ GFile *flatpak_build_file_va (GFile *base,
                               va_list args);
 GFile *flatpak_build_file (GFile *base, ...) G_GNUC_NULL_TERMINATED;
 
+gboolean flatpak_file_rename (GFile *from,
+                              GFile *to,
+                              GCancellable  *cancellable,
+                              GError       **error);
+
 gboolean flatpak_openat_noatime (int            dfd,
                                  const char    *name,
                                  int           *ret_fd,
