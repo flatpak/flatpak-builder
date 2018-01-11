@@ -1279,7 +1279,7 @@ build (GFile          *app_dir,
 
   g_ptr_array_add (args, NULL);
 
-  if (!builder_maybe_host_spawnv (cwd_file, NULL, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (cwd_file, NULL, 0, error, (const char * const *)args->pdata))
     {
       g_prefix_error (error, "module %s: ", module_name);
       return FALSE;
