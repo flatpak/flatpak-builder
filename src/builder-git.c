@@ -516,9 +516,15 @@ builder_git_mirror_repo (const char     *repo_location,
         cached_git_dir = g_object_ref (cache_mirror_dir);
 
       /* If we're not updating, only pull from cache to avoid network i/o */
-      if (!update && cached_git_dir)
-        origin = g_file_get_uri (cached_git_dir);
-      else
+      if (!update)
+        {
+          if (cached_git_dir)
+            origin = g_file_get_uri (cached_git_dir);
+          else if (!created)
+            return TRUE;
+        }
+
+      if (origin == NULL)
         origin = g_strdup ("origin");
 
       refs = git_ls_remote (mirror_dir, origin, error);
