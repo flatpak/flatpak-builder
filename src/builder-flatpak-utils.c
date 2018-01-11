@@ -897,6 +897,23 @@ flatpak_rm_rf (GFile         *dir,
                                cancellable, error);
 }
 
+gboolean flatpak_file_rename (GFile *from,
+                              GFile *to,
+                              GCancellable  *cancellable,
+                              GError       **error)
+{
+  if (g_cancellable_set_error_if_cancelled (cancellable, error))
+    return FALSE;
+
+  if (rename (flatpak_file_get_path_cached (from),
+              flatpak_file_get_path_cached (to)) < 0)
+    {
+      glnx_set_error_from_errno (error);
+      return FALSE;
+    }
+
+  return TRUE;
+}
 
 #define OSTREE_GIO_FAST_QUERYINFO ("standard::name,standard::type,standard::size,standard::is-symlink,standard::symlink-target," \
                                    "unix::device,unix::inode,unix::mode,unix::uid,unix::gid,unix::rdev")

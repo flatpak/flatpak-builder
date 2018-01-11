@@ -440,6 +440,8 @@ builder_git_mirror_repo (const char     *repo_location,
 {
   g_autoptr(GFile) cache_mirror_dir = NULL;
   g_autoptr(GFile) mirror_dir = NULL;
+  g_autoptr(GFile) real_mirror_dir = NULL;
+  g_autoptr(FlatpakTempDir) tmp_mirror_dir = NULL;
   g_autofree char *current_commit = NULL;
   g_autoptr(GHashTable) refs = NULL;
   gboolean already_exists = FALSE;
@@ -466,6 +468,15 @@ builder_git_mirror_repo (const char     *repo_location,
 
   if (!g_file_query_exists (mirror_dir, NULL))
     {
+      g_autofree char *tmpdir = g_strconcat (flatpak_file_get_path_cached (mirror_dir), "-XXXXXX", NULL);
+
+      if (g_mkdtemp_full (tmpdir, 0755) == NULL)
+        return flatpak_fail (error, "Can't create temporary directory");
+
+      tmp_mirror_dir = g_file_new_for_path (tmpdir);
+      real_mirror_dir = g_steal_pointer (&mirror_dir);
+      mirror_dir = g_object_ref (tmp_mirror_dir);
+
       if (!git (NULL, NULL, 0, error,
                 "init", "--bare",
                 (char *)flatpak_file_get_path_cached (mirror_dir), NULL))
@@ -516,9 +527,15 @@ builder_git_mirror_repo (const char     *repo_location,
         cached_git_dir = g_object_ref (cache_mirror_dir);
 
       /* If we're not updating, only pull from cache to avoid network i/o */
-      if (!update && cached_git_dir)
-        origin = g_file_get_uri (cached_git_dir);
-      else
+      if (!update)
+        {
+          if (cached_git_dir)
+            origin = g_file_get_uri (cached_git_dir);
+          else if (!created)
+            return TRUE;
+        }
+
+      if (origin == NULL)
         origin = g_strdup ("origin");
 
       refs = git_ls_remote (mirror_dir, origin, error);
@@ -597,6 +614,14 @@ builder_git_mirror_repo (const char     *repo_location,
               !g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
             g_debug ("Error deleting alternates file: %s", local_error->message);
         }
+    }
+
+  if (real_mirror_dir)
+    {
+      if (!flatpak_file_rename (mirror_dir, real_mirror_dir, NULL, error))
+        return FALSE;
+      g_clear_object (&mirror_dir);
+      mirror_dir = g_steal_pointer (&real_mirror_dir);
     }
 
   if (flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
