@@ -1575,6 +1575,11 @@ builder_host_spawnv (GFile                *dir,
   g_variant_get (ret, "(u)", &client_pid);
   data.client_pid = client_pid;
 
+  /* Drop the FDList immediately or splice_async() may not
+   * complete when the peer process exists, causing us to hang.
+   */
+  g_clear_object (&fd_list);
+
   g_main_loop_run (loop);
 
   g_source_remove (sigterm_id);
