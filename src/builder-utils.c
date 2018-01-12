@@ -1409,7 +1409,7 @@ host_command_exited_cb (GDBusConnection *connection,
 
   if (client_pid == data->client_pid)
     {
-      g_print ("host_command_exited_cb %d %d\n", client_pid, exit_status);
+      g_debug ("host_command_exited_cb %d %d\n", client_pid, exit_status);
       data->exit_status = exit_status;
       host_command_call_exit (data);
     }
@@ -1456,6 +1456,7 @@ sigint_handler (gpointer user_data)
 gboolean
 builder_host_spawnv (GFile                *dir,
                      char                **output,
+                     GSubprocessFlags      flags,
                      GError              **error,
                      const gchar * const  *argv)
 {
@@ -1463,7 +1464,7 @@ builder_host_spawnv (GFile                *dir,
   GVariantBuilder *fd_builder = g_variant_builder_new (G_VARIANT_TYPE("a{uh}"));
   GVariantBuilder *env_builder = g_variant_builder_new (G_VARIANT_TYPE("a{ss}"));
   g_autoptr(GUnixFDList) fd_list = g_unix_fd_list_new ();
-  gint stdout_handle, stdin_handle, stderr_handle;
+  gint stdout_handle, stdin_handle, stderr_handle = -1;
   g_autoptr(GDBusConnection) connection = NULL;
   g_autoptr(GVariant) ret = NULL;
   g_autoptr(GMainLoop) loop = NULL;
@@ -1534,13 +1535,16 @@ builder_host_spawnv (GFile                *dir,
         return FALSE;
     }
 
-  stderr_handle = g_unix_fd_list_append (fd_list, 2, error);
-  if (stderr_handle == -1)
-    return FALSE;
-
   g_variant_builder_add (fd_builder, "{uh}", 0, stdin_handle);
   g_variant_builder_add (fd_builder, "{uh}", 1, stdout_handle);
-  g_variant_builder_add (fd_builder, "{uh}", 2, stderr_handle);
+
+  if ((flags & G_SUBPROCESS_FLAGS_STDERR_SILENCE) == 0)
+    {
+      stderr_handle = g_unix_fd_list_append (fd_list, 2, error);
+      if (stderr_handle == -1)
+        return FALSE;
+      g_variant_builder_add (fd_builder, "{uh}", 2, stderr_handle);
+    }
 
   env_vars = g_listenv ();
   for (i = 0; env_vars[i] != NULL; i++)
@@ -1575,6 +1579,11 @@ builder_host_spawnv (GFile                *dir,
   g_variant_get (ret, "(u)", &client_pid);
   data.client_pid = client_pid;
 
+  /* Drop the FDList immediately or splice_async() may not
+   * complete when the peer process exists, causing us to hang.
+   */
+  g_clear_object (&fd_list);
+
   g_main_loop_run (loop);
 
   g_source_remove (sigterm_id);
@@ -1606,13 +1615,14 @@ builder_host_spawnv (GFile                *dir,
 gboolean
 builder_maybe_host_spawnv (GFile                *dir,
                            char                **output,
+                           GSubprocessFlags      flags,
                            GError              **error,
                            const gchar * const  *argv)
 {
   if (flatpak_is_in_sandbox ())
-    return builder_host_spawnv (dir, output, error, argv);
+    return builder_host_spawnv (dir, output, 0, error, argv);
 
-  return flatpak_spawnv (dir, output, 0, error, argv);
+  return flatpak_spawnv (dir, output, flags, error, argv);
 }
 
 /**
