@@ -1409,7 +1409,7 @@ host_command_exited_cb (GDBusConnection *connection,
 
   if (client_pid == data->client_pid)
     {
-      g_print ("host_command_exited_cb %d %d\n", client_pid, exit_status);
+      g_debug ("host_command_exited_cb %d %d\n", client_pid, exit_status);
       data->exit_status = exit_status;
       host_command_call_exit (data);
     }
