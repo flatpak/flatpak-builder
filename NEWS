@@ -1,3 +1,12 @@
+Major changes in 0.10.7
+=======================
+
+ * Add support for --socket=fallback-x11
+ * Fix assert in --install
+ * Fix --disable-updates for git sources
+ * When mirroring git repos, use a temporary download dir
+ * Support running flatpak-builder inside a flatpak sandbox
+
 Major changes in 0.10.6
 =======================
 
