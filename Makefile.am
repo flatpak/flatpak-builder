@@ -21,7 +21,7 @@ SUBDIRS += . doc
 endif
 
 FLATPAK_BINDIR=$(bindir)
-
+ACLOCAL_AMFLAGS = -I m4 -I libglnx ${ACLOCAL_FLAGS}
 AM_CPPFLAGS =							\
 	-DFLATPAK_BINDIR=\"$(FLATPAK_BINDIR)\"			\
 	-DFLATPAK_BASEDIR=\"$(pkgdatadir)\"			\
