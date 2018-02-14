@@ -229,7 +229,7 @@ builder_context_class_init (BuilderContextClass *klass)
 static void
 builder_context_init (BuilderContext *self)
 {
-  GLnxLockFile init = GLNX_LOCK_FILE_INIT;
+  GLnxLockFile init = { 0, };
   g_autofree char *path = NULL;
 
   self->rofiles_file_lock = init;
