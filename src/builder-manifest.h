@@ -94,6 +94,7 @@ gboolean        builder_manifest_install_deps (BuilderManifest *self,
                                                const char *remote,
                                                gboolean opt_user,
                                                const char *opt_installation,
+                                               gboolean opt_yes,
                                                GError         **error);
 gboolean        builder_manifest_run (BuilderManifest *self,
                                       BuilderContext  *context,
