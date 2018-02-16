@@ -518,11 +518,16 @@ builder_git_mirror_repo (const char     *repo_location,
       g_autoptr(GFile) cached_git_dir = NULL;
       g_autofree char *origin = NULL;
       g_autoptr(GFile) alternates = NULL;
-      g_autofree char *filename = g_file_get_basename (mirror_dir);
+      g_autofree char *cache_filename = NULL;
+
+      if (real_mirror_dir)
+        cache_filename = g_file_get_basename (real_mirror_dir);
+      else
+        cache_filename = g_file_get_basename (mirror_dir);
 
       /* If we're doing a regular download, look for cache sources */
       if (destination_path == NULL)
-        cached_git_dir = builder_context_find_in_sources_dirs (context, "git", filename, NULL);
+        cached_git_dir = builder_context_find_in_sources_dirs (context, "git", cache_filename, NULL);
       else
         cached_git_dir = g_object_ref (cache_mirror_dir);
 
