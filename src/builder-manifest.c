@@ -3274,6 +3274,7 @@ builder_manifest_install_dep (BuilderManifest *self,
                               const char *opt_installation,
                               const char *runtime,
                               const char *version,
+                              gboolean opt_yes,
                               GError         **error)
 {
   g_autofree char *ref = NULL;
@@ -3305,6 +3306,9 @@ builder_manifest_install_dep (BuilderManifest *self,
       g_ptr_array_add (args, g_strdup (remote));
     }
 
+  if (opt_yes)
+    g_ptr_array_add (args, "-y");
+
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
@@ -3322,6 +3326,7 @@ builder_manifest_install_extension_deps (BuilderManifest *self,
                                          const char *remote,
                                          gboolean opt_user,
                                          const char *opt_installation,
+                                         gboolean opt_yes,
                                          GError **error)
 {
   g_autofree char *runtime_ref = flatpak_build_runtime_ref (runtime, builder_manifest_get_runtime_version (self),
@@ -3368,6 +3373,7 @@ builder_manifest_install_extension_deps (BuilderManifest *self,
       g_print ("Dependency Extension: %s %s\n", runtime_extensions[i], extension_version);
       if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
                                          runtime_extensions[i], extension_version,
+                                         opt_yes,
                                          error))
         return FALSE;
     }
@@ -3381,12 +3387,14 @@ builder_manifest_install_deps (BuilderManifest *self,
                                const char *remote,
                                gboolean opt_user,
                                const char *opt_installation,
+                               gboolean opt_yes,
                                GError **error)
 {
   /* Sdk */
   g_print ("Dependency Sdk: %s %s\n", self->sdk, builder_manifest_get_runtime_version (self));
   if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
                                      self->sdk, builder_manifest_get_runtime_version (self),
+                                     opt_yes,
                                      error))
     return FALSE;
 
@@ -3394,6 +3402,7 @@ builder_manifest_install_deps (BuilderManifest *self,
   g_print ("Dependency Runtime: %s %s\n", self->runtime, builder_manifest_get_runtime_version (self));
   if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
                                      self->runtime, builder_manifest_get_runtime_version (self),
+                                     opt_yes,
                                      error))
     return FALSE;
 
@@ -3402,6 +3411,7 @@ builder_manifest_install_deps (BuilderManifest *self,
       g_print ("Dependency Base: %s %s\n", self->base, builder_manifest_get_base_version (self));
       if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
                                          self->base, builder_manifest_get_base_version (self),
+                                         opt_yes,
                                          error))
         return FALSE;
     }
@@ -3409,12 +3419,14 @@ builder_manifest_install_deps (BuilderManifest *self,
   if (!builder_manifest_install_extension_deps (self, context,
                                                 self->sdk, self->sdk_extensions,
                                                 remote,opt_user, opt_installation,
+                                                opt_yes,
                                                 error))
     return FALSE;
 
   if (!builder_manifest_install_extension_deps (self, context,
                                                 self->runtime, self->platform_extensions,
                                                 remote, opt_user, opt_installation,
+                                                opt_yes,
                                                 error))
     return FALSE;
 

@@ -81,6 +81,7 @@ static gboolean opt_user;
 static char *opt_installation;
 static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
+static gboolean opt_yes;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -131,6 +132,7 @@ static GOptionEntry entries[] = {
   { "system", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in system-wide installations (default)", NULL },
   { "installation", 0, 0, G_OPTION_ARG_STRING, &opt_installation, "Install dependencies in a specific system-wide installation", "NAME" },
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
+  { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { NULL }
 };
 
@@ -272,6 +274,9 @@ do_install (BuilderContext *build_context,
     g_ptr_array_add (args, g_strdup_printf ("--installation=%s", opt_installation));
   else
     g_ptr_array_add (args, g_strdup ("--system"));
+
+  if (opt_user)
+    g_ptr_array_add (args, g_strdup ("-y"));
 
   g_ptr_array_add (args, g_strdup ("--reinstall"));
 
@@ -591,7 +596,8 @@ main (int    argc,
 
   if (opt_install_deps_from != NULL)
     {
-      if (!builder_manifest_install_deps (manifest, build_context, opt_install_deps_from, opt_user, opt_installation, &error))
+      if (!builder_manifest_install_deps (manifest, build_context, opt_install_deps_from, opt_user, opt_installation,
+                                          opt_yes, &error))
         {
           g_printerr ("Error running %s: %s\n", argv[3], error->message);
           return 1;
