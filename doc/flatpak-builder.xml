@@ -236,7 +236,7 @@
 
                 <listitem><para>
                   Extract and prepare the sources for the named module, and then start
-                  a shell in a sandbox identical to the one flatpak-builder would use for buildng the module.
+                  a shell in a sandbox identical to the one flatpak-builder would use for building the module.
                   This is useful to debug a module.
                 </para></listitem>
             </varlistentry>
