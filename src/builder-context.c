@@ -875,36 +875,64 @@ builder_context_set_rebuild_on_sdk_change (BuilderContext *self,
 }
 
 gboolean
-builder_context_enable_ccache (BuilderContext *self,
-                               GError        **error)
+builder_context_set_enable_ccache (BuilderContext *self,
+                                   gboolean        enable,
+                                   GError        **error)
 {
-  g_autofree char *ccache_path = g_file_get_path (self->ccache_dir);
-  g_autofree char *ccache_bin_path = g_build_filename (ccache_path, "bin", NULL);
   int i;
-  static const char *compilers[] = {
-    "cc",
-    "c++",
-    "gcc",
-    "g++"
-  };
 
-  if (g_mkdir_with_parents (ccache_bin_path, 0755) != 0)
-    {
-      glnx_set_error_from_errno (error);
-      return FALSE;
-    }
+  self->use_ccache = !!enable;
 
-  for (i = 0; i < G_N_ELEMENTS (compilers); i++)
+  if (enable)
     {
-      const char *symlink_path = g_build_filename (ccache_bin_path, compilers[i], NULL);
-      if (symlink ("/usr/bin/ccache", symlink_path) && errno != EEXIST)
+      g_autofree char *ccache_path = g_file_get_path (self->ccache_dir);
+      g_autofree char *ccache_bin_path = g_build_filename (ccache_path, "bin", NULL);
+      static const char *compilers[] = {
+        "cc",
+        "c++",
+        "gcc",
+        "g++"
+      };
+
+      if (g_mkdir_with_parents (ccache_bin_path, 0755) != 0)
         {
           glnx_set_error_from_errno (error);
           return FALSE;
         }
-    }
 
-  self->use_ccache = TRUE;
+      for (i = 0; i < G_N_ELEMENTS (compilers); i++)
+        {
+          const char *symlink_path = g_build_filename (ccache_bin_path, compilers[i], NULL);
+          if (symlink ("/usr/bin/ccache", symlink_path) && errno != EEXIST)
+            {
+              glnx_set_error_from_errno (error);
+              return FALSE;
+            }
+        }
+    }
+  else
+    {
+      g_autoptr(GFile) ccache_disabled_dir = g_file_get_child (self->ccache_dir, "disabled");
+      g_autofree char *ccache_disabled_path = g_file_get_path (ccache_disabled_dir);
+      g_autofree char *ccache_config_path = g_build_filename (ccache_disabled_path, "ccache.conf", NULL);
+      g_autoptr(GError) my_error = NULL;
+
+      if (g_mkdir_with_parents (ccache_disabled_path, 0755) != 0)
+        {
+          glnx_set_error_from_errno (error);
+          return FALSE;
+        }
+
+      if (!g_file_set_contents (ccache_config_path, "disable = true\n", -1, &my_error))
+        {
+          if (!g_error_matches (my_error, G_FILE_ERROR, G_FILE_ERROR_EXIST))
+            {
+              g_propagate_error (error, g_steal_pointer (&my_error));
+              return FALSE;
+            }
+          g_clear_error (&my_error);
+        }
+    }
 
   return TRUE;
 }
@@ -914,6 +942,7 @@ builder_context_extend_env (BuilderContext *self,
                             char          **envp)
 {
   g_autofree char *path = NULL;
+  const char *ccache_dir = NULL;
 
   path = g_strdup (g_environ_getenv (envp, "PATH"));
   if (path == NULL)
@@ -924,9 +953,14 @@ builder_context_extend_env (BuilderContext *self,
       char *new_path = g_strdup_printf ("/run/ccache/bin:%s", path);
       g_free (path);
       path = new_path;
-      envp = g_environ_setenv (envp, "CCACHE_DIR", "/run/ccache", TRUE);
+      ccache_dir = "/run/ccache";
+    }
+  else
+    {
+      ccache_dir = "/run/ccache/disabled";
     }
 
+  envp = g_environ_setenv (envp, "CCACHE_DIR", ccache_dir, TRUE);
   envp = g_environ_setenv (envp, "PATH", path, TRUE);
 
   return envp;
