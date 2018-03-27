@@ -531,6 +531,14 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--no-shallow-clone</option></term>
+
+                <listitem><para>
+                  Don't use shallow clones when mirroring git repos.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--install-deps-from=REMOTE</option></term>
 
                 <listitem><para>
