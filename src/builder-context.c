@@ -77,6 +77,7 @@ struct BuilderContext
   gboolean        use_rofiles;
   gboolean        have_rofiles;
   gboolean        run_tests;
+  gboolean        no_shallow_clone;
 };
 
 typedef struct
@@ -859,6 +860,19 @@ builder_context_set_run_tests (BuilderContext *self,
                                gboolean run_tests)
 {
   self->run_tests = run_tests;
+}
+
+void
+builder_context_set_no_shallow_clone (BuilderContext *self,
+                                      gboolean        no_shallow_clone)
+{
+  self->no_shallow_clone = no_shallow_clone;
+}
+
+gboolean
+builder_context_get_no_shallow_clone (BuilderContext *self)
+{
+  return self->no_shallow_clone;
 }
 
 gboolean
