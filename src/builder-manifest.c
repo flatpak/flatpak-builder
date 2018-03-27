@@ -83,6 +83,7 @@ struct BuilderManifest
   char          **prepare_platform_commands;
   char          **finish_args;
   char          **inherit_extensions;
+  char          **inherit_sdk_extensions;
   char          **tags;
   char           *rename_desktop_file;
   char           *rename_appdata_file;
@@ -149,6 +150,7 @@ enum {
   PROP_PLATFORM_EXTENSIONS,
   PROP_FINISH_ARGS,
   PROP_INHERIT_EXTENSIONS,
+  PROP_INHERIT_SDK_EXTENSIONS,
   PROP_TAGS,
   PROP_RENAME_DESKTOP_FILE,
   PROP_RENAME_APPDATA_FILE,
@@ -193,6 +195,7 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->prepare_platform_commands);
   g_strfreev (self->finish_args);
   g_strfreev (self->inherit_extensions);
+  g_strfreev (self->inherit_sdk_extensions);
   g_strfreev (self->tags);
   g_free (self->rename_desktop_file);
   g_free (self->rename_appdata_file);
@@ -365,6 +368,10 @@ builder_manifest_get_property (GObject    *object,
 
     case PROP_INHERIT_EXTENSIONS:
       g_value_set_boxed (value, self->inherit_extensions);
+      break;
+
+    case PROP_INHERIT_SDK_EXTENSIONS:
+      g_value_set_boxed (value, self->inherit_sdk_extensions);
       break;
 
     case PROP_TAGS:
@@ -588,6 +595,12 @@ builder_manifest_set_property (GObject      *object,
     case PROP_INHERIT_EXTENSIONS:
       tmp = self->inherit_extensions;
       self->inherit_extensions = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_INHERIT_SDK_EXTENSIONS:
+      tmp = self->inherit_sdk_extensions;
+      self->inherit_sdk_extensions = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -865,6 +878,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_INHERIT_EXTENSIONS,
                                    g_param_spec_boxed ("inherit-extensions",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_INHERIT_SDK_EXTENSIONS,
+                                   g_param_spec_boxed ("inherit-sdk-extensions",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -1622,6 +1642,7 @@ builder_manifest_checksum_for_finish (BuilderManifest *self,
   builder_cache_checksum_strv (cache, self->finish_args);
   builder_cache_checksum_str (cache, self->command);
   builder_cache_checksum_strv (cache, self->inherit_extensions);
+  builder_cache_checksum_compat_strv (cache, self->inherit_sdk_extensions);
 
   for (l = self->add_extensions; l != NULL; l = l->next)
     {
@@ -2482,6 +2503,7 @@ builder_manifest_finish (BuilderManifest *self,
   g_autofree char *json = NULL;
   g_autofree char *commandline = NULL;
   g_autoptr(GPtrArray) args = NULL;
+  g_autoptr(GPtrArray) inherit_extensions = NULL;
   g_autoptr(GSubprocess) subp = NULL;
   int i;
   GList *l;
@@ -2525,7 +2547,8 @@ builder_manifest_finish (BuilderManifest *self,
             return FALSE;
         }
 
-      if (self->inherit_extensions && self->inherit_extensions[0] != NULL)
+      if ((self->inherit_extensions && self->inherit_extensions[0] != NULL) ||
+          (self->inherit_sdk_extensions && self->inherit_sdk_extensions[0] != NULL))
         {
           g_autoptr(GFile) metadata = g_file_get_child (app_dir, "metadata");
           g_autoptr(GKeyFile) keyfile = g_key_file_new ();
@@ -2570,16 +2593,25 @@ builder_manifest_finish (BuilderManifest *self,
               return FALSE;
             }
 
-          for (i = 0; self->inherit_extensions[i] != NULL; i++)
+          inherit_extensions = g_ptr_array_new ();
+
+          for (i = 0; self->inherit_extensions != NULL && self->inherit_extensions[i] != NULL; i++)
+            g_ptr_array_add (inherit_extensions, self->inherit_extensions[i]);
+
+          for (i = 0; self->inherit_sdk_extensions != NULL && self->inherit_sdk_extensions[i] != NULL; i++)
+            g_ptr_array_add (inherit_extensions, self->inherit_sdk_extensions[i]);
+
+          for (i = 0; i < inherit_extensions->len; i++)
             {
+              const char *extension = inherit_extensions->pdata[i];
               g_autofree char *group = g_strconcat (FLATPAK_METADATA_GROUP_PREFIX_EXTENSION,
-                                                    self->inherit_extensions[i],
+                                                    extension,
                                                     NULL);
               g_auto(GStrv) keys = NULL;
               int j;
 
               if (!g_key_file_has_group (base_keyfile, group))
-                return flatpak_fail (error, "Can't find inherited extension point %s", self->inherit_extensions[i]);
+                return flatpak_fail (error, "Can't find inherited extension point %s", extension);
 
               keys = g_key_file_get_keys (base_keyfile, group, NULL, error);
               if (keys == NULL)
@@ -2956,7 +2988,6 @@ builder_manifest_create_platform (BuilderManifest *self,
           g_autoptr(GFile) dest_metadata = g_file_get_child (app_dir, "metadata.platform");
           g_autoptr(GKeyFile) keyfile = g_key_file_new ();
           g_auto(GStrv) groups = NULL;
-          g_autofree char *sdk_group_prefix = g_strconcat (FLATPAK_METADATA_GROUP_PREFIX_EXTENSION, self->id, NULL);
           int j;
 
           if (!g_key_file_load_from_file (keyfile,
@@ -2974,8 +3005,19 @@ builder_manifest_create_platform (BuilderManifest *self,
           groups = g_key_file_get_groups (keyfile, NULL);
           for (j = 0; groups[j] != NULL; j++)
             {
-              if (g_str_has_prefix (groups[j], sdk_group_prefix))
-                g_key_file_remove_group (keyfile, groups[j], NULL);
+              const char *ext;
+
+              if (!g_str_has_prefix (groups[j], FLATPAK_METADATA_GROUP_PREFIX_EXTENSION))
+                continue;
+
+              ext = groups[j] + strlen (FLATPAK_METADATA_GROUP_PREFIX_EXTENSION);
+
+              if (g_str_has_prefix (ext, self->id) ||
+                  (self->inherit_sdk_extensions &&
+                   g_strv_contains ((const char * const *)self->inherit_sdk_extensions, ext)))
+                {
+                  g_key_file_remove_group (keyfile, groups[j], NULL);
+                }
             }
 
           if (!g_key_file_save_to_file (keyfile,
