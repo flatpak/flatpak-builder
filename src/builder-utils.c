@@ -1853,7 +1853,9 @@ builder_serializable_find_property_with_error (JsonSerializable *serializable,
 {
   GParamSpec *pspec = g_object_class_find_property (G_OBJECT_GET_CLASS (serializable), name);
   if (pspec == NULL &&
-      !g_str_has_prefix (name, "x-"))
+      !g_str_has_prefix (name, "x-") &&
+      !g_str_has_prefix (name, "__") &&
+      !g_str_has_prefix (name, "//"))
     g_warning ("Unknown property %s for type %s", name, g_type_name_from_instance ((GTypeInstance *)serializable));
   return pspec;
 }
