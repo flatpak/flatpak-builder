@@ -119,8 +119,9 @@ gboolean        builder_context_set_checksum_for (BuilderContext  *self,
 BuilderContext *builder_context_new (GFile *run_dir,
                                      GFile *app_dir,
                                      const char *state_subdir);
-gboolean        builder_context_enable_ccache (BuilderContext *self,
-                                               GError        **error);
+gboolean        builder_context_set_enable_ccache (BuilderContext *self,
+                                                   gboolean        enabled,
+                                                   GError        **error);
 gboolean        builder_context_enable_rofiles (BuilderContext *self,
                                                 GError        **error);
 gboolean        builder_context_disable_rofiles (BuilderContext *self,
