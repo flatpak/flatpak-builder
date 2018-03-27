@@ -133,6 +133,9 @@ void            builder_context_set_use_rofiles (BuilderContext *self,
 gboolean        builder_context_get_run_tests (BuilderContext *self);
 void            builder_context_set_run_tests (BuilderContext *self,
                                                gboolean run_tests);
+void            builder_context_set_no_shallow_clone (BuilderContext *self,
+                                                      gboolean        no_shallow_clone);
+gboolean        builder_context_get_no_shallow_clone (BuilderContext *self);
 char **         builder_context_extend_env (BuilderContext *self,
                                             char          **envp);
 

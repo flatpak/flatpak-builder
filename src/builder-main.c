@@ -41,6 +41,7 @@ static gboolean opt_disable_cache;
 static gboolean opt_disable_tests;
 static gboolean opt_disable_rofiles;
 static gboolean opt_download_only;
+static gboolean opt_no_shallow_clone;
 static gboolean opt_bundle_sources;
 static gboolean opt_build_only;
 static gboolean opt_finish_only;
@@ -133,6 +134,7 @@ static GOptionEntry entries[] = {
   { "installation", 0, 0, G_OPTION_ARG_STRING, &opt_installation, "Install dependencies in a specific system-wide installation", "NAME" },
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
+  { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { NULL }
 };
 
@@ -438,6 +440,7 @@ main (int    argc,
 
   builder_context_set_use_rofiles (build_context, !opt_disable_rofiles);
   builder_context_set_run_tests (build_context, !opt_disable_tests);
+  builder_context_set_no_shallow_clone (build_context, opt_no_shallow_clone);
   builder_context_set_keep_build_dirs (build_context, opt_keep_build_dirs);
   builder_context_set_delete_build_dirs (build_context, opt_delete_build_dirs);
   builder_context_set_sandboxed (build_context, opt_sandboxed);
