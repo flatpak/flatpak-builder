@@ -483,8 +483,7 @@ main (int    argc,
       builder_context_set_stop_at (build_context, opt_stop_at);
     }
 
-  if (opt_ccache &&
-      !builder_context_enable_ccache (build_context, &error))
+  if (!builder_context_set_enable_ccache (build_context, opt_ccache, &error))
     {
       g_printerr ("Can't initialize ccache use: %s\n", error->message);
       return 1;
