@@ -272,13 +272,28 @@
                     needed).</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>prepend-path</option> (string)</term>
+                    <listitem><para>This will get prepended to PATH in the build environment (with an trailing colon if
+                    needed).</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>append-ld-library-path</option> (string)</term>
                     <listitem><para>This will get appended to LD_LIBRARY_PATH in the build environment (with an leading colon if
                     needed).</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>prepend-ld-library-path</option> (string)</term>
+                    <listitem><para>This will get prepended to LD_LIBRARY_PATH in the build environment (with an trailing colon if
+                    needed).</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>append-pkg-config-path</option> (string)</term>
                     <listitem><para>This will get appended to PKG_CONFIG_PATH in the build environment (with an leading colon if
+                    needed).</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>prepend-pkg-config-path</option> (string)</term>
+                    <listitem><para>This will get prepended to PKG_CONFIG_PATH in the build environment (with an trailing colon if
                     needed).</para></listitem>
                 </varlistentry>
                 <varlistentry>
