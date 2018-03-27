@@ -44,8 +44,11 @@ struct BuilderOptions
   char       *cxxflags;
   char       *ldflags;
   char       *append_path;
+  char       *prepend_path;
   char       *append_ld_library_path;
+  char       *prepend_ld_library_path;
   char       *append_pkg_config_path;
+  char       *prepend_pkg_config_path;
   char       *prefix;
   char      **env;
   char      **build_args;
@@ -84,8 +87,11 @@ enum {
   PROP_MAKE_ARGS,
   PROP_MAKE_INSTALL_ARGS,
   PROP_APPEND_PATH,
+  PROP_PREPEND_PATH,
   PROP_APPEND_LD_LIBRARY_PATH,
+  PROP_PREPEND_LD_LIBRARY_PATH,
   PROP_APPEND_PKG_CONFIG_PATH,
+  PROP_PREPEND_PKG_CONFIG_PATH,
   LAST_PROP
 };
 
@@ -100,8 +106,11 @@ builder_options_finalize (GObject *object)
   g_free (self->cppflags);
   g_free (self->ldflags);
   g_free (self->append_path);
+  g_free (self->prepend_path);
   g_free (self->append_ld_library_path);
+  g_free (self->prepend_ld_library_path);
   g_free (self->append_pkg_config_path);
+  g_free (self->prepend_pkg_config_path);
   g_free (self->prefix);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
@@ -144,12 +153,24 @@ builder_options_get_property (GObject    *object,
       g_value_set_string (value, self->append_path);
       break;
 
+    case PROP_PREPEND_PATH:
+      g_value_set_string (value, self->prepend_path);
+      break;
+
     case PROP_APPEND_LD_LIBRARY_PATH:
       g_value_set_string (value, self->append_ld_library_path);
       break;
 
+    case PROP_PREPEND_LD_LIBRARY_PATH:
+      g_value_set_string (value, self->prepend_ld_library_path);
+      break;
+
     case PROP_APPEND_PKG_CONFIG_PATH:
       g_value_set_string (value, self->append_pkg_config_path);
+      break;
+
+    case PROP_PREPEND_PKG_CONFIG_PATH:
+      g_value_set_string (value, self->prepend_pkg_config_path);
       break;
 
     case PROP_PREFIX:
@@ -237,14 +258,29 @@ builder_options_set_property (GObject      *object,
       self->append_path = g_value_dup_string (value);
       break;
 
+    case PROP_PREPEND_PATH:
+      g_clear_pointer (&self->prepend_path, g_free);
+      self->prepend_path = g_value_dup_string (value);
+      break;
+
     case PROP_APPEND_LD_LIBRARY_PATH:
       g_clear_pointer (&self->append_ld_library_path, g_free);
       self->append_ld_library_path = g_value_dup_string (value);
       break;
 
+    case PROP_PREPEND_LD_LIBRARY_PATH:
+      g_clear_pointer (&self->prepend_ld_library_path, g_free);
+      self->prepend_ld_library_path = g_value_dup_string (value);
+      break;
+
     case PROP_APPEND_PKG_CONFIG_PATH:
       g_clear_pointer (&self->append_pkg_config_path, g_free);
       self->append_pkg_config_path = g_value_dup_string (value);
+      break;
+
+    case PROP_PREPEND_PKG_CONFIG_PATH:
+      g_clear_pointer (&self->prepend_pkg_config_path, g_free);
+      self->prepend_pkg_config_path = g_value_dup_string (value);
       break;
 
     case PROP_PREFIX:
@@ -356,6 +392,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_PREPEND_PATH,
+                                   g_param_spec_string ("prepend-path",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_APPEND_LD_LIBRARY_PATH,
                                    g_param_spec_string ("append-ld-library-path",
                                                         "",
@@ -363,8 +406,22 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_PREPEND_LD_LIBRARY_PATH,
+                                   g_param_spec_string ("prepend-ld-library-path",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_APPEND_PKG_CONFIG_PATH,
                                    g_param_spec_string ("append-pkg-config-path",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_PREPEND_PKG_CONFIG_PATH,
+                                   g_param_spec_string ("prepend-pkg-config-path",
                                                         "",
                                                         "",
                                                         NULL,
@@ -718,7 +775,7 @@ builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
 }
 
 static char *
-builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context, const char *initial_value, size_t field_offset)
+builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context, const char *initial_value, size_t append_field_offset, size_t prepend_field_offset)
 {
   g_autoptr(GList) options = get_all_options (self, context);
   GList *l;
@@ -730,7 +787,8 @@ builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context
   for (l = options; l != NULL; l = l->next)
     {
       BuilderOptions *o = l->data;
-      const char *append = G_STRUCT_MEMBER (const char *, o, field_offset);
+      const char *append = G_STRUCT_MEMBER (const char *, o, append_field_offset);
+      const char *prepend = G_STRUCT_MEMBER (const char *, o, prepend_field_offset);
 
       if (append)
         {
@@ -741,6 +799,17 @@ builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context
             g_string_append_c (path_list, ':');
 
           g_string_append (path_list, append);
+        }
+
+      if (prepend)
+        {
+          if (path_list == NULL)
+            path_list = g_string_new ("");
+
+          if (path_list->len > 0)
+            g_string_prepend_c (path_list, ':');
+
+          g_string_prepend (path_list, prepend);
         }
     }
 
@@ -761,7 +830,8 @@ builder_options_update_ld_path (BuilderOptions *self, BuilderContext *context, c
     old = "/app/lib";
 
   path = builder_options_get_appended_path (self, context, old,
-                                            G_STRUCT_OFFSET (BuilderOptions, append_ld_library_path));
+                                            G_STRUCT_OFFSET (BuilderOptions, append_ld_library_path),
+                                            G_STRUCT_OFFSET (BuilderOptions, prepend_ld_library_path));
   if (path)
     envp = g_environ_setenv (envp, "LD_LIBRARY_PATH", path, TRUE);
 
@@ -779,7 +849,8 @@ builder_options_update_pkg_config_path (BuilderOptions *self, BuilderContext *co
     old = "/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig";
 
   path = builder_options_get_appended_path (self, context, old,
-                                            G_STRUCT_OFFSET (BuilderOptions, append_pkg_config_path));
+                                            G_STRUCT_OFFSET (BuilderOptions, append_pkg_config_path),
+                                            G_STRUCT_OFFSET (BuilderOptions, prepend_pkg_config_path));
   if (path)
     envp = g_environ_setenv (envp, "PKG_CONFIG_PATH", path, TRUE);
 
@@ -792,7 +863,8 @@ builder_options_update_path (BuilderOptions *self, BuilderContext *context, char
   g_autofree char *path = NULL;
   path = builder_options_get_appended_path (self, context,
                                             g_environ_getenv (envp, "PATH"),
-                                            G_STRUCT_OFFSET (BuilderOptions, append_path));
+                                            G_STRUCT_OFFSET (BuilderOptions, append_path),
+                                            G_STRUCT_OFFSET (BuilderOptions, prepend_path));
   if (path)
     envp = g_environ_setenv (envp, "PATH", path, TRUE);
   return envp;
@@ -1086,8 +1158,11 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_boolean (cache, self->no_debuginfo_compression);
 
   builder_cache_checksum_compat_str (cache, self->append_path);
+  builder_cache_checksum_compat_str (cache, self->prepend_path);
   builder_cache_checksum_compat_str (cache, self->append_ld_library_path);
+  builder_cache_checksum_compat_str (cache, self->prepend_ld_library_path);
   builder_cache_checksum_compat_str (cache, self->append_pkg_config_path);
+  builder_cache_checksum_compat_str (cache, self->prepend_pkg_config_path);
 
   arch_options = g_hash_table_lookup (self->arch, builder_context_get_arch (context));
   if (arch_options)
