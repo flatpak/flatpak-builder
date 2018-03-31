@@ -692,7 +692,7 @@
 
         <para>
             <citerefentry><refentrytitle>flatpak</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
-            <citerefentry><refentrytitle>flatpak-manifest</refentrytitle><manvolnum>5</manvolnum></citerefentry>
+            <citerefentry><refentrytitle>flatpak-manifest</refentrytitle><manvolnum>5</manvolnum></citerefentry>,
             <citerefentry><refentrytitle>flatpak-build-init</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
             <citerefentry><refentrytitle>flatpak-build</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
             <citerefentry><refentrytitle>flatpak-build-finish</refentrytitle><manvolnum>1</manvolnum></citerefentry>,
