@@ -62,6 +62,7 @@ const char *    builder_manifest_get_branch (BuilderManifest *self);
 void            builder_manifest_set_default_branch (BuilderManifest *self,
                                                      const char *default_branch);
 const char *    builder_manifest_get_collection_id (BuilderManifest *self);
+const char *    builder_manifest_get_extension_tag (BuilderManifest *self);
 void            builder_manifest_set_default_collection_id (BuilderManifest *self,
                                                             const char      *default_collection_id);
 
