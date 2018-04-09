@@ -62,6 +62,7 @@ struct BuilderManifest
   char           *id_platform;
   char           *branch;
   char           *collection_id;
+  char           *extension_tag;
   char           *type;
   char           *runtime;
   char           *runtime_commit;
@@ -161,6 +162,7 @@ enum {
   PROP_DESKTOP_FILE_NAME_SUFFIX,
   PROP_COLLECTION_ID,
   PROP_ADD_EXTENSIONS,
+  PROP_EXTENSION_TAG,
   LAST_PROP
 };
 
@@ -172,6 +174,7 @@ builder_manifest_finalize (GObject *object)
   g_free (self->id);
   g_free (self->branch);
   g_free (self->collection_id);
+  g_free (self->extension_tag);
   g_free (self->runtime);
   g_free (self->runtime_commit);
   g_free (self->runtime_version);
@@ -438,6 +441,10 @@ builder_manifest_get_property (GObject    *object,
       g_value_set_string (value, self->collection_id);
       break;
 
+    case PROP_EXTENSION_TAG:
+      g_value_set_string (value, self->extension_tag);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -679,6 +686,11 @@ builder_manifest_set_property (GObject      *object,
     case PROP_COLLECTION_ID:
       g_free (self->collection_id);
       self->collection_id = g_value_dup_string (value);
+      break;
+
+    case PROP_EXTENSION_TAG:
+      g_free (self->extension_tag);
+      self->extension_tag = g_value_dup_string (value);
       break;
 
     default:
@@ -997,6 +1009,14 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_COLLECTION_ID,
                                    g_param_spec_string ("collection-id",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_EXTENSION_TAG,
+                                   g_param_spec_string ("extension-tag",
                                                         "",
                                                         "",
                                                         NULL,
@@ -1322,6 +1342,12 @@ builder_manifest_set_default_collection_id (BuilderManifest *self,
     self->collection_id = g_strdup (default_collection_id);
 }
 
+const char *
+builder_manifest_get_extension_tag (BuilderManifest *self)
+{
+  return self->extension_tag;
+}
+
 static const char *
 builder_manifest_get_base_version (BuilderManifest *self)
 {
@@ -1534,6 +1560,9 @@ builder_manifest_init_app_dir (BuilderManifest *self,
         }
     }
 
+  if (self->extension_tag != NULL)
+    g_ptr_array_add (args, g_strdup_printf ("--extension-tag=%s", self->extension_tag));
+
   g_ptr_array_add (args, g_strdup_printf ("--arch=%s", builder_context_get_arch (context)));
   g_ptr_array_add (args, g_file_get_path (app_dir));
   g_ptr_array_add (args, g_strdup (self->id));
@@ -1600,6 +1629,7 @@ builder_manifest_checksum (BuilderManifest *self,
   builder_cache_checksum_str (cache, self->base_version);
   builder_cache_checksum_str (cache, self->base_commit);
   builder_cache_checksum_strv (cache, self->base_extensions);
+  builder_cache_checksum_compat_str (cache, self->extension_tag);
 
   if (self->build_options)
     builder_options_checksum (self->build_options, cache, context);
@@ -2489,6 +2519,15 @@ builder_manifest_cleanup (BuilderManifest *self,
   return TRUE;
 }
 
+static char *
+maybe_format_extension_tag (const char *extension_tag)
+{
+  if (extension_tag != NULL)
+    return g_strdup_printf ("tag=%s\n", extension_tag);
+
+  return g_strdup ("");
+}
+
 
 gboolean
 builder_manifest_finish (BuilderManifest *self,
@@ -2844,18 +2883,23 @@ builder_manifest_finish (BuilderManifest *self,
           g_autofree char *extension_metadata_name = NULL;
           g_autoptr(GFile) metadata_extension_file = NULL;
           g_autofree char *metadata_contents = NULL;
+          g_autofree char *extension_tag_opt = NULL;
 
           if (!builder_extension_is_bundled (e))
             continue;
 
+          extension_tag_opt = maybe_format_extension_tag (builder_manifest_get_extension_tag (self));
           extension_metadata_name = g_strdup_printf ("metadata.%s", builder_extension_get_name (e));
           metadata_extension_file = g_file_get_child (app_dir, extension_metadata_name);
           metadata_contents = g_strdup_printf ("[Runtime]\n"
                                                "name=%s\n"
                                                "\n"
                                                "[ExtensionOf]\n"
-                                               "ref=%s\n",
-                                               builder_extension_get_name (e), ref);
+                                               "ref=%s\n"
+                                               "%s",
+                                               builder_extension_get_name (e),
+                                               ref,
+                                               extension_tag_opt);
           if (!g_file_set_contents (flatpak_file_get_path_cached (metadata_extension_file),
                                     metadata_contents, strlen (metadata_contents), error))
             return FALSE;
