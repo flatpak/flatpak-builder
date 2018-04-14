@@ -61,6 +61,14 @@ void     flatpak_collect_matches_for_path_pattern (const char *path,
 gboolean builder_migrate_locale_dirs (GFile   *root_dir,
                                       GError **error);
 
+GQuark builder_yaml_parse_error_quark (void);
+#define BUILDER_YAML_PARSE_ERROR (builder_yaml_parse_error_quark ())
+
+GObject * builder_gobject_from_data (GType       gtype,
+                                     const char *relpath,
+                                     const char *contents,
+                                     GError    **error);
+
 gboolean builder_host_spawnv (GFile                *dir,
                               char                **output,
                               GSubprocessFlags      flags,
