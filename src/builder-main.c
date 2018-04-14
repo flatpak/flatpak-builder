@@ -312,9 +312,9 @@ main (int    argc,
   g_autoptr(BuilderManifest) manifest = NULL;
   g_autoptr(GOptionContext) context = NULL;
   const char *app_dir_path = NULL, *manifest_rel_path;
-  g_autofree gchar *json = NULL;
-  g_autofree gchar *json_sha256 = NULL;
-  g_autofree gchar *old_json_sha256 = NULL;
+  g_autofree gchar *manifest_contents = NULL;
+  g_autofree gchar *manifest_sha256 = NULL;
+  g_autofree gchar *old_manifest_sha256 = NULL;
   g_autoptr(BuilderContext) build_context = NULL;
   g_autoptr(GFile) base_dir = NULL;
   g_autoptr(GFile) manifest_file = NULL;
@@ -536,18 +536,18 @@ main (int    argc,
 
   builder_context_set_base_dir (build_context, base_dir);
 
-  if (!g_file_get_contents (flatpak_file_get_path_cached (manifest_file), &json, NULL, &error))
+  if (!g_file_get_contents (flatpak_file_get_path_cached (manifest_file), &manifest_contents, NULL, &error))
     {
       g_printerr ("Can't load '%s': %s\n", manifest_rel_path, error->message);
       return 1;
     }
 
-  json_sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, json, -1);
+  manifest_sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, manifest_contents, -1);
 
   if (opt_skip_if_unchanged)
     {
-      old_json_sha256 = builder_context_get_checksum_for (build_context, manifest_basename);
-      if (old_json_sha256 != NULL && strcmp (json_sha256, old_json_sha256) == 0)
+      old_manifest_sha256 = builder_context_get_checksum_for (build_context, manifest_basename);
+      if (old_manifest_sha256 != NULL && strcmp (manifest_sha256, old_manifest_sha256) == 0)
         {
           g_print ("No changes to manifest, skipping\n");
           return 42;
@@ -557,8 +557,8 @@ main (int    argc,
   /* Can't push this as user data to the demarshalling :/ */
   builder_manifest_set_demarshal_base_dir (builder_context_get_base_dir (build_context));
 
-  manifest = (BuilderManifest *) json_gobject_from_data (BUILDER_TYPE_MANIFEST,
-                                                         json, -1, &error);
+  manifest = (BuilderManifest *) builder_gobject_from_data (BUILDER_TYPE_MANIFEST, manifest_rel_path,
+                                                            manifest_contents, &error);
 
   builder_manifest_set_demarshal_base_dir (NULL);
 
@@ -682,7 +682,7 @@ main (int    argc,
       }
   }
 
-  if (!builder_context_set_checksum_for (build_context, manifest_basename, json_sha256, &error))
+  if (!builder_context_set_checksum_for (build_context, manifest_basename, manifest_sha256, &error))
     {
       g_printerr ("Failed to set checksum for ‘%s’: %s\n", manifest_basename, error->message);
       return 1;
@@ -793,7 +793,7 @@ main (int    argc,
         }
 
       if (builder_context_get_bundle_sources (build_context) &&
-          !builder_manifest_bundle_sources (manifest, json, cache, build_context, &error))
+          !builder_manifest_bundle_sources (manifest, manifest_contents, cache, build_context, &error))
         {
           g_printerr ("Error: %s\n", error->message);
           return 1;

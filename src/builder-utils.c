@@ -39,6 +39,15 @@
 #include "builder-flatpak-utils.h"
 #include "builder-utils.h"
 
+#ifdef FLATPAK_BUILDER_ENABLE_YAML
+#include <yaml.h>
+
+G_DEFINE_QUARK (builder-yaml-parse-error, builder_yaml_parse_error)
+
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (yaml_parser_t, yaml_parser_delete)
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (yaml_document_t, yaml_document_delete)
+#endif
+
 char *
 builder_uri_to_filename (const char *uri)
 {
@@ -367,6 +376,140 @@ builder_migrate_locale_dirs (GFile   *root_dir,
   return TRUE;
 }
 
+#ifdef FLATPAK_BUILDER_ENABLE_YAML
+
+static JsonNode *
+parse_yaml_node_to_json (yaml_document_t *doc, yaml_node_t *node)
+{
+  JsonNode *json = json_node_alloc ();
+  const char *scalar = NULL;
+  g_autoptr(JsonArray) array = NULL;
+  g_autoptr(JsonObject) object = NULL;
+  yaml_node_item_t *item = NULL;
+  yaml_node_pair_t *pair = NULL;
+
+  switch (node->type)
+    {
+    case YAML_NO_NODE:
+      json_node_init_null (json);
+      break;
+    case YAML_SCALAR_NODE:
+      scalar = (gchar *) node->data.scalar.value;
+      if (node->data.scalar.style == YAML_PLAIN_SCALAR_STYLE)
+        {
+          if (strcmp (scalar, "true") == 0)
+            {
+              json_node_init_boolean (json, TRUE);
+              break;
+            }
+          else if (strcmp (scalar, "false") == 0)
+            {
+              json_node_init_boolean (json, FALSE);
+              break;
+            }
+
+          gchar *endptr;
+          gint64 num = g_ascii_strtoll (scalar, &endptr, 10);
+          if (*scalar != '\0' && *endptr == '\0')
+            {
+              json_node_init_int (json, num);
+              break;
+            }
+        }
+
+      json_node_init_string (json, scalar);
+      break;
+    case YAML_SEQUENCE_NODE:
+      array = json_array_new ();
+      for (item = node->data.sequence.items.start; item < node->data.sequence.items.top; item++)
+        {
+          yaml_node_t *child = yaml_document_get_node (doc, *item);
+          if (child != NULL)
+            json_array_add_element (array, parse_yaml_node_to_json (doc, child));
+        }
+
+      json_node_init_array (json, array);
+      break;
+    case YAML_MAPPING_NODE:
+      object = json_object_new ();
+      for (pair = node->data.mapping.pairs.start; pair < node->data.mapping.pairs.top; pair++)
+        {
+          yaml_node_t *key = yaml_document_get_node (doc, pair->key);
+          yaml_node_t *value = yaml_document_get_node (doc, pair->value);
+
+          g_warn_if_fail (key->type == YAML_SCALAR_NODE);
+          json_object_set_member (object, (gchar *) key->data.scalar.value,
+                                  parse_yaml_node_to_json (doc, value));
+        }
+
+      json_node_init_object (json, object);
+      break;
+    }
+
+  return json;
+}
+
+static JsonNode *
+parse_yaml_to_json (const gchar *contents,
+                    GError      **error)
+{
+  if (error)
+    *error = NULL;
+
+  g_auto(yaml_parser_t) parser = {0};
+  g_auto(yaml_document_t) doc = {{0}};
+
+  if (!yaml_parser_initialize (&parser))
+    g_error ("yaml_parser_initialize is out of memory.");
+  yaml_parser_set_input_string (&parser, (yaml_char_t *) contents, strlen (contents));
+
+  if (!yaml_parser_load (&parser, &doc))
+    {
+      g_set_error (error, BUILDER_YAML_PARSE_ERROR, parser.error, "%zu:%zu: %s", parser.problem_mark.line + 1,
+                   parser.problem_mark.column + 1, parser.problem);
+      return NULL;
+    }
+
+  yaml_node_t *root = yaml_document_get_root_node (&doc);
+  if (root == NULL)
+    {
+      g_set_error (error, BUILDER_YAML_PARSE_ERROR, YAML_PARSER_ERROR,
+                   "Document has no root node.");
+      return NULL;
+    }
+
+  return parse_yaml_node_to_json (&doc, root);
+}
+
+#else // FLATPAK_BUILDER_ENABLE_YAML
+
+static JsonNode *
+parse_yaml_to_json (const gchar *contents,
+                    GError      **error)
+{
+  g_set_error (error, BUILDER_YAML_PARSE_ERROR, 0, "flatpak-builder was not compiled with YAML support.");
+  return NULL;
+}
+
+#endif  // FLATPAK_BUILDER_ENABLE_YAML
+
+GObject *
+builder_gobject_from_data (GType       gtype,
+                           const char *relpath,
+                           const char *contents,
+                           GError    **error)
+{
+  if (g_str_has_suffix (relpath, ".yaml") || g_str_has_suffix (relpath, ".yml"))
+    {
+      g_autoptr(JsonNode) json = parse_yaml_to_json (contents, error);
+      if (json != NULL)
+        return json_gobject_deserialize (gtype, json);
+      else
+        return NULL;
+    }
+  else
+    return json_gobject_from_data (gtype, contents, -1, error);
+}
 
 /*
  * This code is based on debugedit.c from rpm, which has this copyright:

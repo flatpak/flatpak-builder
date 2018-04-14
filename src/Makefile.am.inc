@@ -44,5 +44,5 @@ flatpak_builder_SOURCES = \
 	src/builder-git.h \
 	$(NULL)
 
-flatpak_builder_LDADD = $(AM_LDADD) $(BASE_LIBS) $(LIBELF_LIBS) libglnx.la
-flatpak_builder_CFLAGS = $(AM_CFLAGS) $(BASE_CFLAGS)
+flatpak_builder_LDADD = $(AM_LDADD) $(BASE_LIBS) $(LIBELF_LIBS) $(YAML_LIBS) libglnx.la
+flatpak_builder_CFLAGS = $(AM_CFLAGS) $(BASE_CFLAGS) $(YAML_CFLAGS)
