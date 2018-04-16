@@ -46,6 +46,8 @@ flatpak_builder_SOURCES = \
 	src/builder-flatpak-utils.h \
 	src/builder-git.c \
 	src/builder-git.h \
+	src/builder-sdk-config.c \
+	src/builder-sdk-config.h \
 	$(NULL)
 
 flatpak_builder_LDADD = $(AM_LDADD) $(BASE_LIBS) $(LIBELF_LIBS) $(YAML_LIBS) libglnx.la

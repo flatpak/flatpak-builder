@@ -78,6 +78,8 @@ struct BuilderContext
   gboolean        have_rofiles;
   gboolean        run_tests;
   gboolean        no_shallow_clone;
+
+  BuilderSdkConfig *sdk_config;
 };
 
 typedef struct
@@ -113,6 +115,7 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->base_dir);
   g_clear_object (&self->soup_session);
   g_clear_object (&self->options);
+  g_clear_object (&self->sdk_config);
   g_free (self->arch);
   g_free (self->state_subdir);
   g_free (self->stop_at);
@@ -978,6 +981,34 @@ builder_context_extend_env (BuilderContext *self,
   envp = g_environ_setenv (envp, "PATH", path, TRUE);
 
   return envp;
+}
+
+gboolean
+builder_context_load_sdk_config (BuilderContext   *self,
+                                 const char       *sdk_path,
+                                 GError          **error)
+{
+  g_autoptr(GFile) root = g_file_new_for_path (sdk_path);
+  g_autoptr(GFile) config_file = g_file_resolve_relative_path (root, "files/etc/flatpak-builder/defaults.json");
+  g_autoptr(GError) local_error = NULL;
+  g_autoptr(BuilderSdkConfig) sdk_config = NULL;
+
+  sdk_config = builder_sdk_config_from_file (config_file, &local_error);
+  if (sdk_config == NULL &&
+      !g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+    {
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      return FALSE;
+    }
+
+  g_set_object (&self->sdk_config, sdk_config);
+  return TRUE;
+}
+
+BuilderSdkConfig *
+builder_context_get_sdk_config (BuilderContext *self)
+{
+  return self->sdk_config;
 }
 
 BuilderContext *
