@@ -60,6 +60,7 @@ struct BuilderContext
   GFile          *rofiles_dir;
   GFile          *rofiles_allocated_dir;
   GLnxLockFile   rofiles_file_lock;
+  GFile          *sdk_defaults;
 
   BuilderOptions *options;
   gboolean        keep_build_dirs;
@@ -78,6 +79,8 @@ struct BuilderContext
   gboolean        have_rofiles;
   gboolean        run_tests;
   gboolean        no_shallow_clone;
+
+  BuilderSdkConfig *sdk_config;
 };
 
 typedef struct
@@ -113,6 +116,7 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->base_dir);
   g_clear_object (&self->soup_session);
   g_clear_object (&self->options);
+  g_clear_object (&self->sdk_config);
   g_free (self->arch);
   g_free (self->state_subdir);
   g_free (self->stop_at);
@@ -192,6 +196,7 @@ builder_context_constructed (GObject *object)
   self->cache_dir = g_file_get_child (self->state_dir, "cache");
   self->checksums_dir = g_file_get_child (self->state_dir, "checksums");
   self->ccache_dir = g_file_get_child (self->state_dir, "ccache");
+  self->sdk_defaults = g_file_get_child (self->state_dir, "sdk-defaults.json");
 }
 
 static void
@@ -978,6 +983,35 @@ builder_context_extend_env (BuilderContext *self,
   envp = g_environ_setenv (envp, "PATH", path, TRUE);
 
   return envp;
+}
+
+gboolean
+builder_context_load_sdk_config (BuilderContext   *self,
+                                 GError          **error)
+{
+  BuilderSdkConfig* sdk_config = builder_sdk_config_from_file (self->sdk_defaults, error);
+  if (!sdk_config)
+    return FALSE;
+
+  g_set_object(&self->sdk_config, sdk_config);
+  return TRUE;
+}
+
+gboolean
+builder_context_save_sdk_config (BuilderContext   *self,
+                                 GFile            *file,
+                                 GError          **error)
+{
+  return g_file_copy (file, self->sdk_defaults,
+                      G_FILE_COPY_OVERWRITE|G_FILE_COPY_TARGET_DEFAULT_PERMS,
+                      NULL, NULL, NULL,
+                      error);
+}
+
+BuilderSdkConfig *
+builder_context_get_sdk_config (BuilderContext *self)
+{
+  return self->sdk_config;
 }
 
 BuilderContext *

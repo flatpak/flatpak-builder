@@ -763,7 +763,19 @@ main (int    argc,
               g_printerr ("Error: %s\n", error->message);
               return 1;
             }
+
+          {
+            GError             *ignore_error = NULL;
+            g_autoptr(GFile)    config_file = g_file_resolve_relative_path(app_dir, "usr/etc/flatpak-builder/defaults.json");
+
+            builder_context_save_sdk_config (build_context, config_file, &ignore_error);
+          }
         }
+
+      {
+        GError *ignore_error = NULL;
+        builder_context_load_sdk_config (build_context, &ignore_error);
+      }
 
       if (!builder_manifest_build (manifest, cache, build_context, &error))
         {
