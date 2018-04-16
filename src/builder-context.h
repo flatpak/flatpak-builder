@@ -25,6 +25,7 @@
 #include <libsoup/soup.h>
 #include "builder-options.h"
 #include "builder-utils.h"
+#include "builder-sdk-config.h"
 
 G_BEGIN_DECLS
 
@@ -138,6 +139,12 @@ void            builder_context_set_no_shallow_clone (BuilderContext *self,
 gboolean        builder_context_get_no_shallow_clone (BuilderContext *self);
 char **         builder_context_extend_env (BuilderContext *self,
                                             char          **envp);
+
+gboolean        builder_context_load_sdk_config (BuilderContext       *self,
+                                                 const char           *sdk_path,
+                                                 GError              **error);
+
+BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderContext, g_object_unref)
 
