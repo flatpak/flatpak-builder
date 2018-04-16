@@ -1237,6 +1237,46 @@ shell (GFile          *app_dir,
 static const char skip_arg[] = "skip";
 static const char strv_arg[] = "strv";
 
+static gchar*
+get_libdir(GFile          *app_dir,
+           const char     *module_name,
+           BuilderContext *context,
+           GFile          *source_dir,
+           const char     *cwd_subdir,
+           char          **flatpak_opts,
+           const char     *prefix,
+           GError        **error) {
+  g_autofree char *output = NULL;
+  g_autoptr(GFile) cwd_file = NULL;
+  g_autoptr(GPtrArray) args =
+    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, NULL, &cwd_file);
+
+  g_ptr_array_add (args, g_strdup ("gcc"));
+  g_ptr_array_add (args, g_strdup ("-print-multiarch"));
+  g_ptr_array_add (args, NULL);
+
+  if (!builder_maybe_host_spawnv (cwd_file, &output, 0, error, (const char * const *)args->pdata))
+    {
+      g_prefix_error (error, "module %s: ", module_name);
+      return NULL;
+    }
+
+  {
+    char *new_line = strchr (output, '\n');
+    if (new_line)
+      *new_line = '\0';
+  }
+
+  if (*output == '\0')
+    {
+      return g_strconcat (prefix, "/lib", NULL);
+    }
+  else
+    {
+      return g_strconcat (prefix, "/lib/", output, NULL);
+    }
+}
+
 static gboolean
 build (GFile          *app_dir,
        const char     *module_name,
@@ -1561,6 +1601,8 @@ builder_module_build_helper (BuilderModule  *self,
       g_auto(GStrv) configure_args = NULL;
       g_autoptr(GPtrArray) configure_args_arr = g_ptr_array_new ();
       g_autofree char *configure_content = NULL;
+      const char *prefix = NULL;
+      g_autofree const char *libdir = NULL;
 
       if (!g_file_load_contents (configure_file, NULL, &configure_content, NULL, NULL, error))
         {
@@ -1633,22 +1675,28 @@ builder_module_build_helper (BuilderModule  *self,
       else if (cmake_ninja)
         cmake_generator = "Ninja";
 
+
+      prefix = builder_options_get_prefix (self->build_options, context);
+      libdir = get_libdir (app_dir, self->name, context, source_dir, build_dir_relative, build_args, prefix, error);
+      if (!libdir)
+        return FALSE;
+
       if (cmake || cmake_ninja)
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'", prefix));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_LIBDIR:PATH='%s'", libdir));
           g_ptr_array_add (configure_args_arr, g_strdup ("-G"));
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("%s", cmake_generator));
         }
       else if (qmake)
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'", prefix));
+          /* TODO: What parameter for qmake? */
         }
       else /* autotools and meson */
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s", prefix));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s", libdir));
         }
 
       g_ptr_array_add (configure_args_arr, configure_final_arg);
