@@ -73,6 +73,20 @@
                 </varlistentry>
                 -->
                 <varlistentry>
+                    <term><option>extension-tag</option> (string)</term>
+                    <listitem><para>If building an extension, the tag for the extension
+                    point to use. Since flatpak 0.11.4 a runtime may define multiple
+                    locations for the same extension point with the intention that
+                    different branches for the extension are mounted at each location. When
+                    building an extension it is necessary to know what extension point to
+                    install the extension to. This option resolves the any ambiguity
+                    in which extension point to choose. If not specified, the default choice
+                    is to install into either the only location for the extension point or
+                    into the location for the untagged extension point. If there are multiple
+                    locations for the same extension point defined with different tags
+                    then an error will occurr.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>runtime</option> (string)</term>
                     <listitem><para>The name of the runtime that the application uses.</para></listitem>
                 </varlistentry>
