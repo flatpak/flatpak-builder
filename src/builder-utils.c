@@ -39,10 +39,10 @@
 #include "builder-flatpak-utils.h"
 #include "builder-utils.h"
 
+G_DEFINE_QUARK (builder-yaml-parse-error, builder_yaml_parse_error)
+
 #ifdef FLATPAK_BUILDER_ENABLE_YAML
 #include <yaml.h>
-
-G_DEFINE_QUARK (builder-yaml-parse-error, builder_yaml_parse_error)
 
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (yaml_parser_t, yaml_parser_delete)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (yaml_document_t, yaml_document_delete)
