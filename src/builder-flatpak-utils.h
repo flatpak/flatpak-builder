@@ -61,6 +61,9 @@ typedef void (*FlatpakLoadUriProgress) (guint64 downloaded_bytes,
 #define FLATPAK_METADATA_KEY_SDK "sdk"
 #define FLATPAK_METADATA_KEY_TAGS "tags"
 
+#define FLATPAK_METADATA_GROUP_BUILD "Build"
+#define FLATPAK_METADATA_KEY_BUILD_EXTENSIONS "built-extensions"
+
 /* https://github.com/GNOME/libglnx/pull/38
  * Note by using #define rather than wrapping via a static inline, we
  * don't have to re-define attributes like G_GNUC_PRINTF.

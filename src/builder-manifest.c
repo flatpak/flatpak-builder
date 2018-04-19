@@ -2514,6 +2514,7 @@ builder_manifest_finish (BuilderManifest *self,
   if (!builder_cache_lookup (cache, "finish"))
     {
       GFile *app_dir = NULL;
+      g_autoptr(GPtrArray) sub_ids = g_ptr_array_new_with_free_func (g_free);
       g_autofree char *ref = NULL;
       g_print ("Finishing app\n");
 
@@ -2796,8 +2797,9 @@ builder_manifest_finish (BuilderManifest *self,
                                     metadata_contents, strlen (metadata_contents),
                                     error))
             return FALSE;
-        }
 
+          g_ptr_array_add (sub_ids, g_strdup (locale_id));
+        }
 
       if (g_file_query_exists (debuginfo_dir, NULL))
         {
@@ -2835,8 +2837,9 @@ builder_manifest_finish (BuilderManifest *self,
           if (!g_file_set_contents (flatpak_file_get_path_cached (metadata_debuginfo_file),
                                     metadata_contents, strlen (metadata_contents), error))
             return FALSE;
-        }
 
+          g_ptr_array_add (sub_ids, g_strdup (debug_id));
+        }
 
       for (l = self->add_extensions; l != NULL; l = l->next)
         {
@@ -2858,6 +2861,33 @@ builder_manifest_finish (BuilderManifest *self,
                                                builder_extension_get_name (e), ref);
           if (!g_file_set_contents (flatpak_file_get_path_cached (metadata_extension_file),
                                     metadata_contents, strlen (metadata_contents), error))
+            return FALSE;
+
+          g_ptr_array_add (sub_ids, g_strdup (builder_extension_get_name (e)));
+        }
+
+      if (sub_ids->len > 0)
+        {
+          g_autoptr(GFile) metadata_file = NULL;
+          g_autoptr(GFileOutputStream) output = NULL;
+          g_autoptr(GString) extension_contents = g_string_new ("\n"
+                                                                "[Build]\n");
+
+          g_string_append (extension_contents, FLATPAK_METADATA_KEY_BUILD_EXTENSIONS"=");
+          for (i = 0; i < sub_ids->len; i++)
+            {
+              g_string_append (extension_contents, (const char *)sub_ids->pdata[i]);
+              g_string_append (extension_contents, ";");
+            }
+
+          metadata_file = g_file_get_child (app_dir, "metadata");
+          output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
+          if (output == NULL)
+            return FALSE;
+
+          if (!g_output_stream_write_all (G_OUTPUT_STREAM (output),
+                                          extension_contents->str, extension_contents->len,
+                                          NULL, NULL, error))
             return FALSE;
         }
 
@@ -2901,6 +2931,7 @@ builder_manifest_create_platform (BuilderManifest *self,
       g_autoptr(GPtrArray) args = NULL;
       GFile *app_dir = NULL;
       g_autofree char *ref = NULL;
+      g_autoptr(GPtrArray) sub_ids = g_ptr_array_new_with_free_func (g_free);
 
       g_print ("Creating platform based on %s\n", self->runtime);
 
@@ -3202,6 +3233,33 @@ builder_manifest_create_platform (BuilderManifest *self,
                                     metadata_contents, strlen (metadata_contents),
                                     error))
             return FALSE;
+
+          g_ptr_array_add (sub_ids, g_strdup (locale_id));
+        }
+
+      if (sub_ids->len > 0)
+        {
+          g_autoptr(GFile) metadata_file = NULL;
+          g_autoptr(GFileOutputStream) output = NULL;
+          g_autoptr(GString) extension_contents = g_string_new ("\n"
+                                                                "[Build]\n");
+
+          g_string_append (extension_contents, FLATPAK_METADATA_KEY_BUILD_EXTENSIONS"=");
+          for (i = 0; i < sub_ids->len; i++)
+            {
+              g_string_append (extension_contents, (const char *)sub_ids->pdata[i]);
+              g_string_append (extension_contents, ";");
+            }
+
+          metadata_file = g_file_get_child (app_dir, "metadata.platform");
+          output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
+          if (output == NULL)
+            return FALSE;
+
+          if (!g_output_stream_write_all (G_OUTPUT_STREAM (output),
+                                          extension_contents->str, extension_contents->len,
+                                          NULL, NULL, error))
+            return FALSE;
         }
 
       if (!builder_context_disable_rofiles (context, error))
@@ -3232,10 +3290,15 @@ builder_manifest_bundle_sources (BuilderManifest *self,
       g_autofree char *sources_id = builder_manifest_get_sources_id (self);
       GFile *app_dir;
       g_autoptr(GFile) metadata_sources_file = NULL;
+      g_autoptr(GFile) metadata = NULL;
       g_autoptr(GFile) json_dir = NULL;
       g_autofree char *manifest_filename = NULL;
       g_autoptr(GFile) manifest_file = NULL;
       g_autofree char *metadata_contents = NULL;
+      g_autoptr(GKeyFile) metadata_keyfile = g_key_file_new ();
+      g_autoptr(GPtrArray) subs = g_ptr_array_new ();
+      g_auto(GStrv) old_subs = NULL;
+      gsize i;
       GList *l;
 
       g_print ("Bundling sources\n");
@@ -3270,6 +3333,34 @@ builder_manifest_bundle_sources (BuilderManifest *self,
 
           if (!builder_module_bundle_sources (m, context, error))
             return FALSE;
+        }
+
+
+      metadata = g_file_get_child (app_dir, "metadata");
+      if (!g_key_file_load_from_file (metadata_keyfile,
+                                      flatpak_file_get_path_cached (metadata),
+                                      G_KEY_FILE_KEEP_COMMENTS|G_KEY_FILE_KEEP_TRANSLATIONS,
+                                      error))
+        {
+          g_prefix_error (error, "Can't load main metadata file: ");
+          return FALSE;
+        }
+
+      old_subs = g_key_file_get_string_list (metadata_keyfile, "Build", "built-extensions", NULL, NULL);
+      for (i = 0; old_subs != NULL && old_subs[i] != NULL; i++)
+        g_ptr_array_add (subs, old_subs[i]);
+      g_ptr_array_add (subs, sources_id);
+
+      g_key_file_set_string_list (metadata_keyfile, FLATPAK_METADATA_GROUP_BUILD,
+                                  FLATPAK_METADATA_KEY_BUILD_EXTENSIONS,
+                                  (const char * const *)subs->pdata, subs->len);
+
+      if (!g_key_file_save_to_file (metadata_keyfile,
+                                    flatpak_file_get_path_cached (metadata),
+                                    error))
+        {
+          g_prefix_error (error, "Can't save metadata.platform: ");
+          return FALSE;
         }
 
       if (!builder_context_disable_rofiles (context, error))
