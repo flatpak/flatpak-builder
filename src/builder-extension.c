@@ -53,6 +53,7 @@ struct BuilderExtension
   char           *subdirectory_suffix;
   char           *version;
   char           *versions;
+  gboolean        remove_after_build;
 };
 
 typedef struct
@@ -77,6 +78,7 @@ enum {
   PROP_SUBDIRECTORY_SUFFIX,
   PROP_VERSION,
   PROP_VERSIONS,
+  PROP_REMOVE_AFTER_BUILD,
   LAST_PROP
 };
 
@@ -114,6 +116,10 @@ builder_extension_get_property (GObject    *object,
 
     case PROP_BUNDLE:
       g_value_set_boolean (value, self->bundle);
+      break;
+
+    case PROP_REMOVE_AFTER_BUILD:
+      g_value_set_boolean (value, self->remove_after_build);
       break;
 
     case PROP_AUTODELETE:
@@ -182,6 +188,10 @@ builder_extension_set_property (GObject      *object,
 
     case PROP_BUNDLE:
       self->bundle = g_value_get_boolean (value);
+      break;
+
+    case PROP_REMOVE_AFTER_BUILD:
+      self->remove_after_build = g_value_get_boolean (value);
       break;
 
     case PROP_AUTODELETE:
@@ -259,6 +269,13 @@ builder_extension_class_init (BuilderExtensionClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_BUNDLE,
                                    g_param_spec_boolean ("bundle",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_REMOVE_AFTER_BUILD,
+                                   g_param_spec_boolean ("remove-after-build",
                                                          "",
                                                          "",
                                                          FALSE,
@@ -361,6 +378,11 @@ builder_extension_get_name (BuilderExtension *self)
   return self->name;
 }
 
+const char *
+builder_extension_get_version (BuilderExtension *self)
+{
+  return self->version;
+}
 
 gboolean
 builder_extension_is_bundled (BuilderExtension *self)
@@ -394,6 +416,15 @@ add_argb (BuilderExtension  *self,
 {
   if (val)
     add_arg (self, args, key, "true");
+}
+
+void
+builder_extension_add_remove_args (BuilderExtension  *self,
+                                   GPtrArray *args)
+{
+  if (self->remove_after_build)
+    g_ptr_array_add (args,
+                     g_strdup_printf ("--remove-extension=%s", self->name));
 }
 
 void
@@ -440,4 +471,5 @@ builder_extension_checksum (BuilderExtension  *self,
   builder_cache_checksum_str (cache, self->subdirectory_suffix);
   builder_cache_checksum_str (cache, self->version);
   builder_cache_checksum_str (cache, self->versions);
+  builder_cache_checksum_compat_boolean (cache, self->remove_after_build);
 }

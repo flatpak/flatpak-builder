@@ -42,11 +42,14 @@ GType builder_extension_get_type (void);
 void   builder_extension_set_name (BuilderExtension *self,
                                    const char *name);
 const char * builder_extension_get_name (BuilderExtension *self);
+const char * builder_extension_get_version (BuilderExtension *self);
 
 gboolean builder_extension_is_bundled (BuilderExtension *self);
 const char * builder_extension_get_directory (BuilderExtension *self);
 
-void    builder_extension_add_finish_args (BuilderExtension  *self,
+void     builder_extension_add_remove_args (BuilderExtension  *self,
+                                            GPtrArray *args);
+void     builder_extension_add_finish_args (BuilderExtension  *self,
                                            GPtrArray *args);
 void     builder_extension_checksum (BuilderExtension  *self,
                                      BuilderCache   *cache,
