@@ -1023,10 +1023,17 @@ builder_options_get_build_args (BuilderOptions *self,
         }
     }
 
-  if (array->len > 0 && builder_context_get_sandboxed (context))
+  if (builder_context_get_sandboxed (context))
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't specify build-args in sandboxed build");
-      return NULL;
+      if (array->len > 0)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't specify build-args in sandboxed build");
+          return NULL;
+        }
+      /* If, for whatever reason, the app has network access in the
+         metadata, explicitly neuter that if we're building
+         sandboxed */
+      g_ptr_array_add (array, g_strdup ("--unshare=network"));
     }
 
   g_ptr_array_add (array, NULL);
