@@ -84,7 +84,7 @@
                     is to install into either the only location for the extension point or
                     into the location for the untagged extension point. If there are multiple
                     locations for the same extension point defined with different tags
-                    then an error will occurr.</para></listitem>
+                    then an error will occur.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>runtime</option> (string)</term>
