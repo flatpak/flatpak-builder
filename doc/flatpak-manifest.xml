@@ -79,7 +79,7 @@
                     locations for the same extension point with the intention that
                     different branches for the extension are mounted at each location. When
                     building an extension it is necessary to know what extension point to
-                    install the extension to. This option resolves the any ambiguity
+                    install the extension to. This option resolves any ambiguity
                     in which extension point to choose. If not specified, the default choice
                     is to install into either the only location for the extension point or
                     into the location for the untagged extension point. If there are multiple
