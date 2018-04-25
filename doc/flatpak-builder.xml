@@ -199,7 +199,7 @@
 
                 <listitem><para>
                   Download missing sources, but don't update local mirrors of version control repos. This is useful
-                  to rebuild things but without updating git or bzr repositories from the remote repository.
+                  to rebuild things but without updating git, bzr or svn repositories from the remote repository.
                 </para></listitem>
             </varlistentry>
 
@@ -499,7 +499,7 @@
                 <term><option>--extra-sources=SOURCE-DIR</option></term>
 
                 <listitem><para>
-                  When downloading sources (archives, files, git, bzr), look in this
+                  When downloading sources (archives, files, git, bzr, svn), look in this
                   directory for pre-existing copies and use them instead of downloading.
                 </para></listitem>
             </varlistentry>
@@ -508,7 +508,7 @@
                 <term><option>--extra-sources-url=URL</option></term>
 
                 <listitem><para>
-                  When downloading sources (archives, files, git, bzr), look at this url
+                  When downloading sources (archives, files, git, bzr, svn), look at this url
                   for mirrored downloads before downloading from the original url.
                 </para></listitem>
             </varlistentry>
