@@ -1337,6 +1337,13 @@ builder_cache_checksum_uint32 (BuilderCache *self,
 }
 
 void
+builder_cache_checksum_random (BuilderCache *self)
+{
+  builder_cache_checksum_uint32 (self, g_random_int ());
+  builder_cache_checksum_uint32 (self, g_random_int ());
+}
+
+void
 builder_cache_checksum_uint64 (BuilderCache *self,
                                guint64       val)
 {
