@@ -667,6 +667,23 @@
                 </variablelist>
             </refsect3>
             <refsect3>
+                <title>Svn sources</title>
+                <variablelist>
+                    <varlistentry>
+                        <term><option>type</option></term>
+                        <listitem><para>"svn"</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>url</option> (string)</term>
+                        <listitem><para>URL of the svn repository, including branch/tag part</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>revision</option> (string)</term>
+                        <listitem><para>A specific revision number to use</para></listitem>
+                    </varlistentry>
+                </variablelist>
+            </refsect3>
+            <refsect3>
                 <title>File sources</title>
                 <variablelist>
                     <varlistentry>
