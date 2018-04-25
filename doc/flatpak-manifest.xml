@@ -684,6 +684,23 @@
                 </variablelist>
             </refsect3>
             <refsect3>
+                <title>Directory sources</title>
+                <variablelist>
+                    <varlistentry>
+                        <term><option>type</option></term>
+                        <listitem><para>"dir"</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>path</option> (string)</term>
+                        <listitem><para>The path of a local directory whose content will be copied into the source dir. Note that directory sources don't currently support caching, so they will be rebuilt each time.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>skip</option> (array of string)</term>
+                        <listitem><para>Source files to ignore in the directory.</para></listitem>
+                    </varlistentry>
+                </variablelist>
+            </refsect3>
+            <refsect3>
                 <title>File sources</title>
                 <variablelist>
                     <varlistentry>
