@@ -22,6 +22,8 @@ flatpak_builder_SOURCES = \
 	src/builder-source-git.h \
 	src/builder-source-bzr.c \
 	src/builder-source-bzr.h \
+	src/builder-source-svn.c \
+	src/builder-source-svn.h \
 	src/builder-source-file.c \
 	src/builder-source-file.h \
 	src/builder-source-script.c \
