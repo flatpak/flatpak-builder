@@ -80,6 +80,7 @@ void builder_cache_checksum_uint64 (BuilderCache *self,
 void builder_cache_checksum_data (BuilderCache *self,
                                   guint8       *data,
                                   gsize         len);
+void builder_cache_checksum_random (BuilderCache *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderCache, g_object_unref)
 
