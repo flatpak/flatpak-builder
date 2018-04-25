@@ -693,6 +693,7 @@ gboolean
 flatpak_cp_a (GFile         *src,
               GFile         *dest,
               FlatpakCpFlags flags,
+              GPtrArray     *skip_files,
               GCancellable  *cancellable,
               GError       **error)
 {
@@ -763,14 +764,29 @@ flatpak_cp_a (GFile         *src,
     {
       const char *name = g_file_info_get_name (child_info);
       g_autoptr(GFile) src_child = g_file_get_child (src, name);
+      gboolean skip = FALSE;
+      int i;
+
+      for (i = 0; skip_files != NULL && i < skip_files->len; i++)
+        {
+          if (g_file_equal (src_child, g_ptr_array_index (skip_files, i)))
+            {
+              skip = TRUE;
+              break;
+            }
+        }
 
       if (dest_child)
         g_object_unref (dest_child);
       dest_child = g_file_get_child (dest, name);
 
-      if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
+      if (skip)
         {
-          if (!flatpak_cp_a (src_child, dest_child, flags,
+          /* skip src */
+        }
+      else if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
+        {
+          if (!flatpak_cp_a (src_child, dest_child, flags, skip_files,
                              cancellable, error))
             goto out;
         }

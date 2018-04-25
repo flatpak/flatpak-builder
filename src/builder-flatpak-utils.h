@@ -245,6 +245,7 @@ typedef enum {
 gboolean   flatpak_cp_a (GFile         *src,
                          GFile         *dest,
                          FlatpakCpFlags flags,
+                         GPtrArray     *skip_files,
                          GCancellable  *cancellable,
                          GError       **error);
 
