@@ -311,7 +311,6 @@ builder_source_svn_bundle (BuilderSource  *source,
   BuilderSourceSvn *self = BUILDER_SOURCE_SVN (source);
   g_autoptr(GFile) mirror_dir = NULL;
   g_autoptr(GFile) dest_dir = NULL;
-  g_autofree char *sources_dir_path = NULL;
   g_autofree char *base_name = NULL;
 
   mirror_dir = get_mirror_dir (self, context, self->orig_revision);
