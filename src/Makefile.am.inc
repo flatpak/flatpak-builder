@@ -34,6 +34,8 @@ flatpak_builder_SOURCES = \
 	src/builder-source-extra-data.h \
 	src/builder-source-patch.c \
 	src/builder-source-patch.h \
+	src/builder-source-dir.c \
+	src/builder-source-dir.h \
 	src/builder-context.c \
 	src/builder-context.h \
 	src/builder-cache.c \
