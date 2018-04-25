@@ -334,7 +334,7 @@ migrate_locale_dir (GFile      *source_dir,
 
           if (!flatpak_cp_a (child, locale_subdir,
                              FLATPAK_CP_FLAGS_MERGE | FLATPAK_CP_FLAGS_MOVE,
-                             NULL, error))
+                             NULL, NULL, error))
             return FALSE;
 
           target = g_build_filename ("../../share/runtime/locale", relative, NULL);
