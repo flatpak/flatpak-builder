@@ -15,7 +15,7 @@ AC_PREREQ([2.63])
 
 m4_define([flatpak_builder_major_version], [0])
 m4_define([flatpak_builder_minor_version], [10])
-m4_define([flatpak_builder_micro_version], [9])
+m4_define([flatpak_builder_micro_version], [10])
 m4_define([flatpak_builder_version],
           [flatpak_builder_major_version.flatpak_builder_minor_version.flatpak_builder_micro_version])
 
