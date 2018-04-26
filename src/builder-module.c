@@ -1378,6 +1378,7 @@ builder_module_build_helper (BuilderModule  *self,
   GFile *app_dir = builder_context_get_app_dir (context);
   g_autofree char *make_j = NULL;
   g_autofree char *make_l = NULL;
+  g_autofree char *n_jobs = NULL;
   const char *make_cmd = NULL;
   const char *test_arg = NULL;
 
@@ -1424,6 +1425,9 @@ builder_module_build_helper (BuilderModule  *self,
 
   env = builder_options_get_env (self->build_options, context);
   config_opts = builder_options_get_config_opts (self->build_options, context, self->config_opts);
+
+  n_jobs = g_strdup_printf ("%d", self->no_parallel_make ? 1 : builder_context_get_jobs (context));
+  env = g_environ_setenv (env, "FLATPAK_BUILDER_N_JOBS", n_jobs, FALSE);
 
   if (!self->buildsystem)
     {
