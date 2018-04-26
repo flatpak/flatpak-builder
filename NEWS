@@ -1,3 +1,30 @@
+Major changes in 0.10.10
+========================
+
+ * We now support yaml manifest as well as json.
+ * New source type "svn" to download subversion checkouts.
+ * New source type "dir" for local directories.
+ * Set FLATPAK_BUILDER_N_JOBS in environment during build.
+ * If not using ccache, enfore it of. This helps builds with
+   meson as they pick up ccache by default, which makes no
+   sense when there is no persistent storage for ccache to use.
+ * New options prepend-*-path similar to the existing append-*-path
+   ones, but prepending instead.
+ * New argument --no-shallow-clone which disables any shallow clone
+   optimizations.
+ * New inherit-sdk-extensions property similar to inherit-extensions,
+   but is not inherited in the platform.
+ * We now ignore json keys starting with "//" and "__" allowing these
+   to be used for comments.
+ * Fixed a bug that caused --install to not work properly.
+ * New argument --extension-tag for using the new tagged extension feature.
+ * The build metadata now records which extensions were produced as part
+   of a build.
+ * New property add-build-extensions allows creating exension points that
+   can be used during the build.
+ * flatpak-builder --run now also binds /run/build-runtime to the builds,
+   allowing it to work when building runtimes.
+
 Major changes in 0.10.9
 =======================
 
