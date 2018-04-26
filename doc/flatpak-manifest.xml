@@ -32,7 +32,7 @@
         <title>Description</title>
 
         <para>
-          Flatpak uses manifest, or recipe, files in a json format to describe how an
+          Flatpak uses manifest, or recipe, files in a json or yaml format to describe how an
           application and its bundled dependencies can be built from sources. The manifest
           gets used by flatpak-builder.
        </para>
@@ -42,7 +42,7 @@
         <title>File format</title>
 
         <para>
-          The top level of the json file describes global attributes of the application, how
+          The top level of the manifest file describes global attributes of the application, how
           it can be built, and the list of modules that need to be built.
         </para>
 
@@ -185,7 +185,7 @@
                 <varlistentry>
                     <term><option>modules</option> (array of objects or string)</term>
                     <listitem><para>An array of objects specifying the modules to be built in order.
-                    String members in the array are interpreted as the name of a separate json file that contains a module.
+                    String members in the array are interpreted as the name of a separate json or yaml file that contains a module.
                     See below for details.</para></listitem>
                 </varlistentry>
                 <varlistentry>
@@ -425,7 +425,7 @@
                     <listitem><para>An array of objects defining
                     sources that will be downloaded and extracted in
                     order. String members in the array are interpreted
-                    as the name of a separate json file that contains
+                    as the name of a separate json or yaml file that contains
                     sources.  See below for details.</para></listitem>
                 </varlistentry>
                 <varlistentry>
@@ -538,7 +538,7 @@
                 <varlistentry>
                     <term><option>modules</option> (array of objects or strings)</term>
                     <listitem><para>An array of objects specifying nested modules to be built before this one.
-                    String members in the array are interpreted as names of a separate json file that contains a module.</para></listitem>
+                    String members in the array are interpreted as names of a separate json or yaml file that contains a module.</para></listitem>
                 </varlistentry>
             </variablelist>
         </refsect2>
@@ -550,7 +550,7 @@
             </para>
             <para>
                 Additionally, the sources list can contain a plain string, which is interpreted as the name
-                of a separate json file that is read and inserted at this point. The json file can contain
+                of a separate json or yaml file that is read and inserted at this point. The file can contain
                 a single source, or an array of sources.
             </para>
             <refsect3>
