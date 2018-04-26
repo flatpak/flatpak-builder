@@ -835,6 +835,105 @@
     </refsect1>
 
     <refsect1>
+      <title>Build environment</title>
+
+      <para>
+        When building the application each command is run in a separate sandbox with access
+        to only the things required for it. This section describes the details of the sandbox.
+        Any options here can be overridden globally or per-module with the <option>build-args</option>
+        option (although such manifest will not work if you start flatpak-builder with <option>--sandbox</option>).
+      </para>
+
+      <refsect2>
+        <title>Filesystem</title>
+        <para>
+          Each module is built in its own build directory, stored in a sub directory called
+          <filename>build/$modulename-$count</filename> in the state dir (which is typically <filename>.flatpak-builder/</filename>).
+          Additionally there is a symlink <filename>build/$modulename</filename> to the latest version.
+          In order to generate reproducible builds this directory is also mounted as <filename>/run/build/$modulename</filename>
+          in the sandbox (or <filename>/run/build-runtime/$modulename</filename> when building runtimes).
+          This is used as current working directory for all build ops.
+        </para>
+        <para>
+          The destination directory for installation is accessible for writing at the place it will seen at runtime.
+          In the case of a regular application this will be /app. If building a runtime it will instead be /usr, and
+          when building an extension it will be at the extensionpoint directory somewhere below /app (for app extension)
+          or /usr (for runtime extensions).
+        </para>
+        <para>
+          Additionally the there will be (as needed, depending on what is building) read-only mounts of the sdk at /usr,
+          sdk extensions below that, and the application at /app. No other filesystem access is available.
+        </para>
+      </refsect2>
+
+      <refsect2>
+        <title>Environment</title>
+        <para>
+          The environment can be modified in several ways in the manifest, but the default values are:
+        </para>
+        <variablelist>
+          <varlistentry>
+            <term>FLATPAK_ID</term>
+            <listitem><para>The id of the application currently building.</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>FLATPAK_ARCH</term>
+            <listitem><para>The architecture currently building.</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>FLATPAK_DEST</term>
+            <listitem><para>The path to where the current build should install into. This is <filename>/app</filename> for application builds.</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>FLATPAK_BUILDER_N_JOBS</term>
+            <listitem><para>The number of jobs that flatpak-builder would normally use for make -j. Defaults to ncpus unless the module disabled parallel make.</para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>PATH</term>
+            <listitem><para><filename>/app/bin:/usr/bin</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>LD_LIBRARY_PATH</term>
+            <listitem><para><filename>/app/lib</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>PKG_CONFIG_PATH</term>
+            <listitem><para><filename>/app/lib/pkgconfig:/app/share/pkgconfig:/usr/lib/pkgconfig:/usr/share/pkgconfig</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>ACLOCAL_PATH</term>
+            <listitem><para><filename>/app/share/aclocal</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>C_INCLUDE_PATH</term>
+            <listitem><para><filename>/app/include</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>CPLUS_INCLUDE_PATH</term>
+            <listitem><para><filename>/app/include</filename></para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>LDFLAGS</term>
+            <listitem><para>-L/app/lib </para></listitem>
+          </varlistentry>
+          <varlistentry>
+            <term>LC_ALL</term>
+            <listitem><para>en_US.utf8</para></listitem>
+          </varlistentry>
+        </variablelist>
+      </refsect2>
+
+      <refsect2>
+        <title>Permissions</title>
+        <para>
+          Builds have the --allow=devel and --allow=multiarch permissions that regular flatpak runs don't have by default. This allows
+          limits the syscall filtering that is normally done so development tools like debuggers work. Otherwise the build sandbox
+          is very limited, for example there is no network access.
+        </para>
+      </refsect2>
+    </refsect1>
+
+    <refsect1>
         <title>Examples</title>
 
         <para>
