@@ -1248,8 +1248,14 @@ get_libdir(GFile          *app_dir,
            GError        **error) {
   g_autofree char *output = NULL;
   g_autoptr(GFile) cwd_file = NULL;
-  g_autoptr(GPtrArray) args =
-    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, NULL, &cwd_file);
+  g_autoptr(GPtrArray) args = NULL;
+
+  if (!builder_context_get_build_runtime (context))
+    {
+      return g_strconcat (prefix, "/lib", NULL);
+    }
+
+  args = setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, NULL, &cwd_file);
 
   g_ptr_array_add (args, g_strdup ("gcc"));
   g_ptr_array_add (args, g_strdup ("-print-multiarch"));
