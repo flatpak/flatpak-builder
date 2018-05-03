@@ -290,6 +290,11 @@
                     applications and <filename>/usr</filename> for runtimes).</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>libdir</option> (string)</term>
+                    <listitem><para>The build libdir for the modules (defaults to <filename>/app/lib</filename> for
+                    applications and <filename>/usr/lib</filename> for runtimes).</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>append-path</option> (string)</term>
                     <listitem><para>This will get appended to PATH in the build environment (with an leading colon if
                     needed).</para></listitem>
