@@ -71,6 +71,7 @@ void            builder_manifest_set_default_collection_id (BuilderManifest *sel
 char **         builder_manifest_get_exclude_dirs (BuilderManifest *self);
 
 gboolean        builder_manifest_start (BuilderManifest *self,
+                                        gboolean         download_only,
                                         gboolean         allow_missing_runtimes,
                                         BuilderContext  *context,
                                         GError         **error);

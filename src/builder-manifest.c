@@ -1465,6 +1465,7 @@ flatpak_info (gboolean opt_user,
 
 gboolean
 builder_manifest_start (BuilderManifest *self,
+                        gboolean download_only,
                         gboolean allow_missing_runtimes,
                         BuilderContext  *context,
                         GError         **error)
@@ -1484,14 +1485,14 @@ builder_manifest_start (BuilderManifest *self,
 
   self->sdk_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->sdk,
                               builder_manifest_get_runtime_version (self), NULL);
-  if (!allow_missing_runtimes && self->sdk_commit == NULL)
+  if (!download_only && !allow_missing_runtimes && self->sdk_commit == NULL)
     return flatpak_fail (error, "Unable to find sdk %s version %s",
                          self->sdk,
                          builder_manifest_get_runtime_version (self));
 
   self->runtime_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->runtime,
                                   builder_manifest_get_runtime_version (self), NULL);
-  if (!allow_missing_runtimes && self->runtime_commit == NULL)
+  if (!download_only && !allow_missing_runtimes && self->runtime_commit == NULL)
     return flatpak_fail (error, "Unable to find runtime %s version %s",
                          self->runtime,
                          builder_manifest_get_runtime_version (self));
@@ -1500,7 +1501,7 @@ builder_manifest_start (BuilderManifest *self,
     {
       self->base_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->base,
                                    builder_manifest_get_base_version (self), NULL);
-      if (self->base_commit == NULL)
+      if (!download_only && self->base_commit == NULL)
         return flatpak_fail (error, "Unable to find app %s version %s",
                              self->base, builder_manifest_get_base_version (self));
     }
