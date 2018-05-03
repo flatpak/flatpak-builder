@@ -24,6 +24,7 @@
 #include <gio/gio.h>
 #include <libsoup/soup.h>
 #include <json-glib/json-glib.h>
+#include <curl/curl.h>
 
 #include <libxml/tree.h>
 
@@ -61,6 +62,9 @@ void     flatpak_collect_matches_for_path_pattern (const char *path,
 gboolean builder_migrate_locale_dirs (GFile   *root_dir,
                                       GError **error);
 
+GQuark builder_curl_error_quark (void);
+#define BUILDER_CURL_ERROR (builder_curl_error_quark ())
+
 GQuark builder_yaml_parse_error_quark (void);
 #define BUILDER_YAML_PARSE_ERROR (builder_yaml_parse_error_quark ())
 
@@ -85,6 +89,7 @@ gboolean builder_download_uri (SoupURI        *uri,
                                const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                SoupSession    *soup_session,
+                               CURL           *curl_session,
                                GError        **error);
 
 gsize builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],

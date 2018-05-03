@@ -23,6 +23,7 @@
 
 #include <gio/gio.h>
 #include <libsoup/soup.h>
+#include <curl/curl.h>
 #include "builder-options.h"
 #include "builder-utils.h"
 #include "builder-sdk-config.h"
@@ -68,6 +69,7 @@ gboolean        builder_context_download_uri (BuilderContext *self,
                                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                               GError        **error);
 SoupSession *   builder_context_get_soup_session (BuilderContext *self);
+CURL *          builder_context_get_curl_session (BuilderContext *self);
 const char *    builder_context_get_arch (BuilderContext *self);
 void            builder_context_set_arch (BuilderContext *self,
                                           const char     *arch);

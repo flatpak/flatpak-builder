@@ -39,6 +39,7 @@
 #include "builder-flatpak-utils.h"
 #include "builder-utils.h"
 
+G_DEFINE_QUARK (builder-curl-error, builder_curl_error)
 G_DEFINE_QUARK (builder-yaml-parse-error, builder_yaml_parse_error)
 
 #ifdef FLATPAK_BUILDER_ENABLE_YAML
@@ -1878,6 +1879,62 @@ builder_verify_checksums (const char *name,
 }
 
 typedef struct {
+  GOutputStream  *out;
+  GChecksum     **checksums;
+  gsize           n_checksums;
+  GError        **error;
+} CURLWriteData;
+
+static gsize
+builder_curl_write_cb (gpointer *buffer,
+                       gsize     size,
+                       gsize     nmemb,
+                       gpointer *userdata)
+{
+  gsize bytes_written;
+  CURLWriteData *write_data = (CURLWriteData *) userdata;
+
+  flatpak_write_update_checksum (write_data->out, buffer, size * nmemb, &bytes_written,
+                                 write_data->checksums, write_data->n_checksums,
+                                 NULL, write_data->error);
+
+  return bytes_written;
+}
+
+static gboolean
+builder_download_uri_curl (SoupURI        *uri,
+                           CURL           *session,
+                           GOutputStream  *out,
+                           GChecksum     **checksums,
+                           gsize           n_checksums,
+                           GError        **error)
+{
+  CURLcode retcode;
+  CURLWriteData write_data;
+  g_autofree gchar *url = soup_uri_to_string (uri, FALSE);
+
+  curl_easy_setopt (session, CURLOPT_URL, url);
+  curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
+  curl_easy_setopt (session, CURLOPT_WRITEDATA, &write_data);
+
+  write_data.out = out;
+  write_data.checksums = checksums;
+  write_data.n_checksums = n_checksums;
+  write_data.error = error;
+
+  retcode = curl_easy_perform (session);
+
+  if (retcode != CURLE_OK)
+    {
+      g_set_error_literal (error, BUILDER_CURL_ERROR, retcode,
+                           curl_easy_strerror (retcode));
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+typedef struct {
   int stage;
   gboolean printed_something;
 } DownloadPromptData;
@@ -1903,40 +1960,17 @@ download_progress_cleanup (DownloadPromptData *progress_data)
     g_print ("\b");
 }
 
-gboolean
-builder_download_uri (SoupURI        *uri,
-                      GFile          *dest,
-                      const char     *checksums[BUILDER_CHECKSUMS_LEN],
-                      GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
-                      SoupSession    *session,
-                      GError        **error)
+static gboolean
+builder_download_uri_soup (SoupURI       *uri,
+                           SoupSession   *session,
+                           GOutputStream *out,
+                           GChecksum    **checksums,
+                           gsize          n_checksums,
+                           GError       **error)
 {
-  g_autoptr(SoupRequest) req = NULL;
   g_autoptr(GInputStream) input = NULL;
-  g_autoptr(GFileOutputStream) out = NULL;
-  g_autoptr(GFile) tmp = NULL;
-  g_autoptr(GFile) dir = NULL;
-  g_autoptr(GPtrArray) checksum_array = g_ptr_array_new_with_free_func ((GDestroyNotify)g_checksum_free);
+  g_autoptr(SoupRequest) req = NULL;
   DownloadPromptData progress_data = {0};
-  g_autofree char *basename = g_file_get_basename (dest);
-  g_autofree char *template = g_strconcat (".", basename, "XXXXXX", NULL);
-  gsize i;
-
-  for (i = 0; checksums[i] != NULL; i++)
-    g_ptr_array_add (checksum_array,
-                     g_checksum_new (checksums_type[i]));
-
-  dir = g_file_get_parent (dest);
-  g_mkdir_with_parents (flatpak_file_get_path_cached (dir), 0755);
-
-  tmp = flatpak_file_new_tmp_in (dir, template, error);
-  if (tmp == NULL)
-    return FALSE;
-
-  out = g_file_replace (tmp, NULL, FALSE, G_FILE_CREATE_REPLACE_DESTINATION,
-                        NULL, error);
-  if (out == NULL)
-    return FALSE;
 
   req = soup_session_request_uri (session, uri, error);
   if (req == NULL)
@@ -1957,8 +1991,68 @@ builder_download_uri (SoupURI        *uri,
     }
 
   if (!flatpak_splice_update_checksum (G_OUTPUT_STREAM (out), input,
-                                       (GChecksum **)checksum_array->pdata, checksum_array->len,
-                                       download_progress, &progress_data, NULL, error))
+                                       checksums, n_checksums,
+                                       download_progress, &progress_data,
+                                       NULL, error))
+    return FALSE;
+
+  download_progress_cleanup (&progress_data);
+
+  return TRUE;
+}
+
+gboolean
+builder_download_uri (SoupURI        *uri,
+                      GFile          *dest,
+                      const char     *checksums[BUILDER_CHECKSUMS_LEN],
+                      GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
+                      SoupSession    *soup_session,
+                      CURL           *curl_session,
+                      GError        **error)
+{
+  g_autoptr(GFileOutputStream) out = NULL;
+  g_autoptr(GFile) tmp = NULL;
+  g_autoptr(GFile) dir = NULL;
+  g_autoptr(GPtrArray) checksum_array = g_ptr_array_new_with_free_func ((GDestroyNotify)g_checksum_free);
+  g_autofree char *basename = g_file_get_basename (dest);
+  g_autofree char *template = g_strconcat (".", basename, "XXXXXX", NULL);
+  gsize i;
+  gboolean download_res;
+
+  for (i = 0; checksums[i] != NULL; i++)
+    g_ptr_array_add (checksum_array,
+                     g_checksum_new (checksums_type[i]));
+
+  dir = g_file_get_parent (dest);
+  g_mkdir_with_parents (flatpak_file_get_path_cached (dir), 0755);
+
+  tmp = flatpak_file_new_tmp_in (dir, template, error);
+  if (tmp == NULL)
+    return FALSE;
+
+  out = g_file_replace (tmp, NULL, FALSE, G_FILE_CREATE_REPLACE_DESTINATION,
+                        NULL, error);
+  if (out == NULL)
+    return FALSE;
+
+  if (SOUP_URI_VALID_FOR_HTTP(uri))
+    {
+      download_res = builder_download_uri_soup (uri, soup_session,
+                                                G_OUTPUT_STREAM (out),
+                                                (GChecksum **)checksum_array->pdata,
+                                                checksum_array->len,
+                                                error);
+    }
+  else
+    {
+      download_res = builder_download_uri_curl (uri, curl_session,
+                                                G_OUTPUT_STREAM (out),
+                                                (GChecksum **)checksum_array->pdata,
+                                                checksum_array->len,
+                                                error);
+    }
+
+  if (download_res == FALSE)
     {
       unlink (flatpak_file_get_path_cached (tmp));
       return FALSE;
@@ -1970,8 +2064,6 @@ builder_download_uri (SoupURI        *uri,
       unlink (flatpak_file_get_path_cached (tmp));
       return FALSE;
     }
-
-  download_progress_cleanup (&progress_data);
 
   for (i = 0; checksums[i] != NULL; i++)
     {
