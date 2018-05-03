@@ -737,11 +737,19 @@ get_all_options (BuilderOptions *self, BuilderContext *context)
 }
 
 static const char *
-builder_options_get_flags (BuilderOptions *self, BuilderContext *context, size_t field_offset)
+builder_options_get_flags (BuilderOptions *self,
+                           BuilderContext *context,
+                           size_t          field_offset,
+                           const char     *sdk_flags)
 {
   g_autoptr(GList) options = get_all_options (self, context);
   GList *l;
   GString *flags = NULL;
+
+  if (sdk_flags && sdk_flags[0])
+    {
+      flags = g_string_new (sdk_flags);
+    }
 
   /* Last command flag wins, so reverse order */
   options = g_list_reverse (options);
@@ -772,25 +780,33 @@ builder_options_get_flags (BuilderOptions *self, BuilderContext *context, size_t
 const char *
 builder_options_get_cflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags));
+  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags),
+                                    sdk_config?builder_sdk_config_get_cflags(sdk_config):NULL);
 }
 
 const char *
 builder_options_get_cxxflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags));
+  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags),
+                                    sdk_config?builder_sdk_config_get_cxxflags(sdk_config):NULL);
 }
 
 const char *
 builder_options_get_cppflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags));
+  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags),
+                                    sdk_config?builder_sdk_config_get_cppflags(sdk_config):NULL);
 }
 
 const char *
 builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags));
+  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags),
+                                    sdk_config?builder_sdk_config_get_ldflags(sdk_config):NULL);
 }
 
 static char *
@@ -903,7 +919,16 @@ builder_options_get_prefix (BuilderOptions *self, BuilderContext *context)
     }
 
   if (builder_context_get_build_runtime (context))
-    return "/usr";
+    {
+      BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+      if (sdk_config)
+        {
+          const char * prefix = builder_sdk_config_get_prefix (sdk_config);
+          if (prefix)
+            return prefix;
+        }
+      return "/usr";
+    }
 
   return "/app";
 }
@@ -919,6 +944,17 @@ builder_options_get_libdir (BuilderOptions *self, BuilderContext *context)
       BuilderOptions *o = l->data;
       if (o->libdir)
         return o->libdir;
+    }
+
+  if (builder_context_get_build_runtime (context))
+    {
+      BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
+      if (sdk_config)
+        {
+          const char * prefix = builder_sdk_config_get_libdir (sdk_config);
+          if (prefix)
+            return prefix;
+        }
     }
 
   return NULL;
