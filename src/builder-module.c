@@ -1561,6 +1561,8 @@ builder_module_build_helper (BuilderModule  *self,
       g_auto(GStrv) configure_args = NULL;
       g_autoptr(GPtrArray) configure_args_arr = g_ptr_array_new ();
       g_autofree char *configure_content = NULL;
+      const char *prefix = NULL;
+      const char *libdir = NULL;
 
       if (!g_file_load_contents (configure_file, NULL, &configure_content, NULL, NULL, error))
         {
@@ -1633,22 +1635,27 @@ builder_module_build_helper (BuilderModule  *self,
       else if (cmake_ninja)
         cmake_generator = "Ninja";
 
+      prefix = builder_options_get_prefix (self->build_options, context);
+      libdir = builder_options_get_libdir (self->build_options, context);
+
       if (cmake || cmake_ninja)
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'", prefix));
+          if (libdir)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_LIBDIR:PATH='%s'", libdir));
           g_ptr_array_add (configure_args_arr, g_strdup ("-G"));
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("%s", cmake_generator));
         }
       else if (qmake)
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'", prefix));
+          /* TODO: What parameter for qmake? */
         }
       else /* autotools and meson */
         {
-          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s",
-                                                                builder_options_get_prefix (self->build_options, context)));
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s", prefix));
+          if (libdir)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s", libdir));
         }
 
       g_ptr_array_add (configure_args_arr, configure_final_arg);
