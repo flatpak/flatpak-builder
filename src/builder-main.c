@@ -667,20 +667,21 @@ main (int    argc,
     }
 
   /* Verify that cache and build dir is on same filesystem */
-  {
-    g_autofree char *state_path = g_file_get_path (builder_context_get_state_dir (build_context));
-    g_autoptr(GFile) app_parent = g_file_get_parent (builder_context_get_app_dir (build_context));
-    g_autofree char *app_parent_path = g_file_get_path (app_parent);
-    struct stat buf1, buf2;
+  if (!opt_download_only)
+    {
+      g_autofree char *state_path = g_file_get_path (builder_context_get_state_dir (build_context));
+      g_autoptr(GFile) app_parent = g_file_get_parent (builder_context_get_app_dir (build_context));
+      g_autofree char *app_parent_path = g_file_get_path (app_parent);
+      struct stat buf1, buf2;
 
-    if (stat (app_parent_path, &buf1) == 0 && stat (state_path, &buf2) == 0 &&
-        buf1.st_dev != buf2.st_dev)
-      {
-        g_printerr ("The state dir (%s) is not on the same filesystem as the target dir (%s)\n",
-                    state_path, app_parent_path);
-        return 1;
-      }
-  }
+      if (stat (app_parent_path, &buf1) == 0 && stat (state_path, &buf2) == 0 &&
+          buf1.st_dev != buf2.st_dev)
+        {
+          g_printerr ("The state dir (%s) is not on the same filesystem as the target dir (%s)\n",
+                      state_path, app_parent_path);
+          return 1;
+        }
+    }
 
   if (!builder_context_set_checksum_for (build_context, manifest_basename, manifest_sha256, &error))
     {
@@ -688,7 +689,7 @@ main (int    argc,
       return 1;
     }
 
-  if (!builder_manifest_start (manifest, opt_allow_missing_runtimes, build_context, &error))
+  if (!builder_manifest_start (manifest, opt_download_only, opt_allow_missing_runtimes, build_context, &error))
     {
       g_printerr ("Failed to init: %s\n", error->message);
       return 1;
