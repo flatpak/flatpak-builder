@@ -50,6 +50,7 @@ struct BuilderOptions
   char       *append_pkg_config_path;
   char       *prepend_pkg_config_path;
   char       *prefix;
+  char       *libdir;
   char      **env;
   char      **build_args;
   char      **test_args;
@@ -76,6 +77,7 @@ enum {
   PROP_CXXFLAGS,
   PROP_LDFLAGS,
   PROP_PREFIX,
+  PROP_LIBDIR,
   PROP_ENV,
   PROP_STRIP,
   PROP_NO_DEBUGINFO,
@@ -112,6 +114,7 @@ builder_options_finalize (GObject *object)
   g_free (self->append_pkg_config_path);
   g_free (self->prepend_pkg_config_path);
   g_free (self->prefix);
+  g_free (self->libdir);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
   g_strfreev (self->test_args);
@@ -175,6 +178,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_PREFIX:
       g_value_set_string (value, self->prefix);
+      break;
+
+    case PROP_LIBDIR:
+      g_value_set_string (value, self->libdir);
       break;
 
     case PROP_ENV:
@@ -286,6 +293,11 @@ builder_options_set_property (GObject      *object,
     case PROP_PREFIX:
       g_clear_pointer (&self->prefix, g_free);
       self->prefix = g_value_dup_string (value);
+      break;
+
+    case PROP_LIBDIR:
+      g_clear_pointer (&self->libdir, g_free);
+      self->libdir = g_value_dup_string (value);
       break;
 
     case PROP_ENV:
@@ -429,6 +441,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_PREFIX,
                                    g_param_spec_string ("prefix",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_LIBDIR,
+                                   g_param_spec_string ("libdir",
                                                         "",
                                                         "",
                                                         NULL,
@@ -889,6 +908,22 @@ builder_options_get_prefix (BuilderOptions *self, BuilderContext *context)
   return "/app";
 }
 
+const char *
+builder_options_get_libdir (BuilderOptions *self, BuilderContext *context)
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      if (o->libdir)
+        return o->libdir;
+    }
+
+  return NULL;
+}
+
 gboolean
 builder_options_get_strip (BuilderOptions *self, BuilderContext *context)
 {
@@ -1154,6 +1189,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_str (cache, self->cppflags);
   builder_cache_checksum_str (cache, self->ldflags);
   builder_cache_checksum_str (cache, self->prefix);
+  builder_cache_checksum_compat_str (cache, self->libdir);
   builder_cache_checksum_strv (cache, self->env);
   builder_cache_checksum_strv (cache, self->build_args);
   builder_cache_checksum_compat_strv (cache, self->test_args);
