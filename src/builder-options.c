@@ -58,6 +58,7 @@ struct BuilderOptions
   char      **make_args;
   char      **make_install_args;
   GHashTable *arch;
+  BuilderSdkConfig *sdk_default_override;
 };
 
 typedef struct
@@ -94,6 +95,7 @@ enum {
   PROP_PREPEND_LD_LIBRARY_PATH,
   PROP_APPEND_PKG_CONFIG_PATH,
   PROP_PREPEND_PKG_CONFIG_PATH,
+  PROP_SDK_DEFAULT_OVERRIDE,
   LAST_PROP
 };
 
@@ -122,6 +124,7 @@ builder_options_finalize (GObject *object)
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_hash_table_destroy (self->arch);
+  g_clear_object (&self->sdk_default_override);
 
   G_OBJECT_CLASS (builder_options_parent_class)->finalize (object);
 }
@@ -222,6 +225,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_NO_DEBUGINFO_COMPRESSION:
       g_value_set_boolean (value, self->no_debuginfo_compression);
+      break;
+
+    case PROP_SDK_DEFAULT_OVERRIDE:
+      g_value_set_object (value, self->sdk_default_override);
       break;
 
     default:
@@ -352,6 +359,10 @@ builder_options_set_property (GObject      *object,
 
     case PROP_NO_DEBUGINFO_COMPRESSION:
       self->no_debuginfo_compression = g_value_get_boolean (value);
+      break;
+
+    case PROP_SDK_DEFAULT_OVERRIDE:
+      g_set_object(&self->sdk_default_override, g_value_dup_object (value));
       break;
 
     default:
@@ -522,6 +533,14 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                          "",
                                                          FALSE,
                                                          G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SDK_DEFAULT_OVERRIDE,
+                                   g_param_spec_object ("sdk-default-override",
+                                                        "",
+                                                        "",
+                                                        BUILDER_TYPE_SDK_CONFIG,
+                                                        G_PARAM_READWRITE));
 }
 
 static void
@@ -777,36 +796,58 @@ builder_options_get_flags (BuilderOptions *self,
   return NULL;
 }
 
+static const char *
+get_sdk_flags (BuilderOptions *self, BuilderContext *context, const char *(*method)(BuilderSdkConfig *self))
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      if (o->sdk_default_override)
+        {
+          const char * sdk_flags = (*method) (o->sdk_default_override);
+          if (sdk_flags)
+            return sdk_flags;
+        }
+    }
+  {
+    BuilderSdkConfig *sdk_config = builder_context_get_sdk_config (context);
+    if (sdk_config)
+      {
+        const char *sdk_flags = (*method) (sdk_config);
+        return sdk_flags;
+      }
+  }
+  return NULL;
+}
 const char *
 builder_options_get_cflags (BuilderOptions *self, BuilderContext *context)
 {
-  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags),
-                                    sdk_config?builder_sdk_config_get_cflags(sdk_config):NULL);
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cflags));
 }
 
 const char *
 builder_options_get_cxxflags (BuilderOptions *self, BuilderContext *context)
 {
-  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags),
-                                    sdk_config?builder_sdk_config_get_cxxflags(sdk_config):NULL);
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cxxflags));
 }
 
 const char *
 builder_options_get_cppflags (BuilderOptions *self, BuilderContext *context)
 {
-  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags),
-                                    sdk_config?builder_sdk_config_get_cppflags(sdk_config):NULL);
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cppflags));
 }
 
 const char *
 builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
 {
-  BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags),
-                                    sdk_config?builder_sdk_config_get_ldflags(sdk_config):NULL);
+                                    get_sdk_flags (self, context, builder_sdk_config_get_ldflags));
 }
 
 static char *
@@ -919,16 +960,7 @@ builder_options_get_prefix (BuilderOptions *self, BuilderContext *context)
     }
 
   if (builder_context_get_build_runtime (context))
-    {
-      BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
-      if (sdk_config)
-        {
-          const char * prefix = builder_sdk_config_get_prefix (sdk_config);
-          if (prefix)
-            return prefix;
-        }
-      return "/usr";
-    }
+    return "/usr";
 
   return "/app";
 }
@@ -947,15 +979,7 @@ builder_options_get_libdir (BuilderOptions *self, BuilderContext *context)
     }
 
   if (builder_context_get_build_runtime (context))
-    {
-      BuilderSdkConfig * sdk_config  = builder_context_get_sdk_config (context);
-      if (sdk_config)
-        {
-          const char * prefix = builder_sdk_config_get_libdir (sdk_config);
-          if (prefix)
-            return prefix;
-        }
-    }
+    return get_sdk_flags (self, context, builder_sdk_config_get_libdir);
 
   return NULL;
 }
