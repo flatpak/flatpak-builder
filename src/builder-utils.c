@@ -1693,8 +1693,10 @@ builder_host_spawnv (GFile                *dir,
   for (i = 0; env_vars[i] != NULL; i++)
     {
       const char *env_var = env_vars[i];
-      g_variant_builder_add (env_builder, "{ss}", env_var, g_getenv (env_var));
+      if (strcmp (env_var, "LANGUAGE") != 0)
+        g_variant_builder_add (env_builder, "{ss}", env_var, g_getenv (env_var));
     }
+  g_variant_builder_add (env_builder, "{ss}", "LANGUAGE", "C");
 
   sigterm_id = g_unix_signal_add (SIGTERM, sigterm_handler, &data);
   sigint_id = g_unix_signal_add (SIGINT, sigint_handler, &data);
