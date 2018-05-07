@@ -50,6 +50,7 @@ struct BuilderOptions
   char       *append_pkg_config_path;
   char       *prepend_pkg_config_path;
   char       *prefix;
+  char       *libdir;
   char      **env;
   char      **build_args;
   char      **test_args;
@@ -57,6 +58,7 @@ struct BuilderOptions
   char      **make_args;
   char      **make_install_args;
   GHashTable *arch;
+  BuilderSdkConfig *sdk_default_override;
 };
 
 typedef struct
@@ -76,6 +78,7 @@ enum {
   PROP_CXXFLAGS,
   PROP_LDFLAGS,
   PROP_PREFIX,
+  PROP_LIBDIR,
   PROP_ENV,
   PROP_STRIP,
   PROP_NO_DEBUGINFO,
@@ -92,6 +95,7 @@ enum {
   PROP_PREPEND_LD_LIBRARY_PATH,
   PROP_APPEND_PKG_CONFIG_PATH,
   PROP_PREPEND_PKG_CONFIG_PATH,
+  PROP_SDK_DEFAULT_OVERRIDE,
   LAST_PROP
 };
 
@@ -112,6 +116,7 @@ builder_options_finalize (GObject *object)
   g_free (self->append_pkg_config_path);
   g_free (self->prepend_pkg_config_path);
   g_free (self->prefix);
+  g_free (self->libdir);
   g_strfreev (self->env);
   g_strfreev (self->build_args);
   g_strfreev (self->test_args);
@@ -119,6 +124,7 @@ builder_options_finalize (GObject *object)
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_hash_table_destroy (self->arch);
+  g_clear_object (&self->sdk_default_override);
 
   G_OBJECT_CLASS (builder_options_parent_class)->finalize (object);
 }
@@ -177,6 +183,10 @@ builder_options_get_property (GObject    *object,
       g_value_set_string (value, self->prefix);
       break;
 
+    case PROP_LIBDIR:
+      g_value_set_string (value, self->libdir);
+      break;
+
     case PROP_ENV:
       g_value_set_boxed (value, self->env);
       break;
@@ -215,6 +225,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_NO_DEBUGINFO_COMPRESSION:
       g_value_set_boolean (value, self->no_debuginfo_compression);
+      break;
+
+    case PROP_SDK_DEFAULT_OVERRIDE:
+      g_value_set_object (value, self->sdk_default_override);
       break;
 
     default:
@@ -288,6 +302,11 @@ builder_options_set_property (GObject      *object,
       self->prefix = g_value_dup_string (value);
       break;
 
+    case PROP_LIBDIR:
+      g_clear_pointer (&self->libdir, g_free);
+      self->libdir = g_value_dup_string (value);
+      break;
+
     case PROP_ENV:
       tmp = self->env;
       self->env = g_strdupv (g_value_get_boxed (value));
@@ -340,6 +359,10 @@ builder_options_set_property (GObject      *object,
 
     case PROP_NO_DEBUGINFO_COMPRESSION:
       self->no_debuginfo_compression = g_value_get_boolean (value);
+      break;
+
+    case PROP_SDK_DEFAULT_OVERRIDE:
+      g_set_object(&self->sdk_default_override, g_value_dup_object (value));
       break;
 
     default:
@@ -434,6 +457,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_LIBDIR,
+                                   g_param_spec_string ("libdir",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_ENV,
                                    g_param_spec_boxed ("env",
                                                        "",
@@ -503,6 +533,14 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                          "",
                                                          FALSE,
                                                          G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SDK_DEFAULT_OVERRIDE,
+                                   g_param_spec_object ("sdk-default-override",
+                                                        "",
+                                                        "",
+                                                        BUILDER_TYPE_SDK_CONFIG,
+                                                        G_PARAM_READWRITE));
 }
 
 static void
@@ -718,11 +756,19 @@ get_all_options (BuilderOptions *self, BuilderContext *context)
 }
 
 static const char *
-builder_options_get_flags (BuilderOptions *self, BuilderContext *context, size_t field_offset)
+builder_options_get_flags (BuilderOptions *self,
+                           BuilderContext *context,
+                           size_t          field_offset,
+                           const char     *sdk_flags)
 {
   g_autoptr(GList) options = get_all_options (self, context);
   GList *l;
   GString *flags = NULL;
+
+  if (sdk_flags && sdk_flags[0])
+    {
+      flags = g_string_new (sdk_flags);
+    }
 
   /* Last command flag wins, so reverse order */
   options = g_list_reverse (options);
@@ -750,28 +796,58 @@ builder_options_get_flags (BuilderOptions *self, BuilderContext *context, size_t
   return NULL;
 }
 
+static const char *
+get_sdk_flags (BuilderOptions *self, BuilderContext *context, const char *(*method)(BuilderSdkConfig *self))
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      if (o->sdk_default_override)
+        {
+          const char * sdk_flags = (*method) (o->sdk_default_override);
+          if (sdk_flags)
+            return sdk_flags;
+        }
+    }
+  {
+    BuilderSdkConfig *sdk_config = builder_context_get_sdk_config (context);
+    if (sdk_config)
+      {
+        const char *sdk_flags = (*method) (sdk_config);
+        return sdk_flags;
+      }
+  }
+  return NULL;
+}
 const char *
 builder_options_get_cflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags));
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags),
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cflags));
 }
 
 const char *
 builder_options_get_cxxflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags));
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags),
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cxxflags));
 }
 
 const char *
 builder_options_get_cppflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags));
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags),
+                                    get_sdk_flags (self, context, builder_sdk_config_get_cppflags));
 }
 
 const char *
 builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
 {
-  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags));
+  return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags),
+                                    get_sdk_flags (self, context, builder_sdk_config_get_ldflags));
 }
 
 static char *
@@ -887,6 +963,25 @@ builder_options_get_prefix (BuilderOptions *self, BuilderContext *context)
     return "/usr";
 
   return "/app";
+}
+
+const char *
+builder_options_get_libdir (BuilderOptions *self, BuilderContext *context)
+{
+  g_autoptr(GList) options = get_all_options (self, context);
+  GList *l;
+
+  for (l = options; l != NULL; l = l->next)
+    {
+      BuilderOptions *o = l->data;
+      if (o->libdir)
+        return o->libdir;
+    }
+
+  if (builder_context_get_build_runtime (context))
+    return get_sdk_flags (self, context, builder_sdk_config_get_libdir);
+
+  return NULL;
 }
 
 gboolean
@@ -1154,6 +1249,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_str (cache, self->cppflags);
   builder_cache_checksum_str (cache, self->ldflags);
   builder_cache_checksum_str (cache, self->prefix);
+  builder_cache_checksum_compat_str (cache, self->libdir);
   builder_cache_checksum_strv (cache, self->env);
   builder_cache_checksum_strv (cache, self->build_args);
   builder_cache_checksum_compat_strv (cache, self->test_args);

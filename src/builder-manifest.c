@@ -1463,6 +1463,34 @@ flatpak_info (gboolean opt_user,
   return NULL;
 }
 
+static char *
+flatpak_info_show_path (const char *id,
+                        const char *branch,
+                        BuilderContext  *context)
+{
+  g_autofree char *sdk_info = NULL;
+  g_autofree char *arch_option = NULL;
+  g_auto(GStrv) sdk_info_lines = NULL;
+  int i;
+
+  /* Unfortunately there is not flatpak info --show-path, so we have to look at the full flatpak info output */
+
+  arch_option = g_strdup_printf ("--arch=%s", builder_context_get_arch (context));
+
+  sdk_info = flatpak (NULL, "info", arch_option, id, branch, NULL);
+  if (sdk_info == NULL)
+    return NULL;
+
+  sdk_info_lines = g_strsplit (sdk_info, "\n", -1);
+  for (i = 0; sdk_info_lines[i] != NULL; i++)
+    {
+      if (g_str_has_prefix (sdk_info_lines[i], "Location:"))
+        return g_strstrip (g_strdup (sdk_info_lines[i] + strlen ("Location:")));
+    }
+
+  return NULL;
+}
+
 gboolean
 builder_manifest_start (BuilderManifest *self,
                         gboolean download_only,
@@ -1472,6 +1500,7 @@ builder_manifest_start (BuilderManifest *self,
 {
   g_autofree char *arch_option = NULL;
   g_autoptr(GHashTable) names = g_hash_table_new (g_str_hash, g_str_equal);
+  g_autofree char *sdk_path = NULL;
   const char *stop_at;
 
   if (self->sdk == NULL)
@@ -1489,6 +1518,11 @@ builder_manifest_start (BuilderManifest *self,
     return flatpak_fail (error, "Unable to find sdk %s version %s",
                          self->sdk,
                          builder_manifest_get_runtime_version (self));
+
+  sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_runtime_version (self), context);
+  if (sdk_path != NULL &&
+      !builder_context_load_sdk_config (context, sdk_path, error))
+    return FALSE;
 
   self->runtime_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->runtime,
                                   builder_manifest_get_runtime_version (self), NULL);

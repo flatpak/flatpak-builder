@@ -47,6 +47,8 @@ const char *builder_options_get_ldflags (BuilderOptions *self,
                                          BuilderContext *context);
 const char *builder_options_get_prefix (BuilderOptions *self,
                                         BuilderContext *context);
+const char *builder_options_get_libdir (BuilderOptions *self,
+                                        BuilderContext *context);
 char **     builder_options_get_env (BuilderOptions *self,
                                      BuilderContext *context);
 char **     builder_options_get_build_args (BuilderOptions *self,
