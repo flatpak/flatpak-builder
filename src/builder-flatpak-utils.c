@@ -565,6 +565,8 @@ flatpak_spawnv (GFile                *dir,
 
   launcher = g_subprocess_launcher_new (0);
 
+  g_subprocess_launcher_setenv (launcher, "LANGUAGE", "C", TRUE);
+
   if (output)
     flags |= G_SUBPROCESS_FLAGS_STDOUT_PIPE;
 
