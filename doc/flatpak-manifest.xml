@@ -827,7 +827,7 @@
                         <listitem><para>The sha256 of the extra data.</para></listitem>
                     </varlistentry>
                     <varlistentry>
-                        <term><option>size</option> (string)</term>
+                        <term><option>size</option> (number)</term>
                         <listitem><para>The size of the extra data.</para></listitem>
                     </varlistentry>
                     <varlistentry>
