@@ -273,16 +273,32 @@
                     <listitem><para>This is set in the environment variable CFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>cflags-override</option> (boolean)</term>
+                    <listitem><para>If this is true, clear cflags from previous build options before adding it from these options.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>cppflags</option> (string)</term>
                     <listitem><para>This is set in the environment variable CPPFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>cppflags-override</option> (boolean)</term>
+                    <listitem><para>If this is true, clear cppflags from previous build options before adding it from these options.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>cxxflags</option> (string)</term>
                     <listitem><para>This is set in the environment variable CXXFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>cxxflags-override</option> (boolean)</term>
+                    <listitem><para>If this is true, clear cxxflags from previous build options before adding it from these options.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>ldflags</option> (string)</term>
                     <listitem><para>This is set in the environment variable LDFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>ldflags-override</option> (boolean)</term>
+                    <listitem><para>If this is true, clear ldflags from previous build options before adding it from these options.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>prefix</option> (string)</term>
