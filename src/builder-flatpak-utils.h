@@ -29,6 +29,7 @@
 #include <libsoup/soup.h>
 #include <ostree.h>
 #include <json-glib/json-glib.h>
+#include <curl/curl.h>
 
 typedef enum {
   FLATPAK_HOST_COMMAND_FLAGS_CLEAR_ENV = 1 << 0,
@@ -349,6 +350,7 @@ gboolean flatpak_allocate_tmpdir (int           tmpdir_dfd,
 
 
 SoupSession * flatpak_create_soup_session (const char *user_agent);
+CURL * flatpak_create_curl_session (const char *user_agent);
 GBytes * flatpak_load_http_uri (SoupSession *soup_session,
                                 const char   *uri,
                                 const char   *etag,

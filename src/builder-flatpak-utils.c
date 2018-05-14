@@ -1230,6 +1230,24 @@ flatpak_create_soup_session (const char *user_agent)
   return soup_session;
 }
 
+CURL *
+flatpak_create_curl_session (const char *user_agent)
+{
+  CURL *curl_session;
+
+  curl_global_init (CURL_GLOBAL_DEFAULT);
+
+  curl_session = curl_easy_init ();
+  if (curl_session == NULL)
+    return NULL;
+
+  curl_easy_setopt (curl_session, CURLOPT_CONNECTTIMEOUT, 60);
+  curl_easy_setopt (curl_session, CURLOPT_NOPROGRESS, 0);
+  curl_easy_setopt (curl_session, CURLOPT_USERAGENT, user_agent);
+
+  return curl_session;
+}
+
 gboolean
 flatpak_download_http_uri (SoupSession *soup_session,
                            const char   *uri,

@@ -46,6 +46,7 @@ struct BuilderContext
   GFile          *base_dir; /* directory with json manifest, origin for source files */
   char           *state_subdir;
   SoupSession    *soup_session;
+  CURL           *curl_session;
   char           *arch;
   char           *stop_at;
 
@@ -125,6 +126,10 @@ builder_context_finalize (GObject *object)
 
   g_clear_pointer (&self->sources_dirs, g_ptr_array_unref);
   g_clear_pointer (&self->sources_urls, g_ptr_array_unref);
+
+  curl_easy_cleanup (self->curl_session);
+  self->curl_session = NULL;
+  curl_global_cleanup ();
 
   G_OBJECT_CLASS (builder_context_parent_class)->finalize (object);
 }
@@ -387,10 +392,12 @@ builder_context_download_uri (BuilderContext *self,
                                     dest,
                                     checksums, checksums_type,
                                     builder_context_get_soup_session (self),
+                                    builder_context_get_curl_session (self),
                                     &my_error))
             return TRUE;
 
-          if (!g_error_matches (my_error, SOUP_HTTP_ERROR, SOUP_STATUS_NOT_FOUND))
+          if (!g_error_matches (my_error, SOUP_HTTP_ERROR, SOUP_STATUS_NOT_FOUND) &&
+              !g_error_matches (my_error, BUILDER_CURL_ERROR, CURLE_REMOTE_FILE_NOT_FOUND))
             g_warning ("Error downloading from mirror: %s\n", my_error->message);
         }
     }
@@ -399,6 +406,7 @@ builder_context_download_uri (BuilderContext *self,
                              dest,
                              checksums, checksums_type,
                              builder_context_get_soup_session (self),
+                             builder_context_get_curl_session (self),
                              error))
     return FALSE;
 
@@ -496,6 +504,15 @@ builder_context_get_soup_session (BuilderContext *self)
     self->soup_session = flatpak_create_soup_session ("flatpak-builder " PACKAGE_VERSION);
 
   return self->soup_session;
+}
+
+CURL *
+builder_context_get_curl_session (BuilderContext *self)
+{
+  if (self->curl_session == NULL)
+    self->curl_session = flatpak_create_curl_session ("flatpak-builder " PACKAGE_VERSION);
+
+  return self->curl_session;
 }
 
 const char *
