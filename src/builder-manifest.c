@@ -3650,6 +3650,8 @@ builder_manifest_install_deps (BuilderManifest *self,
                                gboolean opt_yes,
                                GError **error)
 {
+  GList *l;
+
   /* Sdk */
   g_print ("Dependency Sdk: %s %s\n", self->sdk, builder_manifest_get_runtime_version (self));
   if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
@@ -3690,7 +3692,7 @@ builder_manifest_install_deps (BuilderManifest *self,
                                                 error))
     return FALSE;
 
-  for (GList *l = self->add_build_extensions; l != NULL; l = l->next)
+  for (l = self->add_build_extensions; l != NULL; l = l->next)
     {
       BuilderExtension *extension = l->data;
       const char *name = builder_extension_get_name (extension);
