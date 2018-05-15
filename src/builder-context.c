@@ -391,13 +391,11 @@ builder_context_download_uri (BuilderContext *self,
           if (builder_download_uri (mirror_uri,
                                     dest,
                                     checksums, checksums_type,
-                                    builder_context_get_soup_session (self),
                                     builder_context_get_curl_session (self),
                                     &my_error))
             return TRUE;
 
-          if (!g_error_matches (my_error, SOUP_HTTP_ERROR, SOUP_STATUS_NOT_FOUND) &&
-              !g_error_matches (my_error, BUILDER_CURL_ERROR, CURLE_REMOTE_FILE_NOT_FOUND))
+          if (!g_error_matches (my_error, BUILDER_CURL_ERROR, CURLE_REMOTE_FILE_NOT_FOUND))
             g_warning ("Error downloading from mirror: %s\n", my_error->message);
         }
     }
@@ -405,7 +403,6 @@ builder_context_download_uri (BuilderContext *self,
   if (!builder_download_uri (original_uri,
                              dest,
                              checksums, checksums_type,
-                             builder_context_get_soup_session (self),
                              builder_context_get_curl_session (self),
                              error))
     return FALSE;

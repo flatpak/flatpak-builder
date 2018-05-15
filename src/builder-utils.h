@@ -88,7 +88,6 @@ gboolean builder_download_uri (SoupURI        *uri,
                                GFile          *dest,
                                const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
-                               SoupSession    *soup_session,
                                CURL           *curl_session,
                                GError        **error);
 
