@@ -1934,79 +1934,11 @@ builder_download_uri_curl (SoupURI        *uri,
   return TRUE;
 }
 
-typedef struct {
-  int stage;
-  gboolean printed_something;
-} DownloadPromptData;
-
-static void
-download_progress (guint64 downloaded_bytes,
-                   gpointer user_data)
-{
-  DownloadPromptData *progress_data = user_data;
-  char chrs[] = { '|', '/', '-', '\\' };
-
-  if (progress_data->printed_something)
-    g_print ("\b");
-  progress_data->printed_something = TRUE;
-  g_print ("%c", chrs[progress_data->stage]);
-  progress_data->stage =  (progress_data->stage + 1) % G_N_ELEMENTS(chrs);
-}
-
-static void
-download_progress_cleanup (DownloadPromptData *progress_data)
-{
-  if (progress_data->printed_something)
-    g_print ("\b");
-}
-
-static gboolean
-builder_download_uri_soup (SoupURI       *uri,
-                           SoupSession   *session,
-                           GOutputStream *out,
-                           GChecksum    **checksums,
-                           gsize          n_checksums,
-                           GError       **error)
-{
-  g_autoptr(GInputStream) input = NULL;
-  g_autoptr(SoupRequest) req = NULL;
-  DownloadPromptData progress_data = {0};
-
-  req = soup_session_request_uri (session, uri, error);
-  if (req == NULL)
-    return FALSE;
-
-  input = soup_request_send (req, NULL, error);
-  if (input == NULL)
-    return FALSE;
-
-  if (SOUP_IS_REQUEST_HTTP (req))
-    {
-      g_autoptr(SoupMessage) msg = soup_request_http_get_message (SOUP_REQUEST_HTTP(req));
-      if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code))
-        {
-          g_set_error_literal (error, SOUP_HTTP_ERROR, msg->status_code, msg->reason_phrase);
-          return FALSE;
-        }
-    }
-
-  if (!flatpak_splice_update_checksum (G_OUTPUT_STREAM (out), input,
-                                       checksums, n_checksums,
-                                       download_progress, &progress_data,
-                                       NULL, error))
-    return FALSE;
-
-  download_progress_cleanup (&progress_data);
-
-  return TRUE;
-}
-
 gboolean
 builder_download_uri (SoupURI        *uri,
                       GFile          *dest,
                       const char     *checksums[BUILDER_CHECKSUMS_LEN],
                       GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
-                      SoupSession    *soup_session,
                       CURL           *curl_session,
                       GError        **error)
 {
@@ -2017,7 +1949,6 @@ builder_download_uri (SoupURI        *uri,
   g_autofree char *basename = g_file_get_basename (dest);
   g_autofree char *template = g_strconcat (".", basename, "XXXXXX", NULL);
   gsize i;
-  gboolean download_res;
 
   for (i = 0; checksums[i] != NULL; i++)
     g_ptr_array_add (checksum_array,
@@ -2035,24 +1966,12 @@ builder_download_uri (SoupURI        *uri,
   if (out == NULL)
     return FALSE;
 
-  if (SOUP_URI_VALID_FOR_HTTP(uri))
-    {
-      download_res = builder_download_uri_soup (uri, soup_session,
-                                                G_OUTPUT_STREAM (out),
-                                                (GChecksum **)checksum_array->pdata,
-                                                checksum_array->len,
-                                                error);
-    }
-  else
-    {
-      download_res = builder_download_uri_curl (uri, curl_session,
-                                                G_OUTPUT_STREAM (out),
-                                                (GChecksum **)checksum_array->pdata,
-                                                checksum_array->len,
-                                                error);
-    }
-
-  if (download_res == FALSE)
+  if (!builder_download_uri_curl (uri,
+                                  curl_session,
+                                  G_OUTPUT_STREAM (out),
+                                  (GChecksum **)checksum_array->pdata,
+                                  checksum_array->len,
+                                  error))
     {
       unlink (flatpak_file_get_path_cached (tmp));
       return FALSE;
