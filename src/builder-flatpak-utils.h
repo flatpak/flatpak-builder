@@ -351,21 +351,6 @@ gboolean flatpak_allocate_tmpdir (int           tmpdir_dfd,
 
 SoupSession * flatpak_create_soup_session (const char *user_agent);
 CURL * flatpak_create_curl_session (const char *user_agent);
-GBytes * flatpak_load_http_uri (SoupSession *soup_session,
-                                const char   *uri,
-                                const char   *etag,
-                                char        **out_etag,
-                                FlatpakLoadUriProgress progress,
-                                gpointer      user_data,
-                                GCancellable *cancellable,
-                                GError      **error);
-gboolean flatpak_download_http_uri (SoupSession *soup_session,
-                                    const char   *uri,
-                                    GOutputStream *out,
-                                    FlatpakLoadUriProgress progress,
-                                    gpointer      user_data,
-                                    GCancellable *cancellable,
-                                    GError      **error);
 
 typedef struct FlatpakContext FlatpakContext;
 
