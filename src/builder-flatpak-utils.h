@@ -71,23 +71,12 @@ typedef void (*FlatpakLoadUriProgress) (guint64 downloaded_bytes,
  */
 #define flatpak_fail glnx_throw
 
-gint flatpak_strcmp0_ptr (gconstpointer a,
-                          gconstpointer b);
-
-gboolean  flatpak_has_path_prefix (const char *str,
-                                   const char *prefix);
-
 const char * flatpak_path_match_prefix (const char *pattern,
                                         const char *path);
 
 gboolean flatpak_is_in_sandbox (void);
 
-gboolean flatpak_fancy_output (void);
-
 const char * flatpak_get_arch (void);
-const char ** flatpak_get_arches (void);
-
-char ** flatpak_get_current_locale_subpaths (void);
 
 GFile *flatpak_file_new_tmp_in (GFile *dir,
                                 const char *templatename,
@@ -113,23 +102,11 @@ gboolean flatpak_splice_update_checksum (GOutputStream  *out,
                                          GCancellable   *cancellable,
                                          GError        **error);
 
-GBytes * flatpak_read_stream (GInputStream *in,
-                              gboolean      null_terminate,
-                              GError      **error);
-
 
 gboolean flatpak_has_name_prefix (const char *string,
                                   const char *name);
-gboolean flatpak_is_valid_name (const char *string,
-                                GError **error);
-gboolean flatpak_is_valid_branch (const char *string,
-                                  GError **error);
 
 char * flatpak_make_valid_id_prefix (const char *orig_id);
-gboolean flatpak_id_has_subref_suffix (const char *id);
-
-char **flatpak_decompose_ref (const char *ref,
-                              GError    **error);
 
 char * flatpak_compose_ref (gboolean    app,
                             const char *name,
@@ -198,13 +175,7 @@ flatpak_auto_lock_helper (GMutex *mutex)
   return mutex;
 }
 
-gint flatpak_mkstempat (int    dir_fd,
-                        gchar *tmpl,
-                        int    flags,
-                        int    mode);
-
 char * flatpak_quote_argv (const char *argv[]);
-gboolean flatpak_file_arg_has_suffix (const char *arg, const char *suffix);
 
 gboolean            flatpak_spawn (GFile       *dir,
                                    char       **output,
@@ -229,12 +200,6 @@ gboolean flatpak_file_rename (GFile *from,
                               GFile *to,
                               GCancellable  *cancellable,
                               GError       **error);
-
-gboolean flatpak_openat_noatime (int            dfd,
-                                 const char    *name,
-                                 int           *ret_fd,
-                                 GCancellable  *cancellable,
-                                 GError       **error);
 
 typedef enum {
   FLATPAK_CP_FLAGS_NONE = 0,
@@ -262,13 +227,6 @@ gboolean flatpak_mkdir_p (GFile         *dir,
 gboolean flatpak_rm_rf (GFile         *dir,
                         GCancellable  *cancellable,
                         GError       **error);
-
-gboolean flatpak_open_in_tmpdir_at (int                tmpdir_fd,
-                                    int                mode,
-                                    char              *tmpl,
-                                    GOutputStream    **out_stream,
-                                    GCancellable      *cancellable,
-                                    GError           **error);
 
 static inline void
 flatpak_temp_dir_destroy (void *p)
@@ -351,21 +309,6 @@ gboolean flatpak_allocate_tmpdir (int           tmpdir_dfd,
 
 SoupSession * flatpak_create_soup_session (const char *user_agent);
 CURL * flatpak_create_curl_session (const char *user_agent);
-GBytes * flatpak_load_http_uri (SoupSession *soup_session,
-                                const char   *uri,
-                                const char   *etag,
-                                char        **out_etag,
-                                FlatpakLoadUriProgress progress,
-                                gpointer      user_data,
-                                GCancellable *cancellable,
-                                GError      **error);
-gboolean flatpak_download_http_uri (SoupSession *soup_session,
-                                    const char   *uri,
-                                    GOutputStream *out,
-                                    FlatpakLoadUriProgress progress,
-                                    gpointer      user_data,
-                                    GCancellable *cancellable,
-                                    GError      **error);
 
 typedef struct FlatpakContext FlatpakContext;
 

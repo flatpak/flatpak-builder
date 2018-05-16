@@ -276,9 +276,9 @@ get_source_file (BuilderSourceFile *self,
 }
 
 static GBytes *
-download_uri (const char     *url,
-              BuilderContext *context,
-              GError        **error)
+download_data_uri (const char     *url,
+                   BuilderContext *context,
+                   GError        **error)
 {
   SoupSession *session;
 
@@ -432,9 +432,9 @@ builder_source_file_extract (BuilderSource  *source,
     {
       g_autoptr(GBytes) content = NULL;
 
-      content = download_uri (self->url,
-                              context,
-                              error);
+      content = download_data_uri (self->url,
+                                   context,
+                                   error);
       if (content == NULL)
         return FALSE;
 
