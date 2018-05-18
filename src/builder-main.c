@@ -355,6 +355,15 @@ main (int    argc,
   else
     g_unsetenv ("GIO_USE_VFS");
 
+
+  /* Work around libsoup/glib race condition, as per:
+     https://bugzilla.gnome.org/show_bug.cgi?id=796031 and
+     https://bugzilla.gnome.org/show_bug.cgi?id=674885#c87 */
+  g_type_ensure (G_TYPE_SOCKET_FAMILY);
+  g_type_ensure (G_TYPE_SOCKET_TYPE);
+  g_type_ensure (G_TYPE_SOCKET_PROTOCOL);
+  g_type_ensure (G_TYPE_SOCKET_ADDRESS);
+
   orig_argv = g_memdup (argv, sizeof (char *) * argc);
   orig_argc = argc;
 
