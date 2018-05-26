@@ -169,7 +169,7 @@
                     finishing the build.</para></listitem>
                 </varlistentry>
                 <varlistentry>
-                    <term><option>inherit-sd-extensions</option> (array of strings)</term>
+                    <term><option>inherit-sdk-extensions</option> (array of strings)</term>
                     <listitem><para>Inherit these extra extensions points from the base application or sdk when
                     finishing the build, but do not inherit them into the platform.</para></listitem>
                 </varlistentry>
@@ -183,7 +183,7 @@
                     <listitem><para>Object specifying the build environment. See below for details.</para></listitem>
                 </varlistentry>
                 <varlistentry>
-                    <term><option>modules</option> (array of objects or string)</term>
+                    <term><option>modules</option> (array of objects or strings)</term>
                     <listitem><para>An array of objects specifying the modules to be built in order.
                     String members in the array are interpreted as the name of a separate json or yaml file that contains a module.
                     See below for details.</para></listitem>
@@ -442,7 +442,7 @@
                     <listitem><para>If true, skip this module</para></listitem>
                 </varlistentry>
                 <varlistentry>
-                    <term><option>sources</option> (array of objects or string)</term>
+                    <term><option>sources</option> (array of objects or strings)</term>
                     <listitem><para>An array of objects defining
                     sources that will be downloaded and extracted in
                     order. String members in the array are interpreted
@@ -553,7 +553,7 @@
                     <listitem><para>The target to build when running the tests. Defaults to "check" for make and "test" for ninja. Set to empty to disable.</para></listitem>
                 </varlistentry>
                 <varlistentry>
-                    <term><option>test-commands</option> (arrya of string)</term>
+                    <term><option>test-commands</option> (array of strings)</term>
                     <listitem><para>Array of commands to run during the tests.</para></listitem>
                 </varlistentry>
                 <varlistentry>
@@ -716,7 +716,7 @@
                         <listitem><para>The path of a local directory whose content will be copied into the source dir. Note that directory sources don't currently support caching, so they will be rebuilt each time.</para></listitem>
                     </varlistentry>
                     <varlistentry>
-                        <term><option>skip</option> (array of string)</term>
+                        <term><option>skip</option> (array of strings)</term>
                         <listitem><para>Source files to ignore in the directory.</para></listitem>
                     </varlistentry>
                 </variablelist>
