@@ -1911,23 +1911,26 @@ builder_download_uri_curl (SoupURI        *uri,
 {
   CURLcode retcode;
   CURLWriteData write_data;
+  static gchar error_buffer[CURL_ERROR_SIZE];
   g_autofree gchar *url = soup_uri_to_string (uri, FALSE);
 
   curl_easy_setopt (session, CURLOPT_URL, url);
   curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
   curl_easy_setopt (session, CURLOPT_WRITEDATA, &write_data);
+  curl_easy_setopt (session, CURLOPT_ERRORBUFFER, error_buffer);
 
   write_data.out = out;
   write_data.checksums = checksums;
   write_data.n_checksums = n_checksums;
   write_data.error = error;
 
+  *error_buffer = '\0';
   retcode = curl_easy_perform (session);
 
   if (retcode != CURLE_OK)
     {
       g_set_error_literal (error, BUILDER_CURL_ERROR, retcode,
-                           curl_easy_strerror (retcode));
+                           *error_buffer ? error_buffer : curl_easy_strerror (retcode));
       return FALSE;
     }
 
