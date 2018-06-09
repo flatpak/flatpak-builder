@@ -509,6 +509,7 @@
                     <term><option>build-commands</option> (array of strings)</term>
                     <listitem><para>An array of commands to run during build (between make and make install if those are used).
                     This is primarily useful when using the "simple" buildsystem.
+                    Each command is run in <literal>/bin/sh -c</literal>, so it can use standard POSIX shell syntax such as piping output.
                     </para></listitem>
                 </varlistentry>
                 <varlistentry>
