@@ -332,6 +332,7 @@ main (int    argc,
   gboolean is_run = FALSE;
   gboolean is_show_deps = FALSE;
   gboolean app_dir_is_empty = FALSE;
+  gboolean prune_unused_stages = FALSE;
   g_autoptr(FlatpakContext) arg_context = NULL;
   g_autoptr(FlatpakTempDir) cleanup_manifest_dir = NULL;
   g_autofree char *manifest_basename = NULL;
@@ -1064,7 +1065,10 @@ main (int    argc,
         }
     }
 
-  if (!builder_gc (cache, &error))
+  if (!opt_finish_only && !opt_export_only)
+    prune_unused_stages = TRUE;
+
+  if (!builder_gc (cache, prune_unused_stages, &error))
     {
       g_warning ("Failed to GC build cache: %s", error->message);
       g_clear_error (&error);

@@ -59,6 +59,7 @@ GPtrArray   *builder_cache_get_changes (BuilderCache *self,
 GPtrArray   *builder_cache_get_all_changes (BuilderCache *self,
                                             GError      **error);
 gboolean      builder_gc (BuilderCache *self,
+                          gboolean      prune_unused_stages,
                           GError      **error);
 
 void builder_cache_checksum_str (BuilderCache *self,

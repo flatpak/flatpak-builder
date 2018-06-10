@@ -1210,6 +1210,7 @@ builder_cache_disable_lookups (BuilderCache *self)
 
 gboolean
 builder_gc (BuilderCache *self,
+            gboolean      prune_unused_stages,
             GError      **error)
 {
   gint objects_total;
@@ -1218,20 +1219,23 @@ builder_gc (BuilderCache *self,
   GHashTableIter iter;
   gpointer key, value;
 
-  g_hash_table_iter_init (&iter, self->unused_stages);
-  while (g_hash_table_iter_next (&iter, &key, &value))
+  if (prune_unused_stages)
     {
-      const char *unused_stage = (const char *) key;
-      g_autofree char *unused_ref = get_ref (self, unused_stage);
+      g_hash_table_iter_init (&iter, self->unused_stages);
+      while (g_hash_table_iter_next (&iter, &key, &value))
+        {
+          const char *unused_stage = (const char *) key;
+          g_autofree char *unused_ref = get_ref (self, unused_stage);
 
-      g_debug ("Removing unused ref %s", unused_ref);
+          g_debug ("Removing unused ref %s", unused_ref);
 
-      if (!ostree_repo_set_ref_immediate (self->repo,
-                                          NULL,
-                                          unused_ref,
-                                          NULL,
-                                          NULL, error))
-        return FALSE;
+          if (!ostree_repo_set_ref_immediate (self->repo,
+                                              NULL,
+                                              unused_ref,
+                                              NULL,
+                                              NULL, error))
+            return FALSE;
+        }
     }
 
   g_print ("Pruning cache\n");
