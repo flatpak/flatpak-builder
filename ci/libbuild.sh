@@ -55,5 +55,5 @@ pkg_install_builddeps() {
     # builddeps+runtime deps
     pkg_builddep $pkg
     pkg_install $pkg
-    rpm -e $pkg
+    rpm -e --nodeps $pkg
 }
