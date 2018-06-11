@@ -12,13 +12,13 @@ pkg_install sudo which attr fuse \
     libcurl-devel \
     /usr/bin/{update-mime-database,update-desktop-database,gtk-update-icon-cache}
 pkg_install_testing ostree-devel ostree libyaml-devel
-pkg_install_if_os fedora gjs parallel clang
+pkg_install_if_os fedora gjs parallel clang python2
 pkg_install_builddeps flatpak
 
 (git clone --depth=1 https://github.com/flatpak/flatpak/
  cd flatpak
  unset CFLAGS # the sanitizers require calling apps be linked too
- build
+ build --disable-introspection
  make install
  flatpak --version
 )
