@@ -2420,35 +2420,54 @@ builder_manifest_cleanup (BuilderManifest *self,
 
           if (appdata_file != NULL)
             {
-              g_autofree char *contents;
-              const char *to_replace;
-              const char *match;
-              g_autofree char *replace_src = NULL;
-              g_autofree char *replace_dst = NULL;
+              FlatpakXml *n_id;
+              FlatpakXml *n_root;
+              FlatpakXml *n_text;
+              g_autoptr(FlatpakXml) xml_root = NULL;
+              g_autoptr(GInputStream) in = NULL;
               g_autoptr(GString) new_contents = NULL;
 
-              if (!g_file_load_contents (appdata_file, NULL, &contents, NULL, NULL, error))
+              in = (GInputStream *) g_file_read (appdata_file, NULL, error);
+              if (!in)
+                return FALSE;
+              xml_root = flatpak_xml_parse (in, FALSE, NULL, error);
+              if (!xml_root)
                 return FALSE;
 
-              new_contents = g_string_sized_new (strlen (contents));
-
-              to_replace = contents;
-
-              /* We only want to replace entire matches to id tag, so add the brackets
-               * and the end-tag. That way we don't do partial matches, or match
-               * other tags, while still handling e.g. <id type="desktop">foo.desktop</id> */
-              replace_src = g_strdup_printf (">%s</id", self->rename_desktop_file);
-              replace_dst = g_strdup_printf (">%s</id", desktop_basename);
-
-              while ((match = strstr (to_replace, replace_src)) != NULL)
+              /* replace component/id */
+              n_root = flatpak_xml_find (xml_root, "component", NULL);
+              if (!n_root)
+                n_root = flatpak_xml_find (xml_root, "application", NULL);
+              if (!n_root)
                 {
-                  g_string_append_len (new_contents, to_replace, match - to_replace);
-                  g_string_append (new_contents, replace_dst);
-                  to_replace = match + strlen (replace_src);
+                  g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED, "no <component> node");
+                  return FALSE;
+                }
+              n_id = flatpak_xml_find (n_root, "id", NULL);
+              if (n_id)
+                {
+                  n_text = n_id->first_child;
+                  if (n_text && g_strcmp0 (n_text->text, self->rename_desktop_file) == 0)
+                    {
+                      g_free (n_text->text);
+                      n_text->text = g_strdup (self->id);
+                    }
                 }
 
-              g_string_append (new_contents, to_replace);
+              /* replace any optional launchable */
+              n_id = flatpak_xml_find (n_root, "launchable", NULL);
+              if (n_id)
+                {
+                  n_text = n_id->first_child;
+                  if (n_text && g_strcmp0 (n_text->text, self->rename_desktop_file) == 0)
+                    {
+                      g_free (n_text->text);
+                      n_text->text = g_strdup (desktop_basename);
+                    }
+                }
 
+              new_contents = g_string_new ("");
+              flatpak_xml_to_string (xml_root, new_contents);
               if (!g_file_set_contents (flatpak_file_get_path_cached (appdata_file),
                                         new_contents->str,
                                         new_contents->len,

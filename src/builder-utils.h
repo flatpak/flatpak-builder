@@ -123,6 +123,39 @@ xml_autoptr_cleanup_generic_free (void *p)
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (xmlDoc, xmlFreeDoc)
 
+typedef struct FlatpakXml FlatpakXml;
+
+struct FlatpakXml
+{
+  gchar      *element_name; /* NULL == text */
+  char      **attribute_names;
+  char      **attribute_values;
+  char       *text;
+  FlatpakXml *parent;
+  FlatpakXml *first_child;
+  FlatpakXml *last_child;
+  FlatpakXml *next_sibling;
+};
+
+FlatpakXml *flatpak_xml_new (const gchar *element_name);
+FlatpakXml *flatpak_xml_new_text (const gchar *text);
+void       flatpak_xml_add (FlatpakXml *parent,
+                            FlatpakXml *node);
+void       flatpak_xml_free (FlatpakXml *node);
+FlatpakXml *flatpak_xml_parse (GInputStream *in,
+                               gboolean      compressed,
+                               GCancellable *cancellable,
+                               GError      **error);
+void       flatpak_xml_to_string (FlatpakXml *node,
+                                  GString    *res);
+FlatpakXml *flatpak_xml_unlink (FlatpakXml *node,
+                                FlatpakXml *prev_sibling);
+FlatpakXml *flatpak_xml_find (FlatpakXml  *node,
+                              const char  *type,
+                              FlatpakXml **prev_child_out);
+
+G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
+
 G_END_DECLS
 
 #endif /* __BUILDER_UTILS_H__ */
