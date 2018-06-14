@@ -2035,3 +2035,272 @@ builder_set_term_title (const gchar *format,
 
   g_print ("\033]2;flatpak-builder: %s\007", message);
 }
+
+typedef struct
+{
+  FlatpakXml *current;
+} XmlData;
+
+FlatpakXml *
+flatpak_xml_new (const gchar *element_name)
+{
+  FlatpakXml *node = g_new0 (FlatpakXml, 1);
+
+  node->element_name = g_strdup (element_name);
+  return node;
+}
+
+FlatpakXml *
+flatpak_xml_new_text (const gchar *text)
+{
+  FlatpakXml *node = g_new0 (FlatpakXml, 1);
+
+  node->text = g_strdup (text);
+  return node;
+}
+
+void
+flatpak_xml_add (FlatpakXml *parent, FlatpakXml *node)
+{
+  node->parent = parent;
+
+  if (parent->first_child == NULL)
+    parent->first_child = node;
+  else
+    parent->last_child->next_sibling = node;
+  parent->last_child = node;
+}
+
+static void
+xml_start_element (GMarkupParseContext *context,
+                   const gchar         *element_name,
+                   const gchar        **attribute_names,
+                   const gchar        **attribute_values,
+                   gpointer             user_data,
+                   GError             **error)
+{
+  XmlData *data = user_data;
+  FlatpakXml *node;
+
+  node = flatpak_xml_new (element_name);
+  node->attribute_names = g_strdupv ((char **) attribute_names);
+  node->attribute_values = g_strdupv ((char **) attribute_values);
+
+  flatpak_xml_add (data->current, node);
+  data->current = node;
+}
+
+static void
+xml_end_element (GMarkupParseContext *context,
+                 const gchar         *element_name,
+                 gpointer             user_data,
+                 GError             **error)
+{
+  XmlData *data = user_data;
+
+  data->current = data->current->parent;
+}
+
+static void
+xml_text (GMarkupParseContext *context,
+          const gchar         *text,
+          gsize                text_len,
+          gpointer             user_data,
+          GError             **error)
+{
+  XmlData *data = user_data;
+  FlatpakXml *node;
+
+  node = flatpak_xml_new (NULL);
+  node->text = g_strndup (text, text_len);
+  flatpak_xml_add (data->current, node);
+}
+
+static void
+xml_passthrough (GMarkupParseContext *context,
+                 const gchar         *passthrough_text,
+                 gsize                text_len,
+                 gpointer             user_data,
+                 GError             **error)
+{
+}
+
+static GMarkupParser xml_parser = {
+  xml_start_element,
+  xml_end_element,
+  xml_text,
+  xml_passthrough,
+  NULL
+};
+
+void
+flatpak_xml_free (FlatpakXml *node)
+{
+  FlatpakXml *child;
+
+  if (node == NULL)
+    return;
+
+  child = node->first_child;
+  while (child != NULL)
+    {
+      FlatpakXml *next = child->next_sibling;
+      flatpak_xml_free (child);
+      child = next;
+    }
+
+  g_free (node->element_name);
+  g_free (node->text);
+  g_strfreev (node->attribute_names);
+  g_strfreev (node->attribute_values);
+  g_free (node);
+}
+
+
+void
+flatpak_xml_to_string (FlatpakXml *node, GString *res)
+{
+  int i;
+  FlatpakXml *child;
+
+  if (node->parent == NULL)
+    g_string_append (res, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+
+  if (node->element_name)
+    {
+      if (node->parent != NULL)
+        {
+          g_string_append (res, "<");
+          g_string_append (res, node->element_name);
+          if (node->attribute_names)
+            {
+              for (i = 0; node->attribute_names[i] != NULL; i++)
+                {
+                  g_string_append_printf (res, " %s=\"%s\"",
+                                          node->attribute_names[i],
+                                          node->attribute_values[i]);
+                }
+            }
+          if (node->first_child == NULL)
+            g_string_append (res, "/>");
+          else
+            g_string_append (res, ">");
+        }
+
+      child = node->first_child;
+      while (child != NULL)
+        {
+          flatpak_xml_to_string (child, res);
+          child = child->next_sibling;
+        }
+      if (node->parent != NULL)
+        {
+          if (node->first_child != NULL)
+            g_string_append_printf (res, "</%s>", node->element_name);
+        }
+
+    }
+  else if (node->text)
+    {
+      g_autofree char *escaped = g_markup_escape_text (node->text, -1);
+      g_string_append (res, escaped);
+    }
+}
+
+FlatpakXml *
+flatpak_xml_unlink (FlatpakXml *node,
+                    FlatpakXml *prev_sibling)
+{
+  FlatpakXml *parent = node->parent;
+
+  if (parent == NULL)
+    return node;
+
+  if (parent->first_child == node)
+    parent->first_child = node->next_sibling;
+
+  if (parent->last_child == node)
+    parent->last_child = prev_sibling;
+
+  if (prev_sibling)
+    prev_sibling->next_sibling = node->next_sibling;
+
+  node->parent = NULL;
+  node->next_sibling = NULL;
+
+  return node;
+}
+
+FlatpakXml *
+flatpak_xml_find (FlatpakXml  *node,
+                  const char  *type,
+                  FlatpakXml **prev_child_out)
+{
+  FlatpakXml *child = NULL;
+  FlatpakXml *prev_child = NULL;
+
+  child = node->first_child;
+  prev_child = NULL;
+  while (child != NULL)
+    {
+      FlatpakXml *next = child->next_sibling;
+
+      if (g_strcmp0 (child->element_name, type) == 0)
+        {
+          if (prev_child_out)
+            *prev_child_out = prev_child;
+          return child;
+        }
+
+      prev_child = child;
+      child = next;
+    }
+
+  return NULL;
+}
+
+
+FlatpakXml *
+flatpak_xml_parse (GInputStream *in,
+                   gboolean      compressed,
+                   GCancellable *cancellable,
+                   GError      **error)
+{
+  g_autoptr(GInputStream) real_in = NULL;
+  g_autoptr(FlatpakXml) xml_root = NULL;
+  XmlData data = { 0 };
+  char buffer[32 * 1024];
+  gssize len;
+  g_autoptr(GMarkupParseContext) ctx = NULL;
+
+  if (compressed)
+    {
+      g_autoptr(GZlibDecompressor) decompressor = NULL;
+      decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP);
+      real_in = g_converter_input_stream_new (in, G_CONVERTER (decompressor));
+    }
+  else
+    {
+      real_in = g_object_ref (in);
+    }
+
+  xml_root = flatpak_xml_new ("root");
+  data.current = xml_root;
+
+  ctx = g_markup_parse_context_new (&xml_parser,
+                                    G_MARKUP_PREFIX_ERROR_POSITION,
+                                    &data,
+                                    NULL);
+
+  while ((len = g_input_stream_read (real_in, buffer, sizeof (buffer),
+                                     cancellable, error)) > 0)
+    {
+      if (!g_markup_parse_context_parse (ctx, buffer, len, error))
+        return NULL;
+    }
+
+  if (len < 0)
+    return NULL;
+
+  return g_steal_pointer (&xml_root);
+}
