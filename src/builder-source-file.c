@@ -361,21 +361,10 @@ builder_source_file_download (BuilderSource  *source,
 
   if (g_file_query_exists (file, NULL))
     {
-      if (is_local && checksums[0] != NULL)
-        {
-          g_autofree char *data = NULL;
-          gsize len;
-
-          if (!g_file_load_contents (file, NULL, &data, &len, NULL, error))
-            return FALSE;
-
-          if (!builder_verify_checksums (base_name,
-                                         data, len,
-                                         checksums, checksums_type,
-                                         error))
-            return FALSE;
-        }
-      return TRUE;
+      return !is_local || checksums[0] == NULL ||
+             builder_verify_checksums (base_name, file,
+                                       checksums, checksums_type,
+                                       error);
     }
 
   if (is_local)
