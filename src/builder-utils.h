@@ -99,8 +99,7 @@ gsize builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
                                  const char *sha512);
 
 gboolean builder_verify_checksums (const char *name,
-                                   const char *data,
-                                   gsize len,
+                                   GFile *file,
                                    const char *checksums[BUILDER_CHECKSUMS_LEN],
                                    GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
                                    GError **error);
