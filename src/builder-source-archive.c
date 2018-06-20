@@ -43,6 +43,7 @@ struct BuilderSourceArchive
   char         *sha256;
   char         *sha512;
   guint         strip_components;
+  char         *dest_filename;
 };
 
 typedef struct
@@ -61,6 +62,7 @@ enum {
   PROP_SHA256,
   PROP_SHA512,
   PROP_STRIP_COMPONENTS,
+  PROP_DEST_FILENAME,
   LAST_PROP
 };
 
@@ -127,6 +129,7 @@ builder_source_archive_finalize (GObject *object)
   g_free (self->sha1);
   g_free (self->sha256);
   g_free (self->sha512);
+  g_free (self->dest_filename);
 
   G_OBJECT_CLASS (builder_source_archive_parent_class)->finalize (object);
 }
@@ -167,6 +170,10 @@ builder_source_archive_get_property (GObject    *object,
 
     case PROP_STRIP_COMPONENTS:
       g_value_set_uint (value, self->strip_components);
+      break;
+
+    case PROP_DEST_FILENAME:
+      g_value_set_string (value, self->dest_filename);
       break;
 
     default:
@@ -216,6 +223,11 @@ builder_source_archive_set_property (GObject      *object,
 
     case PROP_STRIP_COMPONENTS:
       self->strip_components = g_value_get_uint (value);
+      break;
+
+    case PROP_DEST_FILENAME:
+      g_free (self->dest_filename);
+      self->dest_filename = g_value_dup_string (value);
       break;
 
     default:
@@ -579,10 +591,37 @@ builder_source_archive_extract (BuilderSource  *source,
   g_autofree char *archive_path = NULL;
   BuilderArchiveType type;
   gboolean is_local;
+  g_autoptr(GFile) dest_file = NULL;
+  g_autofree char *dest_filename = NULL;
 
   archivefile = get_source_file (self, context, &is_local, error);
   if (archivefile == NULL)
     return FALSE;
+
+  if (self->dest_filename)
+    {
+      dest_filename = g_strdup (self->dest_filename);
+      dest_file = g_file_get_child (dest, dest_filename);
+
+      /* If the destination file exists, just delete it. We can encounter errors when
+       * trying to overwrite files that are not writable. */
+      if (g_file_query_exists (dest_file, NULL) && !g_file_delete (dest_file, NULL, error))
+        return FALSE;
+
+      /* Make sure the target is gone, because g_file_copy does
+         truncation on hardlinked destinations */
+      (void)g_file_delete (dest_file, NULL, NULL);
+
+      if (!g_file_copy (archivefile, dest_file,
+            G_FILE_COPY_OVERWRITE,
+            NULL,
+            NULL, NULL,
+            error))
+        return FALSE;
+
+      archivefile = dest_file;
+    }
+
 
   type = get_type (archivefile);
 
@@ -705,6 +744,7 @@ builder_source_archive_checksum (BuilderSource  *source,
   builder_cache_checksum_compat_str (cache, self->sha1);
   builder_cache_checksum_compat_str (cache, self->sha512);
   builder_cache_checksum_uint32 (cache, self->strip_components);
+  builder_cache_checksum_str (cache, self->dest_filename);
 }
 
 
@@ -774,6 +814,14 @@ builder_source_archive_class_init (BuilderSourceArchiveClass *klass)
                                                       0, G_MAXUINT,
                                                       1,
                                                       G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DEST_FILENAME,
+                                   g_param_spec_string ("dest-filename",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
 }
 
 static void
