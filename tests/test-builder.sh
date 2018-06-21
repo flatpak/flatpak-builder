@@ -73,7 +73,7 @@ assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
 
 echo "ok build"
 
-${FLATPAK} ${U} install test-repo org.test.Hello2 master
+${FLATPAK} ${U} install -y test-repo org.test.Hello2 master
 run org.test.Hello2 > hello_out3
 assert_file_has_content hello_out3 '^Hello world2, from a sandbox$'
 
@@ -88,7 +88,7 @@ assert_file_has_content appdir/files/share/app-data version2
 ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.yaml
 assert_file_has_content appdir/files/share/app-data version2
 
-${FLATPAK} ${U} update org.test.Hello2 master
+${FLATPAK} ${U} update -y org.test.Hello2 master
 
 run --command=cat org.test.Hello2 /app/share/app-data > app_data_2
 assert_file_has_content app_data_2 version2
