@@ -362,6 +362,7 @@ builder_context_set_sources_urls (BuilderContext *self,
 gboolean
 builder_context_download_uri (BuilderContext *self,
                               const char     *url,
+                              const char    **mirrors,
                               GFile          *dest,
                               const char     *checksums[BUILDER_CHECKSUMS_LEN],
                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
@@ -369,6 +370,7 @@ builder_context_download_uri (BuilderContext *self,
 {
   int i;
   g_autoptr(SoupURI) original_uri = soup_uri_new (url);
+  g_autoptr(GError) first_error = NULL;
 
   if (original_uri == NULL)
     return flatpak_fail (error, _("Could not parse URI “%s”"), url);
@@ -404,8 +406,40 @@ builder_context_download_uri (BuilderContext *self,
                              dest,
                              checksums, checksums_type,
                              builder_context_get_curl_session (self),
-                             error))
-    return FALSE;
+                             &first_error))
+    {
+      gboolean mirror_ok = FALSE;
+
+      if (mirrors != NULL && mirrors[0] != NULL)
+        {
+          g_print ("Error downloading, trying mirrors\n");
+          for (i = 0; mirrors[i] != NULL; i++)
+            {
+              g_autoptr(GError) mirror_error = NULL;
+              g_autoptr(SoupURI) mirror_uri = soup_uri_new (mirrors[i]);
+              g_print ("Trying mirror %s\n", mirrors[i]);
+              if (!builder_download_uri (mirror_uri,
+                                         dest,
+                                         checksums, checksums_type,
+                                         builder_context_get_curl_session (self),
+                                         &mirror_error))
+                {
+                  g_print ("Error downloading mirror: %s\n", mirror_error->message);
+                }
+              else
+                {
+                  mirror_ok = TRUE;
+                  break;
+                }
+            }
+        }
+
+      if (!mirror_ok)
+        {
+          g_propagate_error (error, g_steal_pointer (&first_error));
+          return FALSE;
+        }
+    }
 
   return TRUE;
 }

@@ -64,6 +64,7 @@ void            builder_context_set_sources_urls (BuilderContext *self,
                                                   GPtrArray      *sources_urls);
 gboolean        builder_context_download_uri (BuilderContext *self,
                                               const char     *url,
+                                              const char    **mirrors,
                                               GFile          *dest,
                                               const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
