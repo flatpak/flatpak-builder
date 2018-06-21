@@ -3585,8 +3585,7 @@ builder_manifest_install_dep (BuilderManifest *self,
       g_ptr_array_add (args, g_strdup (remote));
     }
 
-  if (opt_yes)
-    g_ptr_array_add (args, "-y");
+  g_ptr_array_add (args, g_strdup ("-y"));
 
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
