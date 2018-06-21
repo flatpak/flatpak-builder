@@ -43,6 +43,7 @@ struct BuilderSourceArchive
   char         *sha256;
   char         *sha512;
   guint         strip_components;
+  char         *dest_filename;
 };
 
 typedef struct
@@ -61,6 +62,7 @@ enum {
   PROP_SHA256,
   PROP_SHA512,
   PROP_STRIP_COMPONENTS,
+  PROP_DEST_FILENAME,
   LAST_PROP
 };
 
@@ -127,6 +129,7 @@ builder_source_archive_finalize (GObject *object)
   g_free (self->sha1);
   g_free (self->sha256);
   g_free (self->sha512);
+  g_free (self->dest_filename);
 
   G_OBJECT_CLASS (builder_source_archive_parent_class)->finalize (object);
 }
@@ -167,6 +170,10 @@ builder_source_archive_get_property (GObject    *object,
 
     case PROP_STRIP_COMPONENTS:
       g_value_set_uint (value, self->strip_components);
+      break;
+
+    case PROP_DEST_FILENAME:
+      g_value_set_string (value, self->dest_filename);
       break;
 
     default:
@@ -218,6 +225,11 @@ builder_source_archive_set_property (GObject      *object,
       self->strip_components = g_value_get_uint (value);
       break;
 
+    case PROP_DEST_FILENAME:
+      g_free (self->dest_filename);
+      self->dest_filename = g_value_dup_string (value);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -263,7 +275,10 @@ get_download_location (BuilderSourceArchive *self,
 
   path = soup_uri_get_path (uri);
 
-  base_name = g_path_get_basename (path);
+  if (self->dest_filename)
+    base_name = g_strdup (self->dest_filename);
+  else
+    base_name = g_path_get_basename (path);
 
   builder_get_all_checksums (checksums, checksums_type,
                              self->md5,
@@ -705,6 +720,7 @@ builder_source_archive_checksum (BuilderSource  *source,
   builder_cache_checksum_compat_str (cache, self->sha1);
   builder_cache_checksum_compat_str (cache, self->sha512);
   builder_cache_checksum_uint32 (cache, self->strip_components);
+  builder_cache_checksum_compat_str (cache, self->dest_filename);
 }
 
 
@@ -774,6 +790,13 @@ builder_source_archive_class_init (BuilderSourceArchiveClass *klass)
                                                       0, G_MAXUINT,
                                                       1,
                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_DEST_FILENAME,
+                                   g_param_spec_string ("dest-filename",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
 }
 
 static void
