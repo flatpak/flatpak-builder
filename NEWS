@@ -1,3 +1,19 @@
+Major changes in 0.99.1
+=======================
+
+In preparation for 1.0, this release depends on a recent (0.11.8) flatpak.
+
+ * New libdir build option
+ * Support loading default options from sdk
+ * Add support for overriding c/cpp/ld/etc flags in a module
+ * Now uses libcurl to download things instead of soup,
+   which means we now support ftp urls.
+ * Don't prune build caches when building with --{export,finish}-only
+ * rename-desktop-file now handles launchables in the appdata
+ * archive sources support dest-filename
+ * archive and file sources now support mirror-urls to list
+   extra urls in case of network problems.
+
 Major changes in 0.10.10
 ========================
 
