@@ -608,6 +608,10 @@
                         <listitem><para>The URL of a remote archive that will be downloaded. This overrides path if both are specified.</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>mirror-urls</option> (array of strings)</term>
+                        <listitem><para>A list of alternative urls that are used if the main url fails.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>md5</option> (string)</term>
                         <listitem><para>The md5 checksum of the file, verified after download</para>
                         <para>Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
@@ -740,6 +744,10 @@
                     <varlistentry>
                         <term><option>url</option> (string)</term>
                         <listitem><para>The URL of a remote file that will be downloaded and copied into the source dir. This overrides path if both are specified.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>mirror-urls</option> (array of strings)</term>
+                        <listitem><para>A list of alternative urls that are used if the main url fails.</para></listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>md5</option> (string)</term>

@@ -38,6 +38,7 @@ struct BuilderSourceArchive
 
   char         *path;
   char         *url;
+  char        **mirror_urls;
   char         *md5;
   char         *sha1;
   char         *sha256;
@@ -63,6 +64,7 @@ enum {
   PROP_SHA512,
   PROP_STRIP_COMPONENTS,
   PROP_DEST_FILENAME,
+  PROP_MIRROR_URLS,
   LAST_PROP
 };
 
@@ -130,6 +132,7 @@ builder_source_archive_finalize (GObject *object)
   g_free (self->sha256);
   g_free (self->sha512);
   g_free (self->dest_filename);
+  g_strfreev (self->mirror_urls);
 
   G_OBJECT_CLASS (builder_source_archive_parent_class)->finalize (object);
 }
@@ -176,6 +179,10 @@ builder_source_archive_get_property (GObject    *object,
       g_value_set_string (value, self->dest_filename);
       break;
 
+    case PROP_MIRROR_URLS:
+      g_value_set_boxed (value, self->mirror_urls);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -188,6 +195,7 @@ builder_source_archive_set_property (GObject      *object,
                                      GParamSpec   *pspec)
 {
   BuilderSourceArchive *self = BUILDER_SOURCE_ARCHIVE (object);
+  gchar **tmp;
 
   switch (prop_id)
     {
@@ -228,6 +236,12 @@ builder_source_archive_set_property (GObject      *object,
     case PROP_DEST_FILENAME:
       g_free (self->dest_filename);
       self->dest_filename = g_value_dup_string (value);
+      break;
+
+    case PROP_MIRROR_URLS:
+      tmp = self->mirror_urls;
+      self->mirror_urls = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
       break;
 
     default:
@@ -398,6 +412,7 @@ builder_source_archive_download (BuilderSource  *source,
 
   if (!builder_context_download_uri (context,
                                      self->url,
+                                     (const char **)self->mirror_urls,
                                      file,
                                      checksums,
                                      checksums_type,
@@ -721,6 +736,7 @@ builder_source_archive_checksum (BuilderSource  *source,
   builder_cache_checksum_compat_str (cache, self->sha512);
   builder_cache_checksum_uint32 (cache, self->strip_components);
   builder_cache_checksum_compat_str (cache, self->dest_filename);
+  builder_cache_checksum_compat_strv (cache, self->mirror_urls);
 }
 
 
@@ -797,6 +813,13 @@ builder_source_archive_class_init (BuilderSourceArchiveClass *klass)
                                                         "",
                                                         NULL,
                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_MIRROR_URLS,
+                                   g_param_spec_boxed ("mirror-urls",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
 }
 
 static void
