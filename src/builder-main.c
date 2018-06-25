@@ -277,8 +277,7 @@ do_install (BuilderContext *build_context,
   else
     g_ptr_array_add (args, g_strdup ("--system"));
 
-  if (opt_user)
-    g_ptr_array_add (args, g_strdup ("-y"));
+  g_ptr_array_add (args, g_strdup ("-y"));
 
   g_ptr_array_add (args, g_strdup ("--reinstall"));
 
