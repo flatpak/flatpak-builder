@@ -45,6 +45,7 @@ struct BuilderSourceArchive
   char         *sha512;
   guint         strip_components;
   char         *dest_filename;
+  gboolean      git_init;
 };
 
 typedef struct
@@ -65,6 +66,7 @@ enum {
   PROP_STRIP_COMPONENTS,
   PROP_DEST_FILENAME,
   PROP_MIRROR_URLS,
+  PROP_GIT_INIT,
   LAST_PROP
 };
 
@@ -183,6 +185,10 @@ builder_source_archive_get_property (GObject    *object,
       g_value_set_boxed (value, self->mirror_urls);
       break;
 
+    case PROP_GIT_INIT:
+      g_value_set_boolean (value, self->git_init);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -242,6 +248,10 @@ builder_source_archive_set_property (GObject      *object,
       tmp = self->mirror_urls;
       self->mirror_urls = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
+      break;
+
+    case PROP_GIT_INIT:
+      self->git_init = g_value_get_boolean (value);
       break;
 
     default:
@@ -597,6 +607,39 @@ create_uncompress_directory (BuilderSourceArchive *self, GFile *dest, GError **e
 }
 
 static gboolean
+git (GFile   *dir,
+     GError **error,
+     ...)
+{
+  gboolean res;
+  va_list ap;
+
+  va_start (ap, error);
+  res = flatpak_spawn (dir, NULL, 0, error, "git", ap);
+  va_end (ap);
+
+  return res;
+}
+
+static gboolean
+init_git (GFile   *dir,
+          GError **error)
+{
+  char *basename;
+
+  basename = g_file_get_basename (dir);
+  if (!git (dir, error, "init", NULL) ||
+      !git (dir, error, "add", "--ignore-errors", ".", NULL) ||
+      !git (dir, error, "commit", "-m", basename, NULL))
+    {
+      g_free (basename);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
 builder_source_archive_extract (BuilderSource  *source,
                                 GFile          *dest,
                                 BuilderOptions *build_options,
@@ -663,6 +706,12 @@ builder_source_archive_extract (BuilderSource  *source,
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Unknown archive format of '%s'", archive_path);
       return FALSE;
+    }
+
+  if (self->git_init)
+    {
+      if (!init_git (dest, error))
+        return FALSE;
     }
 
   return TRUE;
@@ -820,6 +869,13 @@ builder_source_archive_class_init (BuilderSourceArchiveClass *klass)
                                                        "",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_GIT_INIT,
+                                   g_param_spec_boolean ("git-init",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
 }
 
 static void

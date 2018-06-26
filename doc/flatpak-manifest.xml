@@ -612,6 +612,10 @@
                         <listitem><para>A list of alternative urls that are used if the main url fails.</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>git-init</option> (boolean)</term>
+                        <listitem><para>Whether to initialise the repository as a git repository.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>md5</option> (string)</term>
                         <listitem><para>The md5 checksum of the file, verified after download</para>
                         <para>Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
