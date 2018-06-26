@@ -835,6 +835,10 @@
                         <listitem><para>Whether to use "git apply" rather than "patch" to apply the patch, required when the patch file contains binary diffs.</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>use-git-am</option> (boolean)</term>
+                        <listitem><para>Whether to use "git am" rather than "patch" to apply the patch, required when the patch file contains binary diffs. You cannot use this at the same time as <option>use-git</option>.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>options</option> (array of strings)</term>
                         <listitem><para>Extra options to pass to the patch command.</para></listitem>
                     </varlistentry>

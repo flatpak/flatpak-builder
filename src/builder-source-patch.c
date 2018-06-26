@@ -39,6 +39,7 @@ struct BuilderSourcePatch
   char         *path;
   guint         strip_components;
   gboolean      use_git;
+  gboolean      use_git_am;
   char        **options;
 };
 
@@ -55,6 +56,7 @@ enum {
   PROP_STRIP_COMPONENTS,
   PROP_USE_GIT,
   PROP_OPTIONS,
+  PROP_USE_GIT_AM,
   LAST_PROP
 };
 
@@ -95,6 +97,10 @@ builder_source_patch_get_property (GObject    *object,
       g_value_set_boxed (value, self->options);
       break;
 
+    case PROP_USE_GIT_AM:
+      g_value_set_boolean (value, self->use_git_am);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -128,6 +134,10 @@ builder_source_patch_set_property (GObject      *object,
       tmp = self->options;
       self->options = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
+      break;
+
+    case PROP_USE_GIT_AM:
+      self->use_git_am = g_value_get_boolean (value);
       break;
 
     default:
@@ -189,6 +199,7 @@ builder_source_patch_download (BuilderSource  *source,
 static gboolean
 patch (GFile      *dir,
        gboolean    use_git,
+       gboolean    use_git_am,
        const char *patch_path,
        char      **extra_options,
        GError    **error,
@@ -207,6 +218,10 @@ patch (GFile      *dir,
     g_ptr_array_add (args, "git");
     g_ptr_array_add (args, "apply");
     g_ptr_array_add (args, "-v");
+  } else if (use_git_am) {
+    g_ptr_array_add (args, "git");
+    g_ptr_array_add (args, "am");
+    g_ptr_array_add (args, "--keep-cr");
   } else {
     g_ptr_array_add (args, "patch");
   }
@@ -214,7 +229,7 @@ patch (GFile      *dir,
     g_ptr_array_add (args, (gchar *) extra_options[i]);
   while ((arg = va_arg (ap, const gchar *)))
     g_ptr_array_add (args, (gchar *) arg);
-  if (use_git) {
+  if (use_git || use_git_am) {
     g_ptr_array_add (args, (char *) patch_path);
   } else {
     g_ptr_array_add (args, "-i");
@@ -248,10 +263,18 @@ builder_source_patch_extract (BuilderSource  *source,
   if (patchfile == NULL)
     return FALSE;
 
+  if (self->use_git && self->use_git_am)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Patch '%s' cannot be applied: Both 'use-git' and 'use-git-am' are set. Only one can be set at a time",
+                   self->path);
+      return FALSE;
+    }
+
   g_print ("Applying patch %s\n", self->path);
   strip_components = g_strdup_printf ("-p%u", self->strip_components);
   patch_path = g_file_get_path (patchfile);
-  if (!patch (dest, self->use_git, patch_path, self->options, error, strip_components, NULL))
+  if (!patch (dest, self->use_git, self->use_git_am, patch_path, self->options, error, strip_components, NULL))
     return FALSE;
 
   return TRUE;
@@ -366,6 +389,13 @@ builder_source_patch_class_init (BuilderSourcePatchClass *klass)
                                                        "",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_USE_GIT_AM,
+                                   g_param_spec_boolean ("use-git-am",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
 }
 
 static void
