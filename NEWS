@@ -1,3 +1,11 @@
+Major changes in 0.99.2
+=======================
+
+ * Fix --install not working due to asking for confirmation
+ * Fix builds with latest libsoup
+ * New option git-init for archives
+ * New option use-git-am for patches
+
 Major changes in 0.99.1
 =======================
 
