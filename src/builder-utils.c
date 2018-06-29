@@ -1857,10 +1857,11 @@ compare_checksum (const char *name,
   return TRUE;
 }
 
+#define GET_BUFFER_SIZE 8192
+
 gboolean
 builder_verify_checksums (const char *name,
-                          const char *data,
-                          gsize len,
+                          GFile *file,
                           const char *checksums[BUILDER_CHECKSUMS_LEN],
                           GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
                           GError **error)
@@ -1869,9 +1870,42 @@ builder_verify_checksums (const char *name,
 
   for (i = 0; checksums[i] != NULL; i++)
     {
-      g_autofree char *checksum = NULL;
-      checksum = g_compute_checksum_for_string (checksums_type[i], data, len);
-      if (!compare_checksum (name, checksums[i], checksums_type[i], checksum, error))
+      g_autoptr(GFileInputStream) stream = NULL;
+
+      stream = g_file_read (file, NULL, error);
+
+      if (stream == NULL)
+        return FALSE;
+
+      gssize bytes_read;
+      guchar buffer[GET_BUFFER_SIZE];
+      GChecksum *checksum = NULL;
+      const char *checksum_string = NULL;
+      gboolean is_valid;
+
+      checksum = g_checksum_new (checksums_type[i]);
+
+      while ((bytes_read = g_input_stream_read (G_INPUT_STREAM(stream),
+                                                buffer, GET_BUFFER_SIZE,
+                                                NULL, error)) > 0)
+        {
+          g_checksum_update (checksum, buffer, bytes_read);
+        }
+
+      if (bytes_read < 0)
+        {
+          is_valid = FALSE;
+        }
+      else
+        {
+          checksum_string = g_checksum_get_string (checksum);
+          is_valid = compare_checksum (name, checksums[i], checksums_type[i],
+                                       checksum_string, error);
+        }
+
+      g_checksum_free (checksum);
+
+      if (!is_valid)
         return FALSE;
     }
 
