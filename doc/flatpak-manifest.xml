@@ -60,7 +60,6 @@
                     <term><option>branch</option> (string)</term>
                     <listitem><para>The branch of the application, defaults to master.</para></listitem>
                 </varlistentry>
-                <!-- FIXME: Uncomment this when enable-p2p is enabled unconditionally.
                 <varlistentry>
                     <term><option>collection-id</option> (string)</term>
                     <listitem><para>The collection ID of the repository,
@@ -71,7 +70,6 @@
                     must match the existing configured collection ID for that
                     repository.</para></listitem>
                 </varlistentry>
-                -->
                 <varlistentry>
                     <term><option>extension-tag</option> (string)</term>
                     <listitem><para>If building an extension, the tag for the extension
