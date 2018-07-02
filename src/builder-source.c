@@ -50,6 +50,8 @@ enum {
   PROP_DEST,
   PROP_ONLY_ARCHES,
   PROP_SKIP_ARCHES,
+  PROP_ONLY_ALTS,
+  PROP_SKIP_ALTS,
   LAST_PROP
 };
 
@@ -61,6 +63,10 @@ builder_source_finalize (GObject *object)
 
   g_clear_object (&self->base_dir);
   g_free (self->dest);
+  g_strfreev (self->only_arches);
+  g_strfreev (self->skip_arches);
+  g_strfreev (self->only_alts);
+  g_strfreev (self->skip_alts);
 
   G_OBJECT_CLASS (builder_source_parent_class)->finalize (object);
 }
@@ -94,6 +100,14 @@ builder_source_get_property (GObject    *object,
       g_value_set_boxed (value, self->skip_arches);
       break;
 
+    case PROP_ONLY_ALTS:
+      g_value_set_boxed (value, self->only_alts);
+      break;
+
+    case PROP_SKIP_ALTS:
+      g_value_set_boxed (value, self->skip_alts);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -124,6 +138,18 @@ builder_source_set_property (GObject      *object,
     case PROP_SKIP_ARCHES:
       tmp = self->skip_arches;
       self->skip_arches = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_ONLY_ALTS:
+      tmp = self->only_alts;
+      self->only_alts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_SKIP_ALTS:
+      tmp = self->skip_alts;
+      self->skip_alts = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -211,6 +237,20 @@ builder_source_class_init (BuilderSourceClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SKIP_ARCHES,
                                    g_param_spec_boxed ("skip-arches",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_ONLY_ALTS,
+                                   g_param_spec_boxed ("only-alts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SKIP_ALTS,
+                                   g_param_spec_boxed ("skip-alts",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -399,6 +439,8 @@ builder_source_checksum (BuilderSource  *self,
   builder_cache_checksum_str (cache, self->dest);
   builder_cache_checksum_strv (cache, self->only_arches);
   builder_cache_checksum_strv (cache, self->skip_arches);
+  builder_cache_checksum_compat_strv (cache, self->only_alts);
+  builder_cache_checksum_compat_strv (cache, self->skip_alts);
 
   class->checksum (self, cache, context);
 }
@@ -425,6 +467,15 @@ builder_source_is_enabled (BuilderSource *self,
 
   if (self->skip_arches != NULL &&
       g_strv_contains ((const char * const *)self->skip_arches, builder_context_get_arch (context)))
+    return FALSE;
+
+  if (self->only_alts != NULL &&
+      self->only_alts[0] != NULL &&
+      !g_strv_contains ((const char * const *) self->only_alts, builder_context_get_defaulted_alt (context)))
+    return FALSE;
+
+  if (self->skip_alts != NULL &&
+      g_strv_contains ((const char * const *)self->skip_alts, builder_context_get_defaulted_alt (context)))
     return FALSE;
 
   return TRUE;

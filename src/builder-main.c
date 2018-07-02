@@ -83,6 +83,7 @@ static char *opt_installation;
 static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
+static char *opt_alt;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -133,6 +134,7 @@ static GOptionEntry entries[] = {
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
+  { "alt", 0, 0, G_OPTION_ARG_STRING, &opt_alt, "Build an alternative build", "ALTNAME"},
   { NULL }
 };
 
@@ -317,8 +319,6 @@ main (int    argc,
   g_autoptr(GFile) manifest_file = NULL;
   g_autoptr(GFile) app_dir = NULL;
   g_autoptr(BuilderCache) cache = NULL;
-  g_autofree char *cache_branch = NULL;
-  g_autofree char *escaped_cache_branch = NULL;
   g_autoptr(GFileEnumerator) dir_enum = NULL;
   g_autoptr(GFileEnumerator) dir_enum2 = NULL;
   g_autofree char *cwd = NULL;
@@ -450,6 +450,7 @@ main (int    argc,
   builder_context_set_jobs (build_context, opt_jobs);
   builder_context_set_rebuild_on_sdk_change (build_context, opt_rebuild_on_sdk_change);
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
+  builder_context_set_alt (build_context, opt_alt);
 
   if (opt_sources_dirs)
     {
@@ -723,23 +724,31 @@ main (int    argc,
       return 0;
     }
 
-  if (opt_state_dir)
-    {
-      /* If the state dir can be shared we need to use a global identifier for the key */
-      g_autofree char *manifest_path = g_file_get_path (manifest_file);
-      cache_branch = g_strconcat (builder_context_get_arch (build_context), "-", manifest_path + 1, NULL);
-    }
-  else
-    cache_branch = g_strconcat (builder_context_get_arch (build_context), "-", manifest_basename, NULL);
+  {
+    g_autofree char *cache_branch = NULL;
+    g_autofree char *escaped_cache_branch = NULL;
+    g_autofree char *manifest_path = g_file_get_path (manifest_file);
+    const char *reference = manifest_basename;
+    const char *alt = builder_context_get_alt (build_context);
 
-  escaped_cache_branch = g_uri_escape_string (cache_branch, "", TRUE);
-  for (p = escaped_cache_branch; *p; p++)
-    {
-      if (*p == '%')
-        *p = '_';
-    }
+    /* If the state dir can be shared we need to use a global identifier for the key */
+    if (opt_state_dir)
+      reference = manifest_path + 1;
 
-  cache = builder_cache_new (build_context, app_dir, escaped_cache_branch);
+    cache_branch = g_strconcat (builder_context_get_arch (build_context),
+                                alt ? "-" : "", alt ? alt : "",
+                                "-", reference, NULL);
+
+    escaped_cache_branch = g_uri_escape_string (cache_branch, "", TRUE);
+    for (p = escaped_cache_branch; *p; p++)
+      {
+        if (*p == '%')
+          *p = '_';
+      }
+
+    cache = builder_cache_new (build_context, app_dir, escaped_cache_branch);
+  }
+
   if (!builder_cache_open (cache, &error))
     {
       g_printerr ("Error opening cache: %s\n", error->message);

@@ -62,6 +62,7 @@ struct BuilderOptions
   char      **make_args;
   char      **make_install_args;
   GHashTable *arch;
+  GHashTable *alt;
 };
 
 typedef struct
@@ -91,6 +92,7 @@ enum {
   PROP_NO_DEBUGINFO,
   PROP_NO_DEBUGINFO_COMPRESSION,
   PROP_ARCH,
+  PROP_ALT,
   PROP_BUILD_ARGS,
   PROP_TEST_ARGS,
   PROP_CONFIG_OPTS,
@@ -130,6 +132,7 @@ builder_options_finalize (GObject *object)
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_hash_table_destroy (self->arch);
+  g_hash_table_destroy (self->alt);
 
   G_OBJECT_CLASS (builder_options_parent_class)->finalize (object);
 }
@@ -214,6 +217,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_ARCH:
       g_value_set_boxed (value, self->arch);
+      break;
+
+    case PROP_ALT:
+      g_value_set_boxed (value, self->alt);
       break;
 
     case PROP_BUILD_ARGS:
@@ -350,6 +357,12 @@ builder_options_set_property (GObject      *object,
       g_hash_table_destroy (self->arch);
       /* NOTE: This takes ownership of the hash table! */
       self->arch = g_value_dup_boxed (value);
+      break;
+
+    case PROP_ALT:
+      g_hash_table_destroy (self->alt);
+      /* NOTE: This takes ownership of the hash table! */
+      self->alt = g_value_dup_boxed (value);
       break;
 
     case PROP_BUILD_ARGS:
@@ -535,6 +548,13 @@ builder_options_class_init (BuilderOptionsClass *klass)
                                                        G_TYPE_HASH_TABLE,
                                                        G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_ALT,
+                                   g_param_spec_boxed ("alt",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_HASH_TABLE,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_BUILD_ARGS,
                                    g_param_spec_boxed ("build-args",
                                                        "",
@@ -597,6 +617,7 @@ static void
 builder_options_init (BuilderOptions *self)
 {
   self->arch = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
+  self->alt = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, g_object_unref);
 }
 
 static JsonNode *
@@ -605,12 +626,19 @@ builder_options_serialize_property (JsonSerializable *serializable,
                                     const GValue     *value,
                                     GParamSpec       *pspec)
 {
-  if (strcmp (property_name, "arch") == 0)
+  if (strcmp (property_name, "arch") == 0 ||
+      strcmp (property_name, "alt") == 0)
     {
       BuilderOptions *self = BUILDER_OPTIONS (serializable);
       JsonNode *retval = NULL;
+      GHashTable *ht;
 
-      if (self->arch && g_hash_table_size (self->arch) > 0)
+      if (strcmp (property_name, "arch") == 0)
+        ht = self->arch;
+      else
+        ht = self->alt;
+
+      if (ht && g_hash_table_size (ht) > 0)
         {
           JsonObject *object;
           GHashTableIter iter;
@@ -618,7 +646,7 @@ builder_options_serialize_property (JsonSerializable *serializable,
 
           object = json_object_new ();
 
-          g_hash_table_iter_init (&iter, self->arch);
+          g_hash_table_iter_init (&iter, ht);
           while (g_hash_table_iter_next (&iter, &key, &value))
             {
               JsonNode *child = json_gobject_serialize (value);
@@ -686,7 +714,8 @@ builder_options_deserialize_property (JsonSerializable *serializable,
                                       GParamSpec       *pspec,
                                       JsonNode         *property_node)
 {
-  if (strcmp (property_name, "arch") == 0)
+  if (strcmp (property_name, "arch") == 0 ||
+      strcmp (property_name, "alt") == 0)
     {
       if (JSON_NODE_TYPE (property_node) == JSON_NODE_NULL)
         {
@@ -790,17 +819,39 @@ get_arched_options (BuilderOptions *self, BuilderContext *context)
   return options;
 }
 
+static BuilderOptions *
+get_alt_options (BuilderOptions *self, BuilderContext *context)
+{
+  const char *alt = builder_context_get_defaulted_alt (context);
+  return g_hash_table_lookup (self->alt, alt);
+}
+
 static GList *
 get_all_options (BuilderOptions *self, BuilderContext *context)
 {
-  GList *options = NULL;
   BuilderOptions *global_options = builder_context_get_options (context);
+  GList *options = NULL;
 
   if (self)
-    options = get_arched_options (self, context);
+    {
+      BuilderOptions *alt_options = get_alt_options (self, context);
+
+      if (alt_options)
+        options = g_list_concat (options, get_arched_options (alt_options, context));
+
+      options = g_list_concat (options, get_arched_options (self, context));
+    }
 
   if (global_options && global_options != self)
-    options = g_list_concat (options,  get_arched_options (global_options, context));
+    {
+      BuilderOptions *global_alt_options = get_alt_options (global_options, context);
+
+      if (global_alt_options)
+        options = g_list_concat (options, get_arched_options (global_alt_options, context));
+
+      options = g_list_concat (options, get_arched_options (global_options, context));
+
+    }
 
   return options;
 }
