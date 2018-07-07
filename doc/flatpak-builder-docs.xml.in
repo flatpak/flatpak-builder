@@ -8,6 +8,11 @@
       <releaseinfo>Version @VERSION@</releaseinfo>
     </referenceinfo>
     <title>Flatpak Builder Command Reference</title>
+    <important>
+        <para>
+          The command reference is generated from the flatpak-builder repo; see <ulink url="https://github.com/flatpak/flatpak-builder/tree/master/doc"></ulink>
+        </para>
+    </important>
     <partintro>
       <para>
         Flatpak-builder is a tool to build flatpak applications.
