@@ -2496,7 +2496,8 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       if (self->rename_icon ||
           self->desktop_file_name_prefix ||
-          self->desktop_file_name_suffix)
+          self->desktop_file_name_suffix ||
+          self->rename_desktop_file)
         {
           g_autoptr(GFile) applications_dir = g_file_resolve_relative_path (app_root, "share/applications");
           g_autofree char *desktop_basename = g_strdup_printf ("%s.desktop", self->id);
@@ -2521,10 +2522,15 @@ builder_manifest_cleanup (BuilderManifest *self,
                                           error))
             return FALSE;
 
+          if (self->rename_desktop_file)
+            g_key_file_set_string (keyfile,
+                                   G_KEY_FILE_DESKTOP_GROUP,
+                                   "X-Flatpak-RenamedFrom",
+                                   self->rename_desktop_file);
+
           desktop_keys = g_key_file_get_keys (keyfile,
                                               G_KEY_FILE_DESKTOP_GROUP,
                                               NULL, NULL);
-
           if (self->rename_icon)
             {
               g_autofree char *original_icon_name = g_key_file_get_string (keyfile,
