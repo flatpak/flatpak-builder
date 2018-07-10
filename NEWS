@@ -1,3 +1,11 @@
+Major changes in 0.99.3
+=======================
+
+ * Add X-Flatpak-RenamedFrom key to renamed desktop files
+ * Set FLATPAK_BUILDER_BUILDDIR when building module
+ * Handle large downloads better
+ * Make p2p code non-optional
+
 Major changes in 0.99.2
 =======================
 
