@@ -393,7 +393,11 @@
             <variablelist>
                 <varlistentry>
                     <term><option>directory</option> (string)</term>
-                    <listitem><para>The directory where the extension is mounted.</para></listitem>
+                    <listitem><para>
+                      The directory where the extension is mounted.
+                      If the extension point is for an application, this path is relative to /app,
+                      otherwise it is relative to /usr.
+                    </para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>bundle</option> (boolean)</term>
@@ -416,6 +420,7 @@
               autodelete, no-autodownload, subdirectories,
               add-ld-path, download-if, enable-if, merge-dirs,
               subdirectory-suffix, locale-subset, version, versions.
+              See the flatpak metadata documentation for more information on these.
             </para>
         </refsect2>
         <refsect2>
