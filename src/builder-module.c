@@ -1706,11 +1706,6 @@ builder_module_build_helper (BuilderModule  *self,
       make_j = g_strdup_printf ("-j%d", builder_context_get_jobs (context));
       make_l = g_strdup_printf ("-l%d", 2 * builder_context_get_jobs (context));
     }
-  else if (meson || cmake_ninja)
-    {
-      /* ninja defaults to a parallel make, disable it if requested */
-      make_j = g_strdup ("-j1");
-    }
 
   if (run_shell)
     {
