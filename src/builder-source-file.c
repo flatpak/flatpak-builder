@@ -367,13 +367,16 @@ builder_source_file_download (BuilderSource  *source,
                                        error);
     }
 
+  if (is_inline)
+    return TRUE;
+
   if (is_local)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", self->path);
       return FALSE;
     }
 
-  if (checksums[0] == NULL && !is_inline)
+  if (checksums[0] == NULL)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "No checksum specified for file source %s", base_name);
       return FALSE;
