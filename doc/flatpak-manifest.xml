@@ -489,10 +489,6 @@
                     <listitem><para>Don't fix up the *.py[oc] header timestamps for ostree use.</para></listitem>
                 </varlistentry>
                 <varlistentry>
-                    <term><option>cmake</option> (boolean)</term>
-                    <listitem><para>Use cmake instead of configure (deprecated: use buildsystem instead)</para></listitem>
-                </varlistentry>
-                <varlistentry>
                     <term><option>buildsystem</option> (string)</term>
                     <listitem><para>Build system to use: autotools, cmake, cmake-ninja, meson, simple, qmake</para></listitem>
                 </varlistentry>

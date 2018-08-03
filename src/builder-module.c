@@ -60,7 +60,6 @@ struct BuilderModule
   gboolean        no_parallel_make;
   gboolean        no_make_install;
   gboolean        no_python_timestamp_fix;
-  gboolean        cmake;
   gboolean        builddir;
   gboolean        run_tests;
   BuilderOptions *build_options;
@@ -93,7 +92,6 @@ enum {
   PROP_NO_PARALLEL_MAKE,
   PROP_NO_MAKE_INSTALL,
   PROP_NO_PYTHON_TIMESTAMP_FIX,
-  PROP_CMAKE,
   PROP_INSTALL_RULE,
   PROP_TEST_RULE,
   PROP_BUILDSYSTEM,
@@ -203,10 +201,6 @@ builder_module_get_property (GObject    *object,
 
     case PROP_NO_PYTHON_TIMESTAMP_FIX:
       g_value_set_boolean (value, self->no_python_timestamp_fix);
-      break;
-
-    case PROP_CMAKE:
-      g_value_set_boolean (value, self->cmake);
       break;
 
     case PROP_BUILDSYSTEM:
@@ -339,9 +333,6 @@ builder_module_set_property (GObject      *object,
       self->no_python_timestamp_fix = g_value_get_boolean (value);
       break;
 
-    case PROP_CMAKE:
-      self->cmake = g_value_get_boolean (value);
-      break;
 
     case PROP_BUILDSYSTEM:
       g_free (self->buildsystem);
@@ -518,13 +509,6 @@ builder_module_class_init (BuilderModuleClass *klass)
                                                          "",
                                                          FALSE,
                                                          G_PARAM_READWRITE));
-  g_object_class_install_property (object_class,
-                                   PROP_CMAKE,
-                                   g_param_spec_boolean ("cmake",
-                                                         "",
-                                                         "",
-                                                         FALSE,
-                                                         G_PARAM_READWRITE|G_PARAM_DEPRECATED));
   g_object_class_install_property (object_class,
                                    PROP_BUILDSYSTEM,
                                    g_param_spec_string ("buildsystem",
@@ -1431,12 +1415,7 @@ builder_module_build_helper (BuilderModule  *self,
   env = g_environ_setenv (env, "FLATPAK_BUILDER_N_JOBS", n_jobs, FALSE);
 
   if (!self->buildsystem)
-    {
-      if (self->cmake)
-        cmake = TRUE;
-      else
         autotools = TRUE;
-    }
   else if (!strcmp (self->buildsystem, "cmake"))
     cmake = TRUE;
   else if (!strcmp (self->buildsystem, "meson"))
@@ -1973,7 +1952,6 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_boolean (cache, self->no_parallel_make);
   builder_cache_checksum_boolean (cache, self->no_make_install);
   builder_cache_checksum_boolean (cache, self->no_python_timestamp_fix);
-  builder_cache_checksum_boolean (cache, self->cmake);
   builder_cache_checksum_boolean (cache, self->builddir);
   builder_cache_checksum_strv (cache, self->build_commands);
   builder_cache_checksum_str (cache, self->buildsystem);
