@@ -341,6 +341,8 @@ builder_module_set_property (GObject      *object,
 
     case PROP_CMAKE:
       self->cmake = g_value_get_boolean (value);
+      if (self->cmake)
+        g_printerr ("The cmake module property is deprecated, use buildsystem cmake instead.\n");
       break;
 
     case PROP_BUILDSYSTEM:
