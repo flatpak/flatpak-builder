@@ -1781,7 +1781,7 @@ builder_maybe_host_spawnv (GFile                *dir,
                            const gchar * const  *argv)
 {
   if (flatpak_is_in_sandbox ())
-    return builder_host_spawnv (dir, output, 0, error, argv);
+    return builder_host_spawnv (dir, output, flags, error, argv);
 
   return flatpak_spawnv (dir, output, flags, error, argv);
 }
