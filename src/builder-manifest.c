@@ -3831,10 +3831,21 @@ builder_manifest_run (BuilderManifest *self,
   commandline = flatpak_quote_argv ((const char **) args->pdata);
   g_debug ("Running '%s'", commandline);
 
-  if (execvp ((char *) args->pdata[0], (char **) args->pdata) == -1)
+
+  if (flatpak_is_in_sandbox ())
     {
-      g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errno), "Unable to start flatpak build");
-      return FALSE;
+      if (builder_host_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_STDIN_INHERIT, NULL, (const gchar * const  *)args->pdata))
+        exit (1);
+      else
+        exit (0);
+    }
+  else
+    {
+      if (execvp ((char *) args->pdata[0], (char **) args->pdata) == -1)
+        {
+          g_set_error (error, G_IO_ERROR, g_io_error_from_errno (errno), "Unable to start flatpak build");
+          return FALSE;
+        }
     }
 
   /* Not reached */
