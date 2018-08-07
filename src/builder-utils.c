@@ -1618,10 +1618,18 @@ builder_host_spawnv (GFile                *dir,
   guint sigterm_id = 0, sigint_id = 0;
   g_autofree gchar *commandline = NULL;
   g_autoptr(GOutputStream) out = NULL;
+  g_autoptr(GFile) cwd = NULL;
   glnx_fd_close int blocking_stdin_fd = -1;
   int pipefd[2];
   int stdin_fd;
   int i;
+
+  if (dir == NULL)
+    {
+      g_autofree char *current_dir = g_get_current_dir ();
+      cwd = g_file_new_for_path (current_dir);
+      dir = cwd;
+    }
 
   commandline = flatpak_quote_argv ((const char **) argv);
   g_debug ("Running '%s' on host", commandline);
