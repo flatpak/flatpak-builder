@@ -1618,7 +1618,9 @@ builder_host_spawnv (GFile                *dir,
   guint sigterm_id = 0, sigint_id = 0;
   g_autofree gchar *commandline = NULL;
   g_autoptr(GOutputStream) out = NULL;
+  glnx_fd_close int blocking_stdin_fd = -1;
   int pipefd[2];
+  int stdin_fd;
   int i;
 
   commandline = flatpak_quote_argv ((const char **) argv);
@@ -1643,7 +1645,20 @@ builder_host_spawnv (GFile                *dir,
                                                      host_command_exited_cb,
                                                      &data, NULL);
 
-  stdin_handle = g_unix_fd_list_append (fd_list, 0, error);
+  if ((flags & G_SUBPROCESS_FLAGS_STDIN_INHERIT) != 0)
+    stdin_fd = 0;
+  else
+    {
+      blocking_stdin_fd = open ("/dev/null", O_RDONLY| O_CLOEXEC);
+      if (blocking_stdin_fd == -1)
+        {
+          glnx_set_error_from_errno (error);
+          return FALSE;
+        }
+      stdin_fd = blocking_stdin_fd;
+    }
+
+  stdin_handle = g_unix_fd_list_append (fd_list, stdin_fd, error);
   if (stdin_handle == -1)
     return FALSE;
 
