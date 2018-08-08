@@ -2523,10 +2523,29 @@ builder_manifest_cleanup (BuilderManifest *self,
             return FALSE;
 
           if (self->rename_desktop_file)
-            g_key_file_set_string (keyfile,
-                                   G_KEY_FILE_DESKTOP_GROUP,
-                                   "X-Flatpak-RenamedFrom",
-                                   self->rename_desktop_file);
+            {
+              g_auto(GStrv) old_renames = g_key_file_get_string_list (keyfile,
+                                                                      G_KEY_FILE_DESKTOP_GROUP,
+                                                                      "X-Flatpak-RenamedFrom",
+                                                                      NULL, NULL);
+              const char **new_renames = NULL;
+              int old_rename_len = 0;
+              int new_rename_len = 0;
+
+              if (old_renames)
+                old_rename_len = g_strv_length (old_renames);
+
+              new_renames = g_new (const char *, old_rename_len + 2);
+              for (i = 0; i < old_rename_len; i++)
+                new_renames[new_rename_len++] = old_renames[i];
+              new_renames[new_rename_len++] = self->rename_desktop_file;
+              new_renames[new_rename_len] = NULL;
+
+              g_key_file_set_string_list (keyfile,
+                                          G_KEY_FILE_DESKTOP_GROUP,
+                                          "X-Flatpak-RenamedFrom",
+                                          new_renames, new_rename_len);
+            }
 
           desktop_keys = g_key_file_get_keys (keyfile,
                                               G_KEY_FILE_DESKTOP_GROUP,
