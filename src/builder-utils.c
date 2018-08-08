@@ -1574,7 +1574,7 @@ sigterm_handler (gpointer user_data)
                                G_DBUS_CALL_FLAGS_NONE, -1,
                                NULL, NULL);
 
-  kill (getpid (), SIGTERM);
+  kill (getpid (), SIGKILL);
   return TRUE;
 }
 
@@ -1593,7 +1593,7 @@ sigint_handler (gpointer user_data)
                                G_DBUS_CALL_FLAGS_NONE, -1,
                                NULL, NULL);
 
-  kill (getpid (), SIGTERM);
+  kill (getpid (), SIGKILL);
   return TRUE;
 }
 
@@ -1618,8 +1618,18 @@ builder_host_spawnv (GFile                *dir,
   guint sigterm_id = 0, sigint_id = 0;
   g_autofree gchar *commandline = NULL;
   g_autoptr(GOutputStream) out = NULL;
+  g_autoptr(GFile) cwd = NULL;
+  glnx_fd_close int blocking_stdin_fd = -1;
   int pipefd[2];
+  int stdin_fd;
   int i;
+
+  if (dir == NULL)
+    {
+      g_autofree char *current_dir = g_get_current_dir ();
+      cwd = g_file_new_for_path (current_dir);
+      dir = cwd;
+    }
 
   commandline = flatpak_quote_argv ((const char **) argv);
   g_debug ("Running '%s' on host", commandline);
@@ -1643,7 +1653,20 @@ builder_host_spawnv (GFile                *dir,
                                                      host_command_exited_cb,
                                                      &data, NULL);
 
-  stdin_handle = g_unix_fd_list_append (fd_list, 0, error);
+  if ((flags & G_SUBPROCESS_FLAGS_STDIN_INHERIT) != 0)
+    stdin_fd = 0;
+  else
+    {
+      blocking_stdin_fd = open ("/dev/null", O_RDONLY| O_CLOEXEC);
+      if (blocking_stdin_fd == -1)
+        {
+          glnx_set_error_from_errno (error);
+          return FALSE;
+        }
+      stdin_fd = blocking_stdin_fd;
+    }
+
+  stdin_handle = g_unix_fd_list_append (fd_list, stdin_fd, error);
   if (stdin_handle == -1)
     return FALSE;
 
@@ -1766,7 +1789,7 @@ builder_maybe_host_spawnv (GFile                *dir,
                            const gchar * const  *argv)
 {
   if (flatpak_is_in_sandbox ())
-    return builder_host_spawnv (dir, output, 0, error, argv);
+    return builder_host_spawnv (dir, output, flags, error, argv);
 
   return flatpak_spawnv (dir, output, flags, error, argv);
 }
