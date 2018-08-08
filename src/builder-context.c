@@ -460,7 +460,8 @@ char *
 builder_context_get_checksum_for (BuilderContext *self,
                                   const char *name)
 {
-  g_autoptr(GFile) checksum_file = g_file_get_child (self->checksums_dir, name);
+  g_autofree char *checksum_name = g_strdup_printf ("%s-%s", builder_context_get_arch (self), name);
+  g_autoptr(GFile) checksum_file = g_file_get_child (self->checksums_dir, checksum_name);
   g_autofree gchar *checksum = NULL;
 
   if (!g_file_get_contents (flatpak_file_get_path_cached (checksum_file), &checksum, NULL, NULL))
@@ -475,7 +476,8 @@ builder_context_set_checksum_for (BuilderContext  *self,
                                   const char      *checksum,
                                   GError         **error)
 {
-  g_autoptr(GFile) checksum_file = g_file_get_child (self->checksums_dir, name);
+  g_autofree char *checksum_name = g_strdup_printf ("%s-%s", builder_context_get_arch (self), name);
+  g_autoptr(GFile) checksum_file = g_file_get_child (self->checksums_dir, checksum_name);
 
   if (!flatpak_mkdir_p (self->checksums_dir,
                         NULL, error))
