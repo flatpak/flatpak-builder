@@ -1574,7 +1574,7 @@ sigterm_handler (gpointer user_data)
                                G_DBUS_CALL_FLAGS_NONE, -1,
                                NULL, NULL);
 
-  kill (getpid (), SIGTERM);
+  kill (getpid (), SIGKILL);
   return TRUE;
 }
 
@@ -1593,7 +1593,7 @@ sigint_handler (gpointer user_data)
                                G_DBUS_CALL_FLAGS_NONE, -1,
                                NULL, NULL);
 
-  kill (getpid (), SIGTERM);
+  kill (getpid (), SIGKILL);
   return TRUE;
 }
 
