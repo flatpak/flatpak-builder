@@ -1036,7 +1036,7 @@
             "sources": [
                 {
                     "type": "git",
-                    "url": "git://git.gnome.org/babl"
+                    "url": "https://gitlab.gnome.org/GNOME/babl.git"
                 }
             ]
         },
