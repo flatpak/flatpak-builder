@@ -729,7 +729,7 @@ static char *rofiles_unmount_path = NULL;
 static void
 rofiles_umount_handler (int signum)
 {
-  char *argv[] = { "fusermount", "-u", NULL,
+  char *argv[] = { "fusermount", "-uz", NULL,
                      NULL };
 
   argv[2] = rofiles_unmount_path;
