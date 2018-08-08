@@ -299,6 +299,70 @@ do_install (BuilderContext *build_context,
   return TRUE;
 }
 
+static gboolean
+git (char   **output,
+     GError **error,
+     ...)
+{
+  gboolean res;
+  va_list ap;
+
+  if (output != NULL)
+    *output = NULL;
+
+  va_start (ap, error);
+  res = flatpak_spawn (NULL, output, 0, error, "git", ap);
+  va_end (ap);
+
+  if (output != NULL &&
+      (*output != NULL && *output[0] == '\0'))
+    {
+      g_free (*output);
+      *output = NULL;
+    }
+
+  return res;
+}
+
+static char *
+trim_linefeed (char *str)
+{
+  guint len;
+
+  g_return_val_if_fail (str != NULL, NULL);
+
+  len = strlen (str);
+  str[len] = '\0';
+
+  return str;
+}
+
+static void
+git_init_email (void)
+{
+  char *user, *email;
+
+  /* Have an email for author and committer */
+  if (!git (&email, NULL, "config", "--get", "user.email", NULL) ||
+      email == NULL)
+    email = g_strdup ("flatpak-builder-commit@flatpak.org");
+  else
+    email = trim_linefeed (email);
+  g_setenv ("GIT_AUTHOR_EMAIL", email, FALSE);
+  g_setenv ("GIT_COMMITTER_EMAIL", email, FALSE);
+  g_free (email);
+
+  /* Have a "real name" for author and committer */
+  if (!git (&user, NULL, "config", "--get", "user.name", NULL) ||
+      user == NULL)
+    user = g_strdup ("Flatpak git committer");
+  else
+    user = trim_linefeed (user);
+  g_setenv ("GIT_AUTHOR_NAME", user, FALSE);
+  g_setenv ("GIT_COMMITTER_NAME", user, FALSE);
+  g_free (user);
+}
+
 int
 main (int    argc,
       char **argv)
@@ -450,6 +514,8 @@ main (int    argc,
   builder_context_set_jobs (build_context, opt_jobs);
   builder_context_set_rebuild_on_sdk_change (build_context, opt_rebuild_on_sdk_change);
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
+
+  git_init_email ();
 
   if (opt_sources_dirs)
     {
