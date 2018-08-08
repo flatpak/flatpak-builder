@@ -469,6 +469,12 @@ main (int    argc,
       sources_urls = g_ptr_array_new_with_free_func ((GDestroyNotify)soup_uri_free);
       for (i = 0; opt_sources_urls[i] != NULL; i++)
         {
+          if (!g_str_has_suffix (opt_sources_urls[i], "/"))
+            {
+              g_autofree gchar *tmp = opt_sources_urls[i];
+              opt_sources_urls[i] = g_strdup_printf ("%s/", tmp);
+            }
+
           SoupURI *uri = soup_uri_new (opt_sources_urls[i]);
           if (uri == NULL)
             {
