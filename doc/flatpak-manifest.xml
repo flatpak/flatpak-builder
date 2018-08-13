@@ -934,6 +934,10 @@
             <listitem><para>The number of jobs that flatpak-builder would normally use for make -j. Defaults to ncpus unless the module disabled parallel make.</para></listitem>
           </varlistentry>
           <varlistentry>
+            <term>FLATPAK_BUILDER_BUILDDIR</term>
+            <listitem><para>The path to the build directory of the module currently building. This is normally <filename>/run/build/$MODULE</filename>.</para></listitem>
+          </varlistentry>
+          <varlistentry>
             <term>PATH</term>
             <listitem><para><filename>/app/bin:/usr/bin</filename></para></listitem>
           </varlistentry>
