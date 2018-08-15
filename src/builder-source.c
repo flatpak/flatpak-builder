@@ -228,13 +228,18 @@ builder_source_find_property (JsonSerializable *serializable,
 {
   if (strcmp (name, "type") == 0)
     return NULL;
-  return builder_serializable_find_property_with_error (serializable, name);
+  return builder_serializable_find_property (serializable, name);
 }
 
 static void
 serializable_iface_init (JsonSerializableIface *serializable_iface)
 {
+  serializable_iface->serialize_property = builder_serializable_serialize_property;
+  serializable_iface->deserialize_property = builder_serializable_deserialize_property;
   serializable_iface->find_property = builder_source_find_property;
+  serializable_iface->list_properties = builder_serializable_list_properties;
+  serializable_iface->set_property = builder_serializable_set_property;
+  serializable_iface->get_property = builder_serializable_get_property;
 }
 
 JsonNode *

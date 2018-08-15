@@ -721,10 +721,10 @@ builder_module_serialize_property (JsonSerializable *serializable,
     }
   else
     {
-      return json_serializable_default_serialize_property (serializable,
-                                                           property_name,
-                                                           value,
-                                                           pspec);
+      return builder_serializable_serialize_property (serializable,
+                                                      property_name,
+                                                      value,
+                                                      pspec);
     }
 }
 
@@ -912,10 +912,10 @@ builder_module_deserialize_property (JsonSerializable *serializable,
     }
   else
     {
-      return json_serializable_default_deserialize_property (serializable,
-                                                             property_name,
-                                                             value,
-                                                             pspec, property_node);
+      return builder_serializable_deserialize_property (serializable,
+                                                        property_name,
+                                                        value,
+                                                        pspec, property_node);
     }
 }
 
@@ -924,7 +924,10 @@ serializable_iface_init (JsonSerializableIface *serializable_iface)
 {
   serializable_iface->serialize_property = builder_module_serialize_property;
   serializable_iface->deserialize_property = builder_module_deserialize_property;
-  serializable_iface->find_property = builder_serializable_find_property_with_error;
+  serializable_iface->find_property = builder_serializable_find_property;
+  serializable_iface->list_properties = builder_serializable_list_properties;
+  serializable_iface->set_property = builder_serializable_set_property;
+  serializable_iface->get_property = builder_serializable_get_property;
 }
 
 const char *
