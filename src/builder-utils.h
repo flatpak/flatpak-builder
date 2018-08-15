@@ -104,8 +104,25 @@ gboolean builder_verify_checksums (const char *name,
                                    GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],
                                    GError **error);
 
-GParamSpec * builder_serializable_find_property_with_error (JsonSerializable *serializable,
-                                                            const char       *name);
+GParamSpec * builder_serializable_find_property (JsonSerializable *serializable,
+                                                 const char       *name);
+GParamSpec ** builder_serializable_list_properties (JsonSerializable *serializable,
+                                                    guint            *n_pspecs);
+gboolean builder_serializable_deserialize_property (JsonSerializable *serializable,
+                                                    const gchar      *property_name,
+                                                    GValue           *value,
+                                                    GParamSpec       *pspec,
+                                                    JsonNode         *property_node);
+JsonNode * builder_serializable_serialize_property (JsonSerializable *serializable,
+                                                    const gchar      *property_name,
+                                                    const GValue     *value,
+                                                    GParamSpec       *pspec);
+void builder_serializable_get_property (JsonSerializable *serializable,
+                                        GParamSpec       *pspec,
+                                        GValue           *value);
+void builder_serializable_set_property (JsonSerializable *serializable,
+                                        GParamSpec       *pspec,
+                                        const GValue     *value);
 
 void builder_set_term_title (const gchar *format,
                              ...) G_GNUC_PRINTF (1, 2);
