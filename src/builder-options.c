@@ -771,7 +771,8 @@ serializable_iface_init (JsonSerializableIface *serializable_iface)
 {
   serializable_iface->serialize_property = builder_options_serialize_property;
   serializable_iface->deserialize_property = builder_options_deserialize_property;
-  serializable_iface->find_property = builder_serializable_find_property_with_error;
+  serializable_iface->find_property = builder_serializable_find_property;
+  serializable_iface->list_properties = builder_serializable_list_properties;
 }
 
 static GList *
