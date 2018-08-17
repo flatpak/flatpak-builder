@@ -37,6 +37,7 @@ struct BuilderSourcePatch
   BuilderSource parent;
 
   char         *path;
+  char        **paths;
   guint         strip_components;
   gboolean      use_git;
   gboolean      use_git_am;
@@ -53,6 +54,7 @@ G_DEFINE_TYPE (BuilderSourcePatch, builder_source_patch, BUILDER_TYPE_SOURCE);
 enum {
   PROP_0,
   PROP_PATH,
+  PROP_PATHS,
   PROP_STRIP_COMPONENTS,
   PROP_USE_GIT,
   PROP_OPTIONS,
@@ -66,6 +68,7 @@ builder_source_patch_finalize (GObject *object)
   BuilderSourcePatch *self = (BuilderSourcePatch *) object;
 
   g_free (self->path);
+  g_strfreev (self->paths);
   g_strfreev (self->options);
 
   G_OBJECT_CLASS (builder_source_patch_parent_class)->finalize (object);
@@ -83,6 +86,10 @@ builder_source_patch_get_property (GObject    *object,
     {
     case PROP_PATH:
       g_value_set_string (value, self->path);
+      break;
+
+    case PROP_PATHS:
+      g_value_set_boxed (value, self->paths);
       break;
 
     case PROP_STRIP_COMPONENTS:
@@ -122,6 +129,12 @@ builder_source_patch_set_property (GObject      *object,
       self->path = g_value_dup_string (value);
       break;
 
+    case PROP_PATHS:
+      tmp = self->paths;
+      self->paths = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
     case PROP_STRIP_COMPONENTS:
       self->strip_components = g_value_get_uint (value);
       break;
@@ -145,20 +158,31 @@ builder_source_patch_set_property (GObject      *object,
     }
 }
 
-static GFile *
-get_source_file (BuilderSourcePatch *self,
+static GPtrArray *
+get_source_files (BuilderSourcePatch *self,
                  BuilderContext     *context,
                  GError            **error)
 {
+  g_autoptr(GPtrArray) res = g_ptr_array_new_with_free_func (g_object_unref);
   GFile *base_dir = BUILDER_SOURCE (self)->base_dir;
+  int i;
 
-  if (self->path == NULL || self->path[0] == 0)
+  if ((self->path != NULL && self->path[0] != 0))
+    g_ptr_array_add (res, g_file_resolve_relative_path (base_dir, self->path));
+
+  if (self->paths != NULL)
+    {
+      for (i = 0; self->paths[i] != NULL; i++)
+        g_ptr_array_add (res, g_file_resolve_relative_path (base_dir, self->paths[i]));
+    }
+
+  if (res->len == 0)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "path not specified");
       return NULL;
     }
 
-  return g_file_resolve_relative_path (base_dir, self->path);
+  return g_steal_pointer (&res);
 }
 
 static gboolean
@@ -166,9 +190,13 @@ builder_source_patch_show_deps (BuilderSource  *source,
                                 GError        **error)
 {
   BuilderSourcePatch *self = BUILDER_SOURCE_PATCH (source);
+  int i;
 
   if (self->path && self->path[0] != 0)
     g_print ("%s\n", self->path);
+
+  for (i = 0; self->paths != NULL && self->paths[i] != NULL; i++)
+    g_print ("%s\n", self->paths[i]);
 
   return TRUE;
 }
@@ -180,17 +208,21 @@ builder_source_patch_download (BuilderSource  *source,
                                GError        **error)
 {
   BuilderSourcePatch *self = BUILDER_SOURCE_PATCH (source);
+  g_autoptr(GPtrArray) srcs = NULL;
+  int i;
 
-  g_autoptr(GFile) src = NULL;
-
-  src = get_source_file (self, context, error);
-  if (src == NULL)
+  srcs = get_source_files (self, context, error);
+  if (srcs == NULL)
     return FALSE;
 
-  if (!g_file_query_exists (src, NULL))
+  for (i = 0; i < srcs->len; i++)
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", self->path);
-      return FALSE;
+      GFile *src = g_ptr_array_index (srcs, i);
+      if (!g_file_query_exists (src, NULL))
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", self->path);
+          return FALSE;
+        }
     }
 
   return TRUE;
@@ -254,14 +286,9 @@ builder_source_patch_extract (BuilderSource  *source,
                               GError        **error)
 {
   BuilderSourcePatch *self = BUILDER_SOURCE_PATCH (source);
-
-  g_autoptr(GFile) patchfile = NULL;
-  g_autofree char *patch_path = NULL;
   g_autofree char *strip_components = NULL;
-
-  patchfile = get_source_file (self, context, error);
-  if (patchfile == NULL)
-    return FALSE;
+  g_autoptr(GPtrArray) srcs = NULL;
+  int i;
 
   if (self->use_git && self->use_git_am)
     {
@@ -271,11 +298,22 @@ builder_source_patch_extract (BuilderSource  *source,
       return FALSE;
     }
 
-  g_print ("Applying patch %s\n", self->path);
-  strip_components = g_strdup_printf ("-p%u", self->strip_components);
-  patch_path = g_file_get_path (patchfile);
-  if (!patch (dest, self->use_git, self->use_git_am, patch_path, self->options, error, strip_components, NULL))
+  srcs = get_source_files (self, context, error);
+  if (srcs == NULL)
     return FALSE;
+
+  strip_components = g_strdup_printf ("-p%u", self->strip_components);
+
+  for (i = 0; i < srcs->len; i++)
+    {
+      GFile *patchfile = g_ptr_array_index (srcs, i);
+      g_autofree char *basename = g_file_get_basename (patchfile);
+      g_autofree char *patch_path = g_file_get_path (patchfile);
+
+      g_print ("Applying patch %s\n", basename);
+      if (!patch (dest, self->use_git, self->use_git_am, patch_path, self->options, error, strip_components, NULL))
+        return FALSE;
+    }
 
   return TRUE;
 }
@@ -287,36 +325,41 @@ builder_source_patch_bundle (BuilderSource  *source,
 {
   BuilderSourcePatch *self = BUILDER_SOURCE_PATCH (source);
   GFile *manifest_base_dir = builder_context_get_base_dir (context);
-  g_autoptr(GFile) src = NULL;
-  g_autoptr(GFile) destination_file = NULL;
-  g_autofree char *rel_path = NULL;
-  g_autoptr(GFile) destination_dir = NULL;
+  g_autoptr(GPtrArray) srcs = NULL;
+  int i;
 
-  src = get_source_file (self, context, error);
-
-  if (src == NULL)
+  srcs = get_source_files (self, context, error);
+  if (srcs == NULL)
     return FALSE;
 
-  rel_path = g_file_get_relative_path (manifest_base_dir, src);
-  if (rel_path == NULL)
+  for (i = 0; i < srcs->len; i++)
     {
-      g_warning ("Patch %s is outside manifest tree, not bundling", flatpak_file_get_path_cached (src));
-      return TRUE;
+      GFile *src = g_ptr_array_index (srcs, i);
+      g_autofree char *rel_path = NULL;
+      g_autoptr(GFile) destination_file = NULL;
+      g_autoptr(GFile) destination_dir = NULL;
+
+      rel_path = g_file_get_relative_path (manifest_base_dir, src);
+      if (rel_path == NULL)
+        {
+          g_warning ("Patch %s is outside manifest tree, not bundling", flatpak_file_get_path_cached (src));
+          return TRUE;
+        }
+
+      destination_file = flatpak_build_file (builder_context_get_app_dir (context),
+                                             "sources/manifest", rel_path, NULL);
+
+      destination_dir = g_file_get_parent (destination_file);
+      if (!flatpak_mkdir_p (destination_dir, NULL, error))
+        return FALSE;
+
+      if (!g_file_copy (src, destination_file,
+                        G_FILE_COPY_OVERWRITE,
+                        NULL,
+                        NULL, NULL,
+                        error))
+        return FALSE;
     }
-
-  destination_file = flatpak_build_file (builder_context_get_app_dir (context),
-                                         "sources/manifest", rel_path, NULL);
-
-  destination_dir = g_file_get_parent (destination_file);
-  if (!flatpak_mkdir_p (destination_dir, NULL, error))
-    return FALSE;
-
-  if (!g_file_copy (src, destination_file,
-                    G_FILE_COPY_OVERWRITE,
-                    NULL,
-                    NULL, NULL,
-                    error))
-    return FALSE;
 
   return TRUE;
 }
@@ -327,19 +370,23 @@ builder_source_patch_checksum (BuilderSource  *source,
                                BuilderContext *context)
 {
   BuilderSourcePatch *self = BUILDER_SOURCE_PATCH (source);
+  g_autoptr(GPtrArray) srcs = NULL;
+  int i;
 
-  g_autoptr(GFile) src = NULL;
-  g_autofree char *data = NULL;
-  gsize len;
+  srcs = get_source_files (self, context, NULL);
 
-  src = get_source_file (self, context, NULL);
-  if (src == NULL)
-    return;
+  for (i = 0; srcs != NULL && i < srcs->len; i++)
+    {
+      GFile *src = g_ptr_array_index (srcs, i);
+      g_autofree char *data = NULL;
+      gsize len;
 
-  if (g_file_load_contents (src, NULL, &data, &len, NULL, NULL))
-    builder_cache_checksum_data (cache, (guchar *) data, len);
+      if (g_file_load_contents (src, NULL, &data, &len, NULL, NULL))
+        builder_cache_checksum_data (cache, (guchar *) data, len);
+    }
 
   builder_cache_checksum_str (cache, self->path);
+  builder_cache_checksum_compat_strv (cache, self->paths);
   builder_cache_checksum_uint32 (cache, self->strip_components);
   builder_cache_checksum_strv (cache, self->options);
 }
@@ -367,6 +414,13 @@ builder_source_patch_class_init (BuilderSourcePatchClass *klass)
                                                         "",
                                                         NULL,
                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_PATHS,
+                                   g_param_spec_boxed ("paths",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
                                    PROP_STRIP_COMPONENTS,
                                    g_param_spec_uint ("strip-components",

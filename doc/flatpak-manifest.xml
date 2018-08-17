@@ -830,6 +830,10 @@
                         <listitem><para>The path of a patch file that will be applied in the source dir</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>paths</option> (array of strings)</term>
+                        <listitem><para>An list of paths to a patch files that will be applied in the source dir, in order</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>strip-components</option> (integer)</term>
                         <listitem><para>The value of the -p argument to patch, defaults to 1.</para></listitem>
                     </varlistentry>
