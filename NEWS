@@ -1,3 +1,17 @@
+Changes in 1.0.0
+================
+
+ * Respect no-parallel-make with ninja
+ * Fixed regression in data: uris
+ * Warn about deprecated cmake property
+ * Make X-Flatpak-RenamedFrom a list
+ * Fix handling of mirror uris with no terminating slash
+ * Take arch into account for --skip-if-unchanged
+ * Fix --run when run inside a flatpak sandbox
+ * Ensure GIT commiter env var is set when applying git patches
+ * Keep x-* properties in the manifest when creating manifest.json
+ * New property `paths` in patch source to apply multiple patches.
+
 Major changes in 0.99.3
 =======================
 
