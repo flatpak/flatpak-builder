@@ -210,13 +210,10 @@ builder_cache_get_checksum (BuilderCache *self)
   return self->checksum;
 }
 
-static char *
-get_ref (BuilderCache *self, const char *stage)
+static void
+append_escaped_stage (GString *s,
+                      const char *stage)
 {
-  GString *s = g_string_new (self->branch);
-
-  g_string_append_c (s, '/');
-
   while (*stage)
     {
       char c = *stage++;
@@ -228,6 +225,16 @@ get_ref (BuilderCache *self, const char *stage)
       else
         g_string_append_printf (s, "%x", c);
     }
+}
+
+static char *
+get_ref (BuilderCache *self, const char *stage)
+{
+  GString *s = g_string_new (self->branch);
+
+  g_string_append_c (s, '/');
+
+  append_escaped_stage (s, stage);
 
   return g_string_free (s, FALSE);
 }
@@ -376,11 +383,13 @@ builder_cache_lookup (BuilderCache *self,
 {
   g_autofree char *commit = NULL;
   g_autofree char *ref = NULL;
+  g_autoptr(GString) s = g_string_new ("");
 
   g_free (self->stage);
   self->stage = g_strdup (stage);
 
-  g_hash_table_remove (self->unused_stages, stage);
+  append_escaped_stage (s, stage);
+  g_hash_table_remove (self->unused_stages, s->str);
 
   g_free (self->current_checksum);
   self->current_checksum = g_strdup (g_checksum_get_string (self->checksum));
