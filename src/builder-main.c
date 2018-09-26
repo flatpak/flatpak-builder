@@ -912,6 +912,11 @@ main (int    argc,
 
       if (g_file_query_exists (xml, NULL))
         {
+          if (!flatpak_break_hardlink (xml, &error))
+            {
+              g_printerr ("Error mirroring screenshots: %s\n", error->message);
+              return 1;
+            }
           if (!builder_maybe_host_spawnv (NULL,
                                           NULL,
                                           0,
