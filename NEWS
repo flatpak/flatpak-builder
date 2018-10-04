@@ -1,3 +1,10 @@
+Changes in 1.0.1
+================
+
+ * Run appstream-util mirror-screenshots in the sandbox, rather than on
+   the host, as the host might not have a new enough appstream-glib.
+ * Fix build cache when a module has uncommon characters in the name.
+
 Changes in 1.0.0
 ================
 
