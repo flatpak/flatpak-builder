@@ -623,7 +623,7 @@
     "runtime-version": "1.2",
     "sdk": "org.freedesktop.Sdk",
     "command": "test",
-    "clean": [ "/include", "*.la" ],
+    "cleanup": [ "/include", "*.la" ],
     "build-options" : {
         "cflags": "-O2 -g",
         "cxxflags": "-O2 -g",
