@@ -138,7 +138,8 @@ builder_source_script_extract (BuilderSource  *source,
   int i;
   guint32 perms;
 
-  script = g_string_new ("#!/bin/sh\n");
+  /* --norc is already on when bash is invoked as sh */
+  script = g_string_new ("#!/bin/sh --noprofile\n");
 
   if (self->commands)
     {
