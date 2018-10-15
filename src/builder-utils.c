@@ -409,12 +409,22 @@ parse_yaml_node_to_json (yaml_document_t *doc, yaml_node_t *node)
               break;
             }
 
-          gchar *endptr;
-          gint64 num = g_ascii_strtoll (scalar, &endptr, 10);
-          if (*scalar != '\0' && *endptr == '\0')
+          if (*scalar != '\0')
             {
-              json_node_init_int (json, num);
-              break;
+              gchar *endptr;
+              gint64 num = g_ascii_strtoll (scalar, &endptr, 10);
+              if (*endptr == '\0')
+                {
+                  json_node_init_int (json, num);
+                  break;
+                }
+              else if (*endptr == '.')
+                {
+                  g_ascii_strtoll (endptr + 1, &endptr, 10);
+                  if (*endptr == '\0')
+                    g_warning ("%zu:%zu: '%s' will be parsed as a number by many YAML parsers",
+                               node->start_mark.line + 1, node->start_mark.column + 1, scalar);
+                }
             }
         }
 
