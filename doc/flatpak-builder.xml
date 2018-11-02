@@ -112,7 +112,7 @@
     <refsect1>
         <title>Manifest</title>
 
-        <para>The manifest file is a json file whose format is described in detail in its own manual page.</para>
+        <para>The manifest file is a json or yaml file whose format is described in detail in its own manual page.</para>
     </refsect1>
 
     <refsect1>
