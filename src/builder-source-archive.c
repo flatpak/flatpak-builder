@@ -504,7 +504,8 @@ get_type (GFile *archivefile)
   if (g_str_has_suffix (lower, ".tar.lzo"))
     return TAR_LZOP;
 
-  if (g_str_has_suffix (lower, ".tar.xz"))
+  if (g_str_has_suffix (lower, ".tar.xz") ||
+      g_str_has_suffix (lower, ".txz"))
     return TAR_XZ;
 
   if (g_str_has_suffix (lower, ".zip"))
