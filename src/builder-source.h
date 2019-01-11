@@ -45,6 +45,8 @@ struct BuilderSource
   char   *dest;
   char  **only_arches;
   char  **skip_arches;
+  char  **only_alts;
+  char  **skip_alts;
 };
 
 typedef struct

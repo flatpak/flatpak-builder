@@ -1725,7 +1725,6 @@ builder_manifest_checksum (BuilderManifest *self,
   builder_cache_checksum_str (cache, self->base_commit);
   builder_cache_checksum_strv (cache, self->base_extensions);
   builder_cache_checksum_compat_str (cache, self->extension_tag);
-
   if (self->build_options)
     builder_options_checksum (self->build_options, cache, context);
 

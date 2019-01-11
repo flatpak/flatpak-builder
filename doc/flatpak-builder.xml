@@ -349,6 +349,16 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--alt=ALTNAME</option></term>
+
+                <listitem><para>
+                  Build an alternative version of the manifest specified by the name and the alt options
+                  (like e.g. only-alts) in the manifest. If this is not specified the alternative used is
+                  called "default".
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--stop-at=MODULENAME</option></term>
 
                 <listitem><para>

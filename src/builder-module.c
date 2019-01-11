@@ -54,6 +54,8 @@ struct BuilderModule
   char          **ensure_writable;
   char          **only_arches;
   char          **skip_arches;
+  char          **only_alts;
+  char          **skip_alts;
   gboolean        disabled;
   gboolean        rm_configure;
   gboolean        no_autogen;
@@ -103,8 +105,10 @@ enum {
   PROP_MAKE_INSTALL_ARGS,
   PROP_ENSURE_WRITABLE,
   PROP_ONLY_ARCHES,
-  PROP_RUN_TESTS,
   PROP_SKIP_ARCHES,
+  PROP_ONLY_ALTS,
+  PROP_SKIP_ALTS,
+  PROP_RUN_TESTS,
   PROP_SOURCES,
   PROP_BUILD_OPTIONS,
   PROP_CLEANUP,
@@ -149,6 +153,8 @@ builder_module_finalize (GObject *object)
   g_strfreev (self->ensure_writable);
   g_strfreev (self->only_arches);
   g_strfreev (self->skip_arches);
+  g_strfreev (self->only_alts);
+  g_strfreev (self->skip_alts);
   g_clear_object (&self->build_options);
   g_list_free_full (self->sources, g_object_unref);
   g_strfreev (self->cleanup);
@@ -247,6 +253,14 @@ builder_module_get_property (GObject    *object,
 
     case PROP_SKIP_ARCHES:
       g_value_set_boxed (value, self->skip_arches);
+      break;
+
+    case PROP_ONLY_ALTS:
+      g_value_set_boxed (value, self->only_alts);
+      break;
+
+    case PROP_SKIP_ALTS:
+      g_value_set_boxed (value, self->skip_alts);
       break;
 
     case PROP_POST_INSTALL:
@@ -397,6 +411,18 @@ builder_module_set_property (GObject      *object,
     case PROP_SKIP_ARCHES:
       tmp = self->skip_arches;
       self->skip_arches = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_ONLY_ALTS:
+      tmp = self->only_alts;
+      self->only_alts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_SKIP_ALTS:
+      tmp = self->skip_alts;
+      self->skip_alts = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -599,6 +625,20 @@ builder_module_class_init (BuilderModuleClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SKIP_ARCHES,
                                    g_param_spec_boxed ("skip-arches",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_ONLY_ALTS,
+                                   g_param_spec_boxed ("only-alts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SKIP_ALTS,
+                                   g_param_spec_boxed ("skip-alts",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -950,6 +990,15 @@ builder_module_is_enabled (BuilderModule *self,
 
   if (self->skip_arches != NULL &&
       g_strv_contains ((const char * const *)self->skip_arches, builder_context_get_arch (context)))
+    return FALSE;
+
+  if (self->only_alts != NULL &&
+      self->only_alts[0] != NULL &&
+      !g_strv_contains ((const char * const *) self->only_alts, builder_context_get_defaulted_alt (context)))
+    return FALSE;
+
+  if (self->skip_alts != NULL &&
+      g_strv_contains ((const char * const *)self->skip_alts, builder_context_get_defaulted_alt (context)))
     return FALSE;
 
   return TRUE;
@@ -1972,6 +2021,8 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_strv (cache, self->ensure_writable);
   builder_cache_checksum_strv (cache, self->only_arches);
   builder_cache_checksum_strv (cache, self->skip_arches);
+  builder_cache_checksum_compat_strv (cache, self->only_alts);
+  builder_cache_checksum_compat_strv (cache, self->skip_alts);
   builder_cache_checksum_boolean (cache, self->rm_configure);
   builder_cache_checksum_boolean (cache, self->no_autogen);
   builder_cache_checksum_boolean (cache, self->disabled);

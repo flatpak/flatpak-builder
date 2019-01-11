@@ -48,6 +48,7 @@ struct BuilderContext
   SoupSession    *soup_session;
   CURL           *curl_session;
   char           *arch;
+  char           *alt;
   char           *stop_at;
 
   GFile          *download_dir;
@@ -118,6 +119,7 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->options);
   g_clear_object (&self->sdk_config);
   g_free (self->arch);
+  g_free (self->alt);
   g_free (self->state_subdir);
   g_free (self->stop_at);
   g_strfreev (self->cleanup);
@@ -563,6 +565,32 @@ builder_context_set_arch (BuilderContext *self,
 {
   g_free (self->arch);
   self->arch = g_strdup (arch);
+}
+
+const char *
+builder_context_get_alt (BuilderContext *self)
+{
+  return (const char *) self->alt;
+}
+
+const char *
+builder_context_get_defaulted_alt (BuilderContext *self)
+{
+  if (self->alt == NULL)
+    return "default";
+  return (const char *) self->alt;
+}
+
+void
+builder_context_set_alt (BuilderContext *self,
+                         const char     *alt)
+{
+  g_free (self->alt);
+
+  if (g_strcmp0 (alt, "default") == 0)
+    alt = NULL;
+
+  self->alt = g_strdup (alt);
 }
 
 const char *
