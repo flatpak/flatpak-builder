@@ -276,7 +276,7 @@ do_install (BuilderContext *build_context,
     g_ptr_array_add (args, g_strdup ("--system"));
 
   g_ptr_array_add (args, g_strdup ("-y"));
-
+  g_ptr_array_add (args, g_strdup ("--noninteractive"));
   g_ptr_array_add (args, g_strdup ("--reinstall"));
 
   ref = flatpak_build_untyped_ref (id, branch,
