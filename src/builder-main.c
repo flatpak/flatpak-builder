@@ -442,6 +442,7 @@ main (int    argc,
   int i, first_non_arg, orig_argc;
   int argnr;
   char *p;
+  struct stat statbuf;
 
   setlocale (LC_ALL, "");
 
@@ -658,6 +659,9 @@ main (int    argc,
       g_printerr ("Can't load '%s': %s\n", manifest_rel_path, error->message);
       return 1;
     }
+
+  if (stat (flatpak_file_get_path_cached (manifest_file), &statbuf) == 0)
+    builder_context_set_source_date_epoch (build_context, (gint64)statbuf.st_mtime);
 
   manifest_sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, manifest_contents, -1);
 

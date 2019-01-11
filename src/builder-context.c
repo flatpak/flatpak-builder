@@ -49,6 +49,7 @@ struct BuilderContext
   CURL           *curl_session;
   char           *arch;
   char           *stop_at;
+  gint64          source_date_epoch;
 
   GFile          *download_dir;
   GPtrArray      *sources_dirs;
@@ -565,6 +566,13 @@ builder_context_set_arch (BuilderContext *self,
   self->arch = g_strdup (arch);
 }
 
+void
+builder_context_set_source_date_epoch (BuilderContext *self,
+                                       gint64 source_date_epoch)
+{
+  self->source_date_epoch = source_date_epoch;
+}
+
 const char *
 builder_context_get_stop_at (BuilderContext *self)
 {
@@ -1029,6 +1037,12 @@ builder_context_extend_env (BuilderContext *self,
 
   envp = g_environ_setenv (envp, "CCACHE_DIR", ccache_dir, TRUE);
   envp = g_environ_setenv (envp, "PATH", path, TRUE);
+
+  if (self->source_date_epoch != 0)
+    {
+      g_autofree char *s_d_e = g_strdup_printf ("%" G_GUINT64_FORMAT, self->source_date_epoch);
+      envp = g_environ_setenv (envp, "SOURCE_DATE_EPOCH", s_d_e, FALSE);
+    }
 
   return envp;
 }
