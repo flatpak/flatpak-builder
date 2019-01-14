@@ -1093,6 +1093,8 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   char **envp = NULL;
   const char *cflags, *cppflags, *cxxflags, *ldflags;
 
+  envp = builder_context_extend_env_pre (context, envp);
+
   cflags = builder_options_get_cflags (self, context);
   if (cflags)
     envp = g_environ_setenv (envp, "CFLAGS", cflags, FALSE);
@@ -1137,7 +1139,7 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
         }
     }
 
-  envp = builder_context_extend_env (context, envp);
+  envp = builder_context_extend_env_post (context, envp);
 
   envp = builder_options_update_path (self, context, envp);
   envp = builder_options_update_ld_path (self, context, envp);

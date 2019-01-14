@@ -142,8 +142,10 @@ void            builder_context_set_run_tests (BuilderContext *self,
 void            builder_context_set_no_shallow_clone (BuilderContext *self,
                                                       gboolean        no_shallow_clone);
 gboolean        builder_context_get_no_shallow_clone (BuilderContext *self);
-char **         builder_context_extend_env (BuilderContext *self,
-                                            char          **envp);
+char **         builder_context_extend_env_pre (BuilderContext *self,
+                                                 char          **envp);
+char **         builder_context_extend_env_post (BuilderContext *self,
+                                                 char          **envp);
 
 gboolean        builder_context_load_sdk_config (BuilderContext       *self,
                                                  const char           *sdk_path,
