@@ -112,6 +112,9 @@ invalidate_old_python_compiled (const char *path,
   return TRUE;
 }
 
+/* We need to read at least 12 bytes to get both magic + optional flags + mtime */
+#define PYTHON_HEADER_SIZE 12
+
 static gboolean
 fixup_python_time_stamp (const char *path,
                          const char *rel_path,
@@ -119,9 +122,11 @@ fixup_python_time_stamp (const char *path,
 {
   glnx_fd_close int fd = -1;
   g_auto(GLnxTmpfile) tmpf = { 0 };
-  guint8 buffer[8];
+  guint8 buffer[PYTHON_HEADER_SIZE];
   ssize_t res;
   guint32 pyc_mtime;
+  guint32 magic, header_flag;
+  gsize mtime_offset;
   g_autofree char *py_path = NULL;
   struct stat stbuf;
   gboolean remove_pyc = FALSE;
@@ -136,8 +141,8 @@ fixup_python_time_stamp (const char *path,
       return TRUE;
     }
 
-  res = pread (fd, buffer, 8, 0);
-  if (res != 8)
+  res = pread (fd, buffer, PYTHON_HEADER_SIZE, 0);
+  if (res != PYTHON_HEADER_SIZE)
     {
       g_warning ("Short read for %s", rel_path);
       return TRUE;
@@ -149,11 +154,48 @@ fixup_python_time_stamp (const char *path,
       return TRUE;
     }
 
+  magic = buffer[0] + (buffer[1] << 8);
+
+  /* All magic listed here: https://github.com/python/cpython/blob/HEAD/Lib/importlib/_bootstrap_external.py#L167
+   * 3392 is the first (3.7) which added an extra flags field in the header.
+   * 20121 is the first higher major listed (1.5), and all other non-py3 ones are higher.
+   */
+  if (magic >= 3392 && magic < 20121)
+    {
+      /* From the spec:
+       * The pyc header currently consists of 3 32-bit words. We will expand it to 4.
+       * The first word will continue to be the magic number, versioning the bytecode and pyc format.
+       * The second word, conceptually the new word, will be a bit field.
+       * The interpretation of the rest of the header and invalidation behavior of the pyc depends on the contents of the bit field.
+       */
+      header_flag =
+        (buffer[4] << 8*0) |
+        (buffer[5] << 8*1) |
+        (buffer[6] << 8*2) |
+        (buffer[7] << 8*3);
+
+      /* If the bit field is 0, the pyc is a traditional timestamp-based pyc. I.e., the third
+         and forth words will be the timestamp and file size respectively, and invalidation
+         will be done by comparing the metadata of the source file  with that in the header. */
+      if (header_flag != 0)
+        {
+          /* Non-mtime based verification, like hash if low bit is 1,
+           * or other future added methods.  No need to do anything*/
+          return TRUE;
+        }
+
+      mtime_offset = 8;
+    }
+  else
+    {
+      mtime_offset = 4;
+    }
+
   pyc_mtime =
-    (buffer[4] << 8*0) |
-    (buffer[5] << 8*1) |
-    (buffer[6] << 8*2) |
-    (buffer[7] << 8*3);
+    (buffer[mtime_offset+0] << 8*0) |
+    (buffer[mtime_offset+1] << 8*1) |
+    (buffer[mtime_offset+2] << 8*2) |
+    (buffer[mtime_offset+3] << 8*3);
 
   if (strcmp (dir_basename, "__pycache__") == 0)
     {
@@ -233,11 +275,11 @@ fixup_python_time_stamp (const char *path,
     return glnx_throw_errno_prefix (error, "copyfile");
 
   /* Change to mtime 0 which is what ostree uses for checkouts */
-  buffer[4] = OSTREE_TIMESTAMP;
-  buffer[5] = buffer[6] = buffer[7] = 0;
+  buffer[mtime_offset+0] = OSTREE_TIMESTAMP;
+  buffer[mtime_offset+1] = buffer[mtime_offset+2] = buffer[mtime_offset+3] = 0;
 
-  res = pwrite (tmpf.fd, buffer, 8, 0);
-  if (res != 8)
+  res = pwrite (tmpf.fd, buffer, PYTHON_HEADER_SIZE, 0);
+  if (res != PYTHON_HEADER_SIZE)
     {
       glnx_set_error_from_errno (error);
       return FALSE;
