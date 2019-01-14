@@ -645,23 +645,24 @@ builder_options_serialize_property (JsonSerializable *serializable,
 
           for (i = 0; self->env[i] != NULL; i++)
             {
-              JsonNode *str = json_node_new (JSON_NODE_VALUE);
+              JsonNode *val = NULL;
               const char *equal;
               g_autofree char *member = NULL;
 
               equal = strchr (self->env[i], '=');
               if (equal)
                 {
-                  json_node_set_string (str, equal + 1);
+                  val = json_node_new (JSON_NODE_VALUE);
+                  json_node_set_string (val, equal + 1);
                   member = g_strndup (self->env[i], equal - self->env[i]);
                 }
               else
                 {
-                  json_node_set_string (str, "");
+                  val = json_node_new (JSON_NODE_NULL);
                   member = g_strdup (self->env[i]);
                 }
 
-              json_object_set_member (object, member, str);
+              json_object_set_member (object, member, val);
             }
 
           retval = json_node_init_object (json_node_alloc (), object);
@@ -743,11 +744,19 @@ builder_options_deserialize_property (JsonSerializable *serializable,
               const char *val_str;
 
               val = json_object_get_member (object, member_name);
-              val_str = json_node_get_string (val);
-              if (val_str == NULL)
-                return FALSE;
 
-              g_ptr_array_add (env, g_strdup_printf ("%s=%s", member_name, val_str));
+              if (JSON_NODE_TYPE (val) == JSON_NODE_NULL)
+                {
+                  g_ptr_array_add (env, g_strdup_printf ("%s", member_name));
+                }
+              else
+                {
+                  val_str = json_node_get_string (val);
+                  if (val_str == NULL)
+                    return FALSE;
+
+                  g_ptr_array_add (env, g_strdup_printf ("%s=%s", member_name, val_str));
+                }
             }
 
           g_ptr_array_add (env, NULL);
@@ -1084,36 +1093,6 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   char **envp = NULL;
   const char *cflags, *cppflags, *cxxflags, *ldflags;
 
-  for (l = options; l != NULL; l = l->next)
-    {
-      BuilderOptions *o = l->data;
-
-      if (o->env)
-        {
-          for (i = 0; o->env[i] != NULL; i++)
-            {
-              const char *line = o->env[i];
-              const char *eq = strchr (line, '=');
-              const char *value = "";
-              g_autofree char *key = NULL;
-
-              if (eq)
-                {
-                  key = g_strndup (line, eq - line);
-                  value = eq + 1;
-                }
-              else
-                {
-                  key = g_strdup (key);
-                }
-
-              envp = g_environ_setenv (envp, key, value, FALSE);
-            }
-        }
-    }
-
-  envp = builder_context_extend_env (context, envp);
-
   cflags = builder_options_get_cflags (self, context);
   if (cflags)
     envp = g_environ_setenv (envp, "CFLAGS", cflags, FALSE);
@@ -1129,6 +1108,36 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   ldflags = builder_options_get_ldflags (self, context);
   if (ldflags)
     envp = g_environ_setenv (envp, "LDFLAGS", ldflags, FALSE);
+
+  /* We traverse in reverse order because the list is "last first" */
+  for (l = g_list_last (options); l != NULL; l = l->prev)
+    {
+      BuilderOptions *o = l->data;
+
+      if (o->env)
+        {
+          for (i = g_strv_length (o->env) - 1; i >= 0; i--)
+            {
+              const char *line = o->env[i];
+              const char *eq = strchr (line, '=');
+
+              if (eq)
+                {
+                  g_autofree char *key = g_strndup (line, eq - line);
+                  const char *value = eq + 1;
+
+                  envp = g_environ_setenv (envp, key, value, TRUE);
+                }
+              else
+                {
+                  envp = g_environ_unsetenv (envp, line);
+                }
+
+            }
+        }
+    }
+
+  envp = builder_context_extend_env (context, envp);
 
   envp = builder_options_update_path (self, context, envp);
   envp = builder_options_update_ld_path (self, context, envp);
