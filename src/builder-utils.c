@@ -408,6 +408,11 @@ parse_yaml_node_to_json (yaml_document_t *doc, yaml_node_t *node)
               json_node_init_boolean (json, FALSE);
               break;
             }
+          else if (strcmp (scalar, "null") == 0)
+            {
+              json_node_init_null (json);
+              break;
+            }
 
           if (*scalar != '\0')
             {
