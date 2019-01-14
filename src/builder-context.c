@@ -1013,8 +1013,21 @@ builder_context_set_enable_ccache (BuilderContext *self,
 }
 
 char **
-builder_context_extend_env (BuilderContext *self,
-                            char          **envp)
+builder_context_extend_env_pre (BuilderContext *self,
+                                char          **envp)
+{
+  if (self->source_date_epoch != 0)
+    {
+      g_autofree char *s_d_e = g_strdup_printf ("%" G_GUINT64_FORMAT, self->source_date_epoch);
+      envp = g_environ_setenv (envp, "SOURCE_DATE_EPOCH", s_d_e, FALSE);
+    }
+
+  return envp;
+}
+
+char **
+builder_context_extend_env_post (BuilderContext *self,
+                                 char          **envp)
 {
   g_autofree char *path = NULL;
   const char *ccache_dir = NULL;
@@ -1037,12 +1050,6 @@ builder_context_extend_env (BuilderContext *self,
 
   envp = g_environ_setenv (envp, "CCACHE_DIR", ccache_dir, TRUE);
   envp = g_environ_setenv (envp, "PATH", path, TRUE);
-
-  if (self->source_date_epoch != 0)
-    {
-      g_autofree char *s_d_e = g_strdup_printf ("%" G_GUINT64_FORMAT, self->source_date_epoch);
-      envp = g_environ_setenv (envp, "SOURCE_DATE_EPOCH", s_d_e, FALSE);
-    }
 
   return envp;
 }
