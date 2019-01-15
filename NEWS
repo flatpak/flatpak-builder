@@ -1,3 +1,13 @@
+Changes in 1.0.2
+================
+
+ * Print a warning when a YAML document has a float-like string value.
+ * Handle .txz archive suffixes.
+ * Set SOURCE_DATE_EPOCH to the mtime of the manifest in the build.
+ * Update python post-processor to handle python 3.7 pyc files.
+ * Allow unsetting env vars in the build options by setting them to null.
+ * Documentation improvements
+
 Changes in 1.0.1
 ================
 
