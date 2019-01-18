@@ -623,9 +623,16 @@ main (int    argc,
 
       cleanup_manifest_dir = g_object_ref (build_subdir);
 
+      int mirror_flags = FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+
+      if (opt_disable_updates)
+        {
+          mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
+	}
+
       if (!builder_git_mirror_repo (opt_from_git,
                                     NULL,
-                                    opt_disable_updates?0:FLATPAK_GIT_MIRROR_FLAGS_UPDATE,
+                                    mirror_flags,
                                     git_branch, build_context, &error))
         {
           g_printerr ("Can't clone manifest repo: %s\n", error->message);
