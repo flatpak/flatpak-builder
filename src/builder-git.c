@@ -822,44 +822,6 @@ git_extract_submodule (const char     *repo_location,
 }
 
 gboolean
-builder_git_checkout_dir (const char     *repo_location,
-                          const char     *branch,
-                          const char     *dir,
-                          GFile          *dest,
-                          BuilderContext *context,
-                          GError        **error)
-{
-  g_autoptr(GFile) mirror_dir = NULL;
-  g_autofree char *mirror_dir_path = NULL;
-  g_autofree char *dest_path = NULL;
-  g_autofree char *dest_path_git = NULL;
-
-  mirror_dir = git_get_mirror_dir (repo_location, context);
-
-  mirror_dir_path = g_file_get_path (mirror_dir);
-  dest_path = g_file_get_path (dest);
-  dest_path_git = g_build_filename (dest_path, ".git", NULL);
-
-  g_mkdir_with_parents (dest_path, 0755);
-
-  if (!cp (error,
-           "-al",
-           mirror_dir_path, dest_path_git, NULL))
-    return FALSE;
-
-  /* Then we need to convert to regular */
-  if (!git (dest, NULL, 0, error,
-            "config", "--bool", "core.bare", "false", NULL))
-    return FALSE;
-
-  if (!git (dest, NULL, 0, error,
-            "checkout", branch, "--", dir ? dir : ".", NULL))
-    return FALSE;
-
-  return TRUE;
-}
-
-gboolean
 builder_git_checkout (const char     *repo_location,
                       const char     *branch,
                       GFile          *dest,
