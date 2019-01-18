@@ -643,12 +643,11 @@ main (int    argc,
           return 1;
         }
 
-      if (!builder_git_checkout_dir (opt_from_git,
-                                     git_branch,
-                                     manifest_dirname,
-                                     build_subdir,
-                                     build_context,
-                                     &error))
+      if (!builder_git_checkout (opt_from_git,
+                                 git_branch,
+                                 build_subdir,
+                                 build_context,
+                                 &error))
         {
           g_printerr ("Can't check out manifest repo: %s\n", error->message);
           return 1;
