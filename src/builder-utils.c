@@ -2539,3 +2539,71 @@ flatpak_xml_parse (GInputStream *in,
 
   return g_steal_pointer (&xml_root);
 }
+
+GBytes *
+flatpak_read_stream (GInputStream *in,
+                     gboolean      null_terminate,
+                     GError      **error)
+{
+  g_autoptr(GOutputStream) mem_stream = NULL;
+
+  mem_stream = g_memory_output_stream_new_resizable ();
+  if (g_output_stream_splice (mem_stream, in,
+                              0, NULL, error) < 0)
+    return NULL;
+
+  if (null_terminate)
+    {
+      if (!g_output_stream_write (G_OUTPUT_STREAM (mem_stream), "\0", 1, NULL, error))
+        return NULL;
+    }
+
+  if (!g_output_stream_close (G_OUTPUT_STREAM (mem_stream), NULL, error))
+    return NULL;
+
+  return g_memory_output_stream_steal_as_bytes (G_MEMORY_OUTPUT_STREAM (mem_stream));
+}
+
+GVariant *
+flatpak_variant_uncompress (GVariant *variant,
+                            const GVariantType *type)
+{
+  g_autoptr(GInputStream) input_stream = NULL;
+  g_autoptr(GZlibDecompressor) decompressor = NULL;
+  g_autoptr(GInputStream) converter = NULL;
+  g_autoptr(GBytes) decompressed_bytes = NULL;
+  const guint8 *compressed;
+  gsize compressed_size;
+
+  g_assert (g_variant_is_of_type (variant, G_VARIANT_TYPE_BYTESTRING));
+
+  compressed = g_variant_get_data (variant);
+  compressed_size = g_variant_get_size (variant);
+
+  input_stream = g_memory_input_stream_new_from_data (compressed, compressed_size, NULL);
+  decompressor = g_zlib_decompressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP);
+  converter = g_converter_input_stream_new (G_INPUT_STREAM (input_stream), G_CONVERTER (decompressor));
+  decompressed_bytes = flatpak_read_stream (converter, FALSE, NULL);
+  return g_variant_ref_sink (g_variant_new_from_bytes (type, decompressed_bytes, TRUE));
+}
+
+GVariant *
+flatpak_variant_compress (GVariant *variant)
+{
+  g_autoptr(GInputStream) input_stream = NULL;
+  g_autoptr(GZlibCompressor) compressor = NULL;
+  g_autoptr(GInputStream) converter = NULL;
+  g_autoptr(GBytes) compressed_bytes = NULL;
+  const guint8 *decompressed;
+  gsize decompressed_size;
+
+  decompressed = g_variant_get_data (variant);
+  decompressed_size = g_variant_get_size (variant);
+
+  input_stream = g_memory_input_stream_new_from_data (decompressed, decompressed_size, NULL);
+  compressor = g_zlib_compressor_new (G_ZLIB_COMPRESSOR_FORMAT_GZIP, -1);
+  converter = g_converter_input_stream_new (G_INPUT_STREAM (input_stream), G_CONVERTER (compressor));
+  compressed_bytes = flatpak_read_stream (converter, FALSE, NULL);
+
+  return g_variant_ref_sink (g_variant_new_from_bytes (G_VARIANT_TYPE_BYTESTRING, compressed_bytes, TRUE));
+}
