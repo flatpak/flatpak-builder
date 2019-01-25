@@ -588,6 +588,10 @@ builder_cache_commit (BuilderCache *self,
   g_autoptr(GPtrArray) removals = NULL;
   g_autoptr(GVariantDict) metadata_dict = NULL;
   g_autoptr(GVariant) metadata = NULL;
+  g_autoptr(GVariant) changesv = NULL;
+  g_autoptr(GVariant) removalsv = NULL;
+  g_autoptr(GVariant) changesvz = NULL;
+  g_autoptr(GVariant) removalsvz = NULL;
 
   g_print ("Committing stage %s to cache\n", self->stage);
 
@@ -615,11 +619,17 @@ builder_cache_commit (BuilderCache *self,
     goto out;
 
   changes = builder_cache_get_changes_to (self, root, &removals, NULL);
+
   metadata_dict = g_variant_dict_new (NULL);
-  g_variant_dict_insert_value (metadata_dict, "changes",
-                               g_variant_new_strv ((const gchar * const  *) changes->pdata, changes->len));
-  g_variant_dict_insert_value (metadata_dict, "removals",
-                               g_variant_new_strv ((const gchar * const  *) removals->pdata, removals->len));
+
+  changesv = g_variant_ref_sink (g_variant_new_strv ((const gchar * const  *) changes->pdata, changes->len));
+  changesvz = flatpak_variant_compress (changesv);
+  g_variant_dict_insert_value (metadata_dict, "changesz", changesvz);
+
+  removalsv = g_variant_ref_sink (g_variant_new_strv ((const gchar * const  *) removals->pdata, removals->len));
+  removalsvz = flatpak_variant_compress (removalsv);
+  g_variant_dict_insert_value (metadata_dict, "removalsz", removalsvz);
+
   metadata = g_variant_ref_sink (g_variant_dict_end (metadata_dict));
 
   current = self->current_checksum;
@@ -1162,6 +1172,7 @@ builder_cache_get_changes (BuilderCache *self,
   g_autoptr(GVariant) variant = NULL;
   g_autoptr(GVariant) commit_metadata = NULL;
   g_autofree char *parent_commit = NULL;
+  g_autoptr(GVariant) changesz_v = NULL;
   g_autoptr(GVariant) changes_v = NULL;
 
   if (!ostree_repo_read_commit (self->repo, self->last_parent, &current_root, NULL, NULL, error))
@@ -1172,7 +1183,12 @@ builder_cache_get_changes (BuilderCache *self,
     return NULL;
 
   commit_metadata = g_variant_get_child_value (variant, 0);
-  changes_v = g_variant_lookup_value (commit_metadata, "changes", G_VARIANT_TYPE ("as"));
+  changesz_v = g_variant_lookup_value (commit_metadata, "changesz", G_VARIANT_TYPE_BYTESTRING);
+
+  if (changesz_v)
+    changes_v = flatpak_variant_uncompress (changesz_v, G_VARIANT_TYPE ("as"));
+  else
+    changes_v = g_variant_lookup_value (commit_metadata, "changes", G_VARIANT_TYPE ("as"));
 
   if (changes_v)
     {
