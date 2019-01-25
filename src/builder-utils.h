@@ -170,6 +170,13 @@ FlatpakXml *flatpak_xml_find (FlatpakXml  *node,
                               const char  *type,
                               FlatpakXml **prev_child_out);
 
+GBytes *   flatpak_read_stream (GInputStream *in,
+                                gboolean      null_terminate,
+                                GError      **error);
+GVariant * flatpak_variant_compress (GVariant *variant);
+GVariant * flatpak_variant_uncompress (GVariant *variant, const GVariantType *type);
+
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
 G_END_DECLS
