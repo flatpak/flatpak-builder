@@ -58,7 +58,24 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>branch</option> (string)</term>
-                    <listitem><para>The branch of the application, defaults to master.</para></listitem>
+                    <listitem><para>The branch to use when exporting
+                    the application. If this is unset the defaults
+                    come from the default-branch option.</para>
+                    <para>This key overrides both the default-branch
+                    key, and the --default-branch commandline
+                    option. Unless you need a very specific branchname
+                    (like for a runtime or an extension) it is
+                    recommended to use the default-branch key instead, because
+                    you can then override the default using --default-branch when
+                    building for instance a test build.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>default-branch</option> (string)</term>
+                    <listitem><para>The default branch to use when
+                    exporting the application. Defaults to master. </para>
+                    <para>This key can be overriden by the
+                    --default-branch commandline
+                    option.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>collection-id</option> (string)</term>

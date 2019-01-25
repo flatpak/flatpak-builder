@@ -48,6 +48,7 @@ struct BuilderContext
   SoupSession    *soup_session;
   CURL           *curl_session;
   char           *arch;
+  char           *default_branch;
   char           *stop_at;
   gint64          source_date_epoch;
 
@@ -119,6 +120,7 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->options);
   g_clear_object (&self->sdk_config);
   g_free (self->arch);
+  g_free (self->default_branch);
   g_free (self->state_subdir);
   g_free (self->stop_at);
   g_strfreev (self->cleanup);
@@ -564,6 +566,20 @@ builder_context_set_arch (BuilderContext *self,
 {
   g_free (self->arch);
   self->arch = g_strdup (arch);
+}
+
+const char *
+builder_context_get_default_branch (BuilderContext *self)
+{
+  return (const char *) self->default_branch;
+}
+
+void
+builder_context_set_default_branch (BuilderContext *self,
+                                    const char     *default_branch)
+{
+  g_free (self->default_branch);
+  self->default_branch = g_strdup (default_branch);
 }
 
 void

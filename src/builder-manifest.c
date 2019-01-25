@@ -61,6 +61,7 @@ struct BuilderManifest
   char           *id;
   char           *id_platform;
   char           *branch;
+  char           *default_branch;
   char           *collection_id;
   char           *extension_tag;
   char           *type;
@@ -123,6 +124,7 @@ enum {
   PROP_ID,
   PROP_ID_PLATFORM,
   PROP_BRANCH,
+  PROP_DEFAULT_BRANCH,
   PROP_RUNTIME,
   PROP_RUNTIME_VERSION,
   PROP_RUNTIME_COMMIT,
@@ -175,6 +177,7 @@ builder_manifest_finalize (GObject *object)
 
   g_free (self->id);
   g_free (self->branch);
+  g_free (self->default_branch);
   g_free (self->collection_id);
   g_free (self->extension_tag);
   g_free (self->runtime);
@@ -282,6 +285,10 @@ builder_manifest_get_property (GObject    *object,
 
     case PROP_BRANCH:
       g_value_set_string (value, self->branch);
+      break;
+
+    case PROP_DEFAULT_BRANCH:
+      g_value_set_string (value, self->default_branch);
       break;
 
     case PROP_RUNTIME:
@@ -486,6 +493,11 @@ builder_manifest_set_property (GObject      *object,
     case PROP_BRANCH:
       g_free (self->branch);
       self->branch = g_value_dup_string (value);
+      break;
+
+    case PROP_DEFAULT_BRANCH:
+      g_free (self->default_branch);
+      self->default_branch = g_value_dup_string (value);
       break;
 
     case PROP_RUNTIME:
@@ -744,6 +756,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_BRANCH,
                                    g_param_spec_string ("branch",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_DEFAULT_BRANCH,
+                                   g_param_spec_string ("default-branch",
                                                         "",
                                                         "",
                                                         NULL,
@@ -1366,20 +1385,20 @@ builder_manifest_get_runtime_version (BuilderManifest *self)
 }
 
 const char *
-builder_manifest_get_branch (BuilderManifest *self)
+builder_manifest_get_branch (BuilderManifest *self,
+                             BuilderContext  *context)
 {
   if (self->branch)
     return self->branch;
 
-  return "master";
-}
+  if (context &&
+      builder_context_get_default_branch (context))
+    return builder_context_get_default_branch (context);
 
-void
-builder_manifest_set_default_branch (BuilderManifest *self,
-                                     const char *default_branch)
-{
-  if (self->branch == NULL)
-    self->branch = g_strdup (default_branch);
+  if (self->default_branch)
+    return self->default_branch;
+
+  return "master";
 }
 
 const char *
@@ -1405,7 +1424,7 @@ builder_manifest_get_extension_tag (BuilderManifest *self)
 static const char *
 builder_manifest_get_base_version (BuilderManifest *self)
 {
-  return self->base_version ? self->base_version : builder_manifest_get_branch (self);
+  return self->base_version ? self->base_version : builder_manifest_get_branch (self, NULL);
 }
 
 G_GNUC_NULL_TERMINATED
@@ -2713,7 +2732,7 @@ builder_manifest_finish (BuilderManifest *self,
 
       ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
                                  builder_manifest_get_id (self),
-                                 builder_manifest_get_branch (self),
+                                 builder_manifest_get_branch (self, context),
                                  builder_context_get_arch (context));
 
       if (self->metadata)
@@ -3132,7 +3151,7 @@ builder_manifest_create_platform (BuilderManifest *self,
 
       ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
                                  builder_manifest_get_id_platform (self),
-                                 builder_manifest_get_branch (self),
+                                 builder_manifest_get_branch (self, context),
                                  builder_context_get_arch (context));
 
       platform_dir = g_file_get_child (app_dir, "platform");
