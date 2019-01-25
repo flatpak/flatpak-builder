@@ -59,9 +59,8 @@ BuilderOptions *builder_manifest_get_build_options (BuilderManifest *self);
 GList *         builder_manifest_get_modules (BuilderManifest *self);
 GList *         builder_manifest_get_add_extensions (BuilderManifest *self);
 GList *         builder_manifest_get_add_build_extensions (BuilderManifest *self);
-const char *    builder_manifest_get_branch (BuilderManifest *self);
-void            builder_manifest_set_default_branch (BuilderManifest *self,
-                                                     const char *default_branch);
+const char *    builder_manifest_get_branch (BuilderManifest *self,
+                                             BuilderContext  *context);
 const char *    builder_manifest_get_collection_id (BuilderManifest *self);
 const char *    builder_manifest_get_extension_tag (BuilderManifest *self);
 void            builder_manifest_set_default_collection_id (BuilderManifest *self,

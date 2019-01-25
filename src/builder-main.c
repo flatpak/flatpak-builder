@@ -690,7 +690,7 @@ main (int    argc,
     }
 
   if (opt_default_branch)
-    builder_manifest_set_default_branch (manifest, opt_default_branch);
+    builder_context_set_default_branch (build_context, opt_default_branch);
 
   if (opt_collection_id)
     builder_manifest_set_default_collection_id (manifest, opt_collection_id);
@@ -928,7 +928,7 @@ main (int    argc,
   if (opt_mirror_screenshots_url && !opt_export_only)
     {
       g_autofree char *screenshot_subdir = g_strdup_printf ("%s-%s", builder_manifest_get_id (manifest),
-                                                            builder_manifest_get_branch (manifest));
+                                                            builder_manifest_get_branch (manifest, build_context));
       g_autofree char *url = g_build_filename (opt_mirror_screenshots_url, screenshot_subdir, NULL);
       g_autofree char *xml_relpath = g_strdup_printf ("files/share/app-info/xmls/%s.xml.gz", builder_manifest_get_id (manifest));
       g_autoptr(GFile) xml = g_file_resolve_relative_path (app_dir, xml_relpath);
@@ -1010,7 +1010,7 @@ main (int    argc,
       if (!do_export (build_context, &error,
                       FALSE,
                       flatpak_file_get_path_cached (export_repo),
-                      app_dir_path, exclude_dirs, builder_manifest_get_branch (manifest),
+                      app_dir_path, exclude_dirs, builder_manifest_get_branch (manifest, build_context),
                       builder_manifest_get_collection_id (manifest),
                       "--exclude=/lib/debug/*",
                       "--include=/lib/debug/app",
@@ -1044,7 +1044,7 @@ main (int    argc,
                                    "/share/runtime/locale/", NULL);
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg,
                           files_arg,
@@ -1064,7 +1064,7 @@ main (int    argc,
 
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.debuginfo",
                           builder_context_get_build_runtime (build_context) ? "--files=usr/lib/debug" : "--files=files/lib/debug",
@@ -1095,7 +1095,7 @@ main (int    argc,
 
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg, files_arg,
                           NULL))
@@ -1114,7 +1114,7 @@ main (int    argc,
 
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.sources",
                           "--files=sources",
@@ -1134,7 +1134,7 @@ main (int    argc,
 
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           "--metadata=metadata.platform",
                           "--files=platform",
@@ -1168,7 +1168,7 @@ main (int    argc,
           files_arg = g_strconcat ("--files=platform/share/runtime/locale/", NULL);
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest),
+                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
                           metadata_arg,
                           files_arg,
@@ -1188,7 +1188,7 @@ main (int    argc,
         g_printerr ("NOTE: No export due to --require-changes, ignoring --install\n");
       else if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
                             builder_manifest_get_id (manifest),
-                            builder_manifest_get_branch (manifest),
+                            builder_manifest_get_branch (manifest, build_context),
                             &error))
         {
           g_printerr ("Install failed: %s\n", error->message);
