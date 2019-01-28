@@ -1,3 +1,10 @@
+Changes in 1.0.3
+================
+
+ * Compress changes in cache, fixing the build of large applications like libreoffice in
+   some cases.
+ * Add new default-branch manifest option to allow overridable branch name.
+
 Changes in 1.0.2
 ================
 
