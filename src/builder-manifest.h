@@ -66,6 +66,11 @@ const char *    builder_manifest_get_extension_tag (BuilderManifest *self);
 void            builder_manifest_set_default_collection_id (BuilderManifest *self,
                                                             const char      *default_collection_id);
 
+void            builder_manifest_add_tags (BuilderManifest *self,
+                                           const char      **add_tags);
+void            builder_manifest_remove_tags (BuilderManifest *self,
+                                              const char      **remove_tags);
+
 
 char **         builder_manifest_get_exclude_dirs (BuilderManifest *self);
 

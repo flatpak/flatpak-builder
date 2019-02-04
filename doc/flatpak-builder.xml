@@ -535,6 +535,24 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--add-tag=TAG</option></term>
+
+                <listitem><para>
+                  Add this tag to the tags list of the manifest before building.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>--remove-tag=TAG</option></term>
+
+                <listitem><para>
+                  Remove this tag to the tags list of the manifest before building. The remove
+                  happen before processing the --add-tag option, so if both are specified, then
+                  --app-tag wins.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--install-deps-from=REMOTE</option></term>
 
                 <listitem><para>
