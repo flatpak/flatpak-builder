@@ -74,6 +74,8 @@ static char *opt_gpg_homedir;
 static char **opt_key_ids;
 static char **opt_sources_dirs;
 static char **opt_sources_urls;
+static char **opt_add_tags;
+static char **opt_remove_tags;
 static int opt_jobs;
 static char *opt_mirror_screenshots_url;
 static char *opt_install_deps_from;
@@ -89,6 +91,8 @@ static GOptionEntry entries[] = {
   { "version", 0, 0, G_OPTION_ARG_NONE, &opt_version, "Print version information and exit", NULL },
   { "arch", 0, 0, G_OPTION_ARG_STRING, &opt_arch, "Architecture to build for (must be host compatible)", "ARCH" },
   { "default-branch", 0, 0, G_OPTION_ARG_STRING, &opt_default_branch, "Change the default branch", "BRANCH" },
+  { "add-tag", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_add_tags, "Add a tag to the build", "TAG"},
+  { "remove-tag", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_remove_tags, "Remove a tag from the build", "TAG"},
   { "run", 0, 0, G_OPTION_ARG_NONE, &opt_run, "Run a command in the build directory (see --run --help)", NULL },
   { "ccache", 0, 0, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache", NULL },
   { "disable-cache", 0, 0, G_OPTION_ARG_NONE, &opt_disable_cache, "Disable cache lookups", NULL },
@@ -688,6 +692,12 @@ main (int    argc,
       g_printerr ("Can't parse '%s': %s\n", manifest_rel_path, error->message);
       return 1;
     }
+
+  if (opt_remove_tags)
+    builder_manifest_remove_tags (manifest, (const char **)opt_remove_tags);
+
+  if (opt_add_tags)
+    builder_manifest_add_tags (manifest, (const char **)opt_add_tags);
 
   if (opt_default_branch)
     builder_context_set_default_branch (build_context, opt_default_branch);

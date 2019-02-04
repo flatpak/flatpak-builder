@@ -1415,6 +1415,56 @@ builder_manifest_set_default_collection_id (BuilderManifest *self,
     self->collection_id = g_strdup (default_collection_id);
 }
 
+void
+builder_manifest_add_tags (BuilderManifest *self,
+                          const char      **add_tags)
+{
+  GPtrArray *new_tags = g_ptr_array_new ();
+  int i;
+
+  for (i = 0; self->tags != NULL && self->tags[i] != NULL; i++)
+    g_ptr_array_add (new_tags, self->tags[i]);
+
+  for (i = 0; add_tags[i] != NULL; i++)
+    {
+      const char *new_tag = add_tags[i];
+      if (self->tags == NULL || !g_strv_contains ((const char **)self->tags, new_tag))
+        g_ptr_array_add (new_tags, g_strdup (new_tag));
+    }
+
+  g_ptr_array_add (new_tags, NULL);
+
+  g_free (self->tags);
+  self->tags = (char **)g_ptr_array_free (new_tags, FALSE);
+
+}
+
+void
+builder_manifest_remove_tags (BuilderManifest *self,
+                             const char      **remove_tags)
+{
+  GPtrArray *new_tags = g_ptr_array_new ();
+  int i;
+
+  if (self->tags)
+    {
+      for (i = 0; self->tags[i] != NULL; i++)
+        {
+          char *old_tag = self->tags[i];
+          if (g_strv_contains (remove_tags, old_tag))
+            g_free (old_tag);
+          else
+            g_ptr_array_add (new_tags, old_tag);
+        }
+    }
+
+  g_ptr_array_add (new_tags, NULL);
+
+  g_free (self->tags);
+  self->tags = (char **)g_ptr_array_free (new_tags, FALSE);
+}
+
+
 const char *
 builder_manifest_get_extension_tag (BuilderManifest *self)
 {
