@@ -1,3 +1,9 @@
+Changes in 1.0.4
+================
+
+ * Add --add/remove-tag options
+ * Allow using a full ref as sdk and use the branch from that.
+
 Changes in 1.0.3
 ================
 
