@@ -3701,7 +3701,11 @@ builder_manifest_install_dep (BuilderManifest *self,
   g_ptr_array_add (args, NULL);
 
   if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
-    return FALSE;
+    {
+      g_autofree char *commandline = flatpak_quote_argv ((const char **)args->pdata);
+      g_prefix_error (error, "running `%s`: ", commandline);
+      return FALSE;
+    }
 
   return TRUE;
 }
