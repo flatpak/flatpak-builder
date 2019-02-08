@@ -1,3 +1,11 @@
+Changes in 1.0.5
+================
+
+Due to a change in the output of "flatpak info" the support for
+loading default build options from the sdk regressed with flatpak
+1.2.x. This is fixed and everyone who built flatpaks with 1.2.x are
+recommended to update to this release and re-build.
+
 Changes in 1.0.4
 ================
 
