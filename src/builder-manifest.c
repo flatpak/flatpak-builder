@@ -1558,27 +1558,17 @@ flatpak_info_show_path (const char *id,
                         const char *branch,
                         BuilderContext  *context)
 {
-  g_autofree char *sdk_info = NULL;
+  g_autofree char *output = NULL;
   g_autofree char *arch_option = NULL;
-  g_auto(GStrv) sdk_info_lines = NULL;
-  int i;
-
-  /* Unfortunately there is not flatpak info --show-path, so we have to look at the full flatpak info output */
 
   arch_option = g_strdup_printf ("--arch=%s", builder_context_get_arch (context));
 
-  sdk_info = flatpak (NULL, "info", arch_option, id, branch, NULL);
-  if (sdk_info == NULL)
+  output = flatpak (NULL, "info", "--show-location", arch_option, id, branch, NULL);
+  if (output == NULL)
     return NULL;
 
-  sdk_info_lines = g_strsplit (sdk_info, "\n", -1);
-  for (i = 0; sdk_info_lines[i] != NULL; i++)
-    {
-      if (g_str_has_prefix (sdk_info_lines[i], "Location:"))
-        return g_strstrip (g_strdup (sdk_info_lines[i] + strlen ("Location:")));
-    }
-
-  return NULL;
+  g_strchomp (output);
+  return g_steal_pointer (&output);
 }
 
 gboolean
