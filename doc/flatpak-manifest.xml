@@ -824,7 +824,7 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>dest-filename</option> (string)</term>
-                        <listitem><para>Filename to use inside the source dir, default to the basename of path.</para></listitem>
+                        <listitem><para>Filename to use inside the source dir, default to autogen.sh.</para></listitem>
                     </varlistentry>
                 </variablelist>
             </refsect3>
