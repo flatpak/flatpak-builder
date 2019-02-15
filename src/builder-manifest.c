@@ -3686,6 +3686,8 @@ builder_manifest_install_dep (BuilderManifest *self,
     }
 
   g_ptr_array_add (args, g_strdup ("-y"));
+  if (flatpak_version_check (1, 2, 0))
+    g_ptr_array_add (args, g_strdup ("--noninteractive"));
 
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
