@@ -257,46 +257,6 @@ do_export (BuilderContext *build_context,
 }
 
 static gboolean
-flatpak_version_check (int major,
-                       int minor,
-                       int micro)
-{
-  static int flatpak_major = 0;
-  static int flatpak_minor = 0;
-  static int flatpak_micro = 0;
-
-  if (flatpak_major == 0 &&
-      flatpak_minor == 0 &&
-      flatpak_micro == 0)
-    {
-      const char * argv[] = { "flatpak", "--version", NULL };
-      g_autoptr(GSubprocess) subp = NULL;
-      g_autofree char *out = NULL;
- 
-      subp = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDOUT_PIPE, NULL);
-      g_subprocess_communicate_utf8 (subp, NULL, NULL, &out, NULL, NULL);
-
-      if (sscanf (out, "Flatpak %d.%d.%d", &flatpak_major, &flatpak_minor, &flatpak_micro) != 3)
-        g_warning ("Failed to get flatpak version");
-
-      g_debug ("Using Flatpak version %d.%d.%d", flatpak_major, flatpak_minor, flatpak_micro);
-    }
-
-  if (flatpak_major > major)
-    return TRUE;
-  if (flatpak_major < major)
-    return FALSE;
-  if (flatpak_minor > minor)
-    return TRUE;
-  if (flatpak_minor < minor)
-    return FALSE;
-  if (flatpak_micro >= micro)
-    return TRUE;
-
-  return FALSE;
-}
-
-static gboolean
 do_install (BuilderContext *build_context,
             const gchar    *repodir,
             const gchar    *id,

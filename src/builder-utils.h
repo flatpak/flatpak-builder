@@ -177,6 +177,10 @@ GVariant * flatpak_variant_compress (GVariant *variant);
 GVariant * flatpak_variant_uncompress (GVariant *variant, const GVariantType *type);
 
 
+gboolean flatpak_version_check (int major,
+                                int minor,
+                                int micro);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
 G_END_DECLS
