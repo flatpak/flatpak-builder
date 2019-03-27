@@ -1,3 +1,9 @@
+Changes in 1.0.6
+================
+
+ * Pass --noninteractive when installing for flatpak >= 1.2.0
+ * Doc fixes
+
 Changes in 1.0.5
 ================
 
