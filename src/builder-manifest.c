@@ -1869,20 +1869,15 @@ builder_manifest_checksum_for_bundle_sources (BuilderManifest *self,
 }
 
 static void
-builder_manifest_checksum_for_platform (BuilderManifest *self,
-                                        BuilderCache    *cache,
-                                        BuilderContext  *context)
+builder_manifest_checksum_for_platform_base (BuilderManifest *self,
+                                             BuilderCache    *cache,
+                                             BuilderContext  *context)
 {
-  GList *l;
-
   builder_cache_checksum_str (cache, BUILDER_MANIFEST_CHECKSUM_PLATFORM_VERSION);
   builder_cache_checksum_str (cache, self->id_platform);
   builder_cache_checksum_str (cache, self->runtime_commit);
-  builder_cache_checksum_str (cache, self->metadata_platform);
-  builder_cache_checksum_strv (cache, self->cleanup_platform);
-  builder_cache_checksum_strv (cache, self->cleanup_platform_commands);
-  builder_cache_checksum_strv (cache, self->prepare_platform_commands);
   builder_cache_checksum_strv (cache, self->platform_extensions);
+  builder_cache_checksum_str (cache, self->metadata_platform);
 
   if (self->metadata_platform)
     {
@@ -1897,12 +1892,30 @@ builder_manifest_checksum_for_platform (BuilderManifest *self,
       else
         g_warning ("Can't load metadata-platform file %s: %s", self->metadata_platform, my_error->message);
     }
+}
 
+static void
+builder_manifest_checksum_for_platform_prepare (BuilderManifest *self,
+                                                BuilderCache    *cache,
+                                                BuilderContext  *context)
+{
+  GList *l;
+
+  builder_cache_checksum_strv (cache, self->prepare_platform_commands);
+  builder_cache_checksum_strv (cache, self->cleanup_platform);
   for (l = self->expanded_modules; l != NULL; l = l->next)
     {
       BuilderModule *m = l->data;
-      builder_module_checksum_for_platform (m, cache, context);
+      builder_module_checksum_for_platform_cleanup (m, cache, context);
     }
+}
+
+static void
+builder_manifest_checksum_for_platform_finish (BuilderManifest *self,
+                                               BuilderCache    *cache,
+                                               BuilderContext  *context)
+{
+  builder_cache_checksum_strv (cache, self->cleanup_platform_commands);
 }
 
 gboolean
@@ -3151,49 +3164,33 @@ builder_manifest_finish (BuilderManifest *self,
   return TRUE;
 }
 
-gboolean
-builder_manifest_create_platform (BuilderManifest *self,
-                                  BuilderCache    *cache,
-                                  BuilderContext  *context,
-                                  GError         **error)
+/* Creates the platform directory based on the base platform (with
+ * locales moved in place if needed), and the metadata.platform file
+ * for it */
+static gboolean
+builder_manifest_create_platform_base (BuilderManifest *self,
+                                       BuilderCache    *cache,
+                                       BuilderContext  *context,
+                                       GError         **error)
 {
-  g_autofree char *commandline = NULL;
-
-  g_autoptr(GFile) locale_dir = NULL;
-  int i;
-
-  if (!self->build_runtime ||
-      self->id_platform == NULL)
-    return TRUE;
-
-  builder_manifest_checksum_for_platform (self, cache, context);
-  if (!builder_cache_lookup (cache, "platform"))
+  builder_manifest_checksum_for_platform_base (self, cache, context);
+  if (!builder_cache_lookup (cache, "platform-base"))
     {
-      g_autoptr(GHashTable) to_remove_ht = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
-      g_autoptr(GPtrArray) changes = NULL;
-      GList *l;
+      GFile *app_dir = NULL;
       g_autoptr(GFile) platform_dir = NULL;
       g_autoptr(GSubprocess) subp = NULL;
       g_autoptr(GPtrArray) args = NULL;
-      GFile *app_dir = NULL;
-      g_autofree char *ref = NULL;
-      g_autoptr(GPtrArray) sub_ids = g_ptr_array_new_with_free_func (g_free);
+      g_autofree char *commandline = NULL;
+      int i;
 
       g_print ("Creating platform based on %s\n", self->runtime);
-
-      builder_set_term_title (_("Creating platform for %s"), self->id);
+      builder_set_term_title (_("Creating platform base for %s"), self->id);
 
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;
 
       /* Call after enabling rofiles */
       app_dir = builder_context_get_app_dir (context);
-
-      ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
-                                 builder_manifest_get_id_platform (self),
-                                 builder_manifest_get_branch (self, context),
-                                 builder_context_get_arch (context));
-
       platform_dir = g_file_get_child (app_dir, "platform");
 
       args = g_ptr_array_new_with_free_func (g_free);
@@ -3233,14 +3230,8 @@ builder_manifest_create_platform (BuilderManifest *self,
 
       if (self->separate_locales)
         {
-          g_autoptr(GFile) root_dir = NULL;
-
-          root_dir = g_file_get_child (app_dir, "platform");
-
-          if (!builder_migrate_locale_dirs (root_dir, error))
+          if (!builder_migrate_locale_dirs (platform_dir, error))
             return FALSE;
-
-          locale_dir = g_file_resolve_relative_path (root_dir, LOCALES_SEPARATE_DIR);
         }
 
       if (self->metadata_platform)
@@ -3306,6 +3297,49 @@ builder_manifest_create_platform (BuilderManifest *self,
             }
         }
 
+      if (!builder_context_disable_rofiles (context, error))
+        return FALSE;
+
+      if (!builder_cache_commit (cache, "Created platform base", error))
+        return FALSE;
+    }
+  else
+    {
+      g_print ("Cache hit for create platform base, skipping\n");
+    }
+
+  return TRUE;
+}
+
+/* Run the prepare-platform commands, then layer on top all the
+ * changes from the sdk build, except any new files mentioned by
+ * cleanup-platform */
+static gboolean
+builder_manifest_prepare_platform (BuilderManifest *self,
+                                   BuilderCache    *cache,
+                                   BuilderContext  *context,
+                                   GError         **error)
+{
+  builder_manifest_checksum_for_platform_prepare (self, cache, context);
+  if (!builder_cache_lookup (cache, "platform-prepare"))
+    {
+      GFile *app_dir = NULL;
+      g_autoptr(GFile) platform_dir = NULL;
+      g_autoptr(GHashTable) to_remove_ht = g_hash_table_new_full (g_str_hash, g_str_equal, g_free, NULL);
+      g_autoptr(GPtrArray) changes = NULL;
+      GList *l;
+      int i;
+
+      g_print ("Preparing platform with new changes\n");
+      builder_set_term_title (_("Preparing platform for %s"), self->id);
+
+      if (!builder_context_enable_rofiles (context, error))
+        return FALSE;
+
+      /* Call after enabling rofiles */
+      app_dir = builder_context_get_app_dir (context);
+      platform_dir = g_file_get_child (app_dir, "platform");
+
       if (self->prepare_platform_commands)
         {
           g_auto(GStrv) env = builder_options_get_env (self->build_options, context);
@@ -3329,7 +3363,7 @@ builder_manifest_create_platform (BuilderManifest *self,
           builder_module_cleanup_collect (m, TRUE, context, to_remove_ht);
         }
 
-      /* This returns both additiona and removals */
+      /* This returns both additions and removals */
       changes = builder_cache_get_all_changes (cache, error);
       if (changes == NULL)
         return FALSE;
@@ -3424,6 +3458,54 @@ builder_manifest_create_platform (BuilderManifest *self,
             }
         }
 
+      if (!builder_context_disable_rofiles (context, error))
+        return FALSE;
+
+      if (!builder_cache_commit (cache, "Prepared platform", error))
+        return FALSE;
+    }
+  else
+    {
+      g_print ("Cache hit for prepare platform, skipping\n");
+    }
+
+  return TRUE;
+}
+
+/* Run the cleanup-platform-commands (which we want to run in a new cache state to ensure it gets freshly zeroed mtimes)
+ * and other finishing touches that need to happen after that, such as adding separate locale metadata. */
+static gboolean
+builder_manifest_finish_platform (BuilderManifest *self,
+                                  BuilderCache    *cache,
+                                  BuilderContext  *context,
+                                  GError         **error)
+{
+  builder_manifest_checksum_for_platform_finish (self, cache, context);
+  if (!builder_cache_lookup (cache, "platform-finish"))
+    {
+      GFile *app_dir = NULL;
+      g_autoptr(GFile) platform_dir = NULL;
+      g_autoptr(GFile) locale_dir = NULL;
+      g_autofree char *ref = NULL;
+      g_autoptr(GPtrArray) sub_ids = g_ptr_array_new_with_free_func (g_free);
+      int i;
+
+      g_print ("Finishing platform\n");
+      builder_set_term_title (_("Finishing up platform for %s"), self->id);
+
+      if (!builder_context_enable_rofiles (context, error))
+        return FALSE;
+
+      /* Call after enabling rofiles */
+      app_dir = builder_context_get_app_dir (context);
+      platform_dir = g_file_get_child (app_dir, "platform");
+      locale_dir = g_file_resolve_relative_path (platform_dir, LOCALES_SEPARATE_DIR);
+
+      ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
+                                 builder_manifest_get_id_platform (self),
+                                 builder_manifest_get_branch (self, context),
+                                 builder_context_get_arch (context));
+
       if (self->cleanup_platform_commands)
         {
           g_auto(GStrv) env = builder_options_get_env (self->build_options, context);
@@ -3440,7 +3522,7 @@ builder_manifest_create_platform (BuilderManifest *self,
             }
         }
 
-      if (self->separate_locales && locale_dir && g_file_query_exists (locale_dir, NULL))
+      if (self->separate_locales && g_file_query_exists (locale_dir, NULL))
         {
           g_autoptr(GFile) metadata_file = NULL;
           g_autofree char *extension_contents = NULL;
@@ -3459,6 +3541,8 @@ builder_manifest_create_platform (BuilderManifest *self,
                                                 locale_id,
                                                 LOCALES_SEPARATE_DIR);
 
+          if (!flatpak_break_hardlink (metadata_file, error))
+            return FALSE;
           output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
           if (output == NULL)
             return FALSE;
@@ -3496,8 +3580,9 @@ builder_manifest_create_platform (BuilderManifest *self,
               g_string_append (extension_contents, (const char *)sub_ids->pdata[i]);
               g_string_append (extension_contents, ";");
             }
-
           metadata_file = g_file_get_child (app_dir, "metadata.platform");
+          if (!flatpak_break_hardlink (metadata_file, error))
+            return FALSE;
           output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
           if (output == NULL)
             return FALSE;
@@ -3511,13 +3596,36 @@ builder_manifest_create_platform (BuilderManifest *self,
       if (!builder_context_disable_rofiles (context, error))
         return FALSE;
 
-      if (!builder_cache_commit (cache, "Created platform", error))
+      if (!builder_cache_commit (cache, "Platform finish", error))
         return FALSE;
     }
   else
     {
-      g_print ("Cache hit for create platform, skipping\n");
+      g_print ("Cache hit for platform finish, skipping\n");
     }
+
+  return TRUE;
+}
+
+
+gboolean
+builder_manifest_create_platform (BuilderManifest *self,
+                                  BuilderCache    *cache,
+                                  BuilderContext  *context,
+                                  GError         **error)
+{
+  if (!self->build_runtime ||
+      self->id_platform == NULL)
+    return TRUE;
+
+  if (!builder_manifest_create_platform_base (self, cache, context, error))
+    return FALSE;
+
+  if (!builder_manifest_prepare_platform (self, cache, context, error))
+    return FALSE;
+
+  if (!builder_manifest_finish_platform (self, cache, context, error))
+    return FALSE;
 
   return TRUE;
 }
