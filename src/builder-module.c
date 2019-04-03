@@ -2010,9 +2010,9 @@ builder_module_checksum_for_cleanup (BuilderModule  *self,
 }
 
 void
-builder_module_checksum_for_platform (BuilderModule  *self,
-                                      BuilderCache   *cache,
-                                      BuilderContext *context)
+builder_module_checksum_for_platform_cleanup (BuilderModule  *self,
+                                              BuilderCache   *cache,
+                                              BuilderContext *context)
 {
   builder_cache_checksum_strv (cache, self->cleanup_platform);
 }
