@@ -1619,6 +1619,7 @@ builder_host_spawnv (GFile                *dir,
                      GError              **error,
                      const gchar * const  *argv)
 {
+  static FlatpakHostCommandFlags cmd_flags = FLATPAK_HOST_COMMAND_FLAGS_CLEAR_ENV | FLATPAK_HOST_COMMAND_FLAGS_WATCH_BUS;
   guint32 client_pid;
   GVariantBuilder *fd_builder = g_variant_builder_new (G_VARIANT_TYPE("a{uh}"));
   GVariantBuilder *env_builder = g_variant_builder_new (G_VARIANT_TYPE("a{ss}"));
@@ -1634,10 +1635,14 @@ builder_host_spawnv (GFile                *dir,
   g_autofree gchar *commandline = NULL;
   g_autoptr(GOutputStream) out = NULL;
   g_autoptr(GFile) cwd = NULL;
+  g_autoptr(GError) local_error = NULL;
   glnx_fd_close int blocking_stdin_fd = -1;
   int pipefd[2];
   int stdin_fd;
   int i;
+
+  if (error == NULL)
+    error = &local_error;
 
   if (dir == NULL)
     {
@@ -1740,6 +1745,7 @@ builder_host_spawnv (GFile                *dir,
   sigterm_id = g_unix_signal_add (SIGTERM, sigterm_handler, &data);
   sigint_id = g_unix_signal_add (SIGINT, sigint_handler, &data);
 
+try_again:
   ret = g_dbus_connection_call_with_unix_fd_list_sync (connection,
                                                        "org.freedesktop.Flatpak",
                                                        "/org/freedesktop/Flatpak/Development",
@@ -1750,14 +1756,28 @@ builder_host_spawnv (GFile                *dir,
                                                                       argv,
                                                                       g_variant_builder_end (fd_builder),
                                                                       g_variant_builder_end (env_builder),
-                                                                      FLATPAK_HOST_COMMAND_FLAGS_CLEAR_ENV),
+                                                                      cmd_flags),
                                                        G_VARIANT_TYPE ("(u)"),
                                                        G_DBUS_CALL_FLAGS_NONE, -1,
                                                        fd_list, NULL,
                                                        NULL, error);
 
   if (ret == NULL)
-    return FALSE;
+    {
+      /* If we are talking to a session-helper that is pre-1.2 we wont have
+       * access to FLATPAK_HOST_COMMAND_FLAGS_WATCH_BUS and will get an
+       * invalid-args reply. Try again without the flag.
+       */
+      if ((cmd_flags & FLATPAK_HOST_COMMAND_FLAGS_WATCH_BUS) != 0 &&
+          g_error_matches (*error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS))
+        {
+          cmd_flags &= ~FLATPAK_HOST_COMMAND_FLAGS_WATCH_BUS;
+          g_clear_error (error);
+          goto try_again;
+        }
+
+      return FALSE;
+    }
 
 
   g_variant_get (ret, "(u)", &client_pid);
