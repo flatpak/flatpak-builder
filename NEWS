@@ -1,3 +1,9 @@
+Changes in 1.0.7
+================
+
+ * Use the new die-with-parent feature of HostCommand when build to run in a flatpak
+ * Fix some details in how we create platform commits to fix font cache mtime issues.
+
 Changes in 1.0.6
 ================
 
