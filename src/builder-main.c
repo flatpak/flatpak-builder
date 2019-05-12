@@ -78,7 +78,7 @@ static char **opt_add_tags;
 static char **opt_remove_tags;
 static int opt_jobs;
 static char *opt_mirror_screenshots_url;
-static char *opt_install_deps_from;
+static char **opt_install_deps_from;
 static gboolean opt_install_deps_only;
 static gboolean opt_user;
 static char *opt_installation;
@@ -129,7 +129,7 @@ static GOptionEntry entries[] = {
   { "from-git-branch", 0, 0, G_OPTION_ARG_STRING, &opt_from_git_branch, "Branch to use in --from-git", "BRANCH"},
   { "mirror-screenshots-url", 0, 0, G_OPTION_ARG_STRING, &opt_mirror_screenshots_url, "Download and rewrite screenshots to match this url", "URL"},
   { "install", 0, 0, G_OPTION_ARG_NONE, &opt_install, "Install if build succeeds", NULL},
-  { "install-deps-from", 0, 0, G_OPTION_ARG_STRING, &opt_install_deps_from, "Install build dependencies from this remote", "REMOTE"},
+  { "install-deps-from", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_install_deps_from, "Install build dependencies from this remote", "REMOTE"},
   { "install-deps-only", 0, 0, G_OPTION_ARG_NONE, &opt_install_deps_only, "Stop after installing dependencies"},
   { "user", 0, 0, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in user installations", NULL },
   { "system", 0, G_OPTION_FLAG_REVERSE, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in system-wide installations (default)", NULL },

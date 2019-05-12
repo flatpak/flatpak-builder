@@ -3754,44 +3754,53 @@ builder_manifest_show_deps (BuilderManifest *self,
 }
 
 static gboolean
-builder_manifest_install_dep (BuilderManifest *self,
-                              BuilderContext  *context,
-                              const char *remote,
-                              gboolean opt_user,
-                              const char *opt_installation,
-                              const char *runtime,
-                              const char *version,
-                              gboolean opt_yes,
-                              GError         **error)
+builder_manifest_install_single_dep (const char *ref,
+				     const char *remote,
+				     gboolean opt_user,
+				     const char *opt_installation,
+				     GError **error)
 {
-  g_autofree char *ref = NULL;
-  g_autofree char *commit = NULL;
   g_autoptr(GPtrArray) args = NULL;
-  gboolean installed;
-
-  if (version == NULL)
-    version = builder_manifest_get_runtime_version (self);
-
-  ref = flatpak_build_untyped_ref (runtime,
-                                   version,
-                                   builder_context_get_arch (context));
-
-  commit = flatpak_info (opt_user, opt_installation, "--show-commit", ref, NULL);
-  installed = (commit != NULL);
-
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
   add_installation_args (args, opt_user, opt_installation);
-  if (installed)
+
+  g_ptr_array_add (args, g_strdup ("install"));
+  g_ptr_array_add (args, g_strdup (remote));
+  
+  g_ptr_array_add (args, g_strdup ("-y"));
+  if (flatpak_version_check (1, 2, 0))
+    g_ptr_array_add (args, g_strdup ("--noninteractive"));
+
+  g_ptr_array_add (args, g_strdup (ref));
+  g_ptr_array_add (args, NULL);
+
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
     {
-      g_ptr_array_add (args, g_strdup ("update"));
-      g_ptr_array_add (args, g_strdup ("--subpath="));
+      g_autofree char *commandline = flatpak_quote_argv ((const char **)args->pdata);
+      g_prefix_error (error, "running `%s`: ", commandline);
+      return FALSE;
     }
   else
     {
-      g_ptr_array_add (args, g_strdup ("install"));
-      g_ptr_array_add (args, g_strdup (remote));
+      return TRUE;
     }
+}
+
+
+static gboolean
+builder_manifest_update_single_dep (const char *ref,
+				     gboolean opt_user,
+				     const char *opt_installation,
+				     GError **error)
+{
+  g_autoptr(GPtrArray) args = NULL;
+  args = g_ptr_array_new_with_free_func (g_free);
+  g_ptr_array_add (args, g_strdup ("flatpak"));
+  add_installation_args (args, opt_user, opt_installation);
+
+  g_ptr_array_add (args, g_strdup ("update"));
+  g_ptr_array_add (args, g_strdup ("--subpath="));
 
   g_ptr_array_add (args, g_strdup ("-y"));
   if (flatpak_version_check (1, 2, 0))
@@ -3806,8 +3815,72 @@ builder_manifest_install_dep (BuilderManifest *self,
       g_prefix_error (error, "running `%s`: ", commandline);
       return FALSE;
     }
+  else
+    {
+      return TRUE;
+    }
+}
 
-  return TRUE;
+static gboolean
+builder_manifest_install_dep (BuilderManifest *self,
+                              BuilderContext  *context,
+                              char *const *remotes,
+                              gboolean opt_user,
+                              const char *opt_installation,
+                              const char *runtime,
+                              const char *version,
+                              gboolean opt_yes,
+                              GError         **error)
+{
+  g_autofree char *ref = NULL;
+  g_autofree char *commit = NULL;
+
+  if (version == NULL)
+    version = builder_manifest_get_runtime_version (self);
+
+  ref = flatpak_build_untyped_ref (runtime,
+                                   version,
+                                   builder_context_get_arch (context));
+
+  commit = flatpak_info (opt_user, opt_installation, "--show-commit", ref, NULL);
+
+  if (commit != NULL)
+    {
+      g_print("Updating %s\n", ref);
+      if (builder_manifest_update_single_dep(ref, opt_user, opt_installation,
+                                             error))
+      {
+        return TRUE;
+      }
+    }
+  else
+    {
+      gboolean multiple_remotes = (*(remotes+1) != NULL);
+      for (const char *remote = *remotes; remote != NULL; remote = *(++remotes))
+	{
+	  g_autoptr(GError) current_error = NULL;
+	  if (multiple_remotes)
+	    {
+            g_print("Trying to install %s from %s\n", ref, remote);
+	    }
+	  else {
+	    g_print("Installing %s from %s\n", ref, remote);
+	  }
+	  if (builder_manifest_install_single_dep (ref, remote, opt_user, opt_installation,
+                                                   &current_error))
+	  {
+	    current_error = g_steal_pointer(error);
+	    return TRUE;
+	  }
+	  else if (*error == NULL)
+	    {
+	      *error = g_steal_pointer(&current_error);
+	    }
+	  if ((*error)->domain != G_SPAWN_EXIT_ERROR)
+	    return FALSE;
+	}
+    }
+  return FALSE;
 }
 
 static gboolean
@@ -3816,7 +3889,7 @@ builder_manifest_install_extension_deps (BuilderManifest *self,
                                          const char *runtime,
                                          const char *runtime_version,
                                          char **runtime_extensions,
-                                         const char *remote,
+                                         char * const *remotes,
                                          gboolean opt_user,
                                          const char *opt_installation,
                                          gboolean opt_yes,
@@ -3864,7 +3937,7 @@ builder_manifest_install_extension_deps (BuilderManifest *self,
         extension_version = g_strdup (runtime_version);
 
       g_print ("Dependency Extension: %s %s\n", runtime_extensions[i], extension_version);
-      if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
+      if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
                                          runtime_extensions[i], extension_version,
                                          opt_yes,
                                          error))
@@ -3877,7 +3950,7 @@ builder_manifest_install_extension_deps (BuilderManifest *self,
 gboolean
 builder_manifest_install_deps (BuilderManifest *self,
                                BuilderContext  *context,
-                               const char *remote,
+                               char * const *remotes,
                                gboolean opt_user,
                                const char *opt_installation,
                                gboolean opt_yes,
@@ -3902,7 +3975,7 @@ builder_manifest_install_deps (BuilderManifest *self,
 
   /* Sdk */
   g_print ("Dependency Sdk: %s %s\n", sdk, sdk_branch);
-  if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
+  if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
                                      sdk, sdk_branch,
                                      opt_yes,
                                      error))
@@ -3910,7 +3983,7 @@ builder_manifest_install_deps (BuilderManifest *self,
 
   /* Runtime */
   g_print ("Dependency Runtime: %s %s\n", self->runtime, builder_manifest_get_runtime_version (self));
-  if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
+  if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
                                      self->runtime, builder_manifest_get_runtime_version (self),
                                      opt_yes,
                                      error))
@@ -3919,7 +3992,7 @@ builder_manifest_install_deps (BuilderManifest *self,
   if (self->base)
     {
       g_print ("Dependency Base: %s %s\n", self->base, builder_manifest_get_base_version (self));
-      if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
+      if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
                                          self->base, builder_manifest_get_base_version (self),
                                          opt_yes,
                                          error))
@@ -3928,7 +4001,7 @@ builder_manifest_install_deps (BuilderManifest *self,
 
   if (!builder_manifest_install_extension_deps (self, context,
                                                 sdk, sdk_branch, self->sdk_extensions,
-                                                remote,opt_user, opt_installation,
+                                                remotes, opt_user, opt_installation,
                                                 opt_yes,
                                                 error))
     return FALSE;
@@ -3936,7 +4009,7 @@ builder_manifest_install_deps (BuilderManifest *self,
   if (!builder_manifest_install_extension_deps (self, context,
                                                 self->runtime, builder_manifest_get_runtime_version (self),
                                                 self->platform_extensions,
-                                                remote, opt_user, opt_installation,
+                                                remotes, opt_user, opt_installation,
                                                 opt_yes,
                                                 error))
     return FALSE;
@@ -3951,7 +4024,7 @@ builder_manifest_install_deps (BuilderManifest *self,
         continue;
 
       g_print ("Dependency Extension: %s %s\n", name, version);
-      if (!builder_manifest_install_dep (self, context, remote, opt_user, opt_installation,
+      if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
                                          name, version,
                                          opt_yes,
                                          error))
