@@ -531,8 +531,10 @@ builder_git_mirror_repo (const char     *repo_location,
       else
         cached_git_dir = g_object_ref (cache_mirror_dir);
 
-      /* If we're not updating, only pull from cache to avoid network i/o */
-      if (!update)
+      /* If the ref already exists (it may not with a shallow mirror
+       * if it has changed) and we're not updating, only pull from
+       * cache to avoid network i/o. */
+      if (already_exists && !update)
         {
           if (cached_git_dir)
             origin = g_file_get_uri (cached_git_dir);
