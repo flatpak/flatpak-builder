@@ -344,7 +344,8 @@
                 <term><option>--ccache</option></term>
 
                 <listitem><para>
-                     Enable use of ccache in the build (needs ccache in the sdk)
+                     Enable use of ccache in the build (needs ccache in the sdk). The default ccache folder can be
+                     overridden by setting the environment variable CCACHE_DIR.
                 </para></listitem>
             </varlistentry>
 

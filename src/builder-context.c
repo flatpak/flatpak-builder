@@ -202,7 +202,18 @@ builder_context_constructed (GObject *object)
   self->build_dir = g_file_get_child (self->state_dir, "build");
   self->cache_dir = g_file_get_child (self->state_dir, "cache");
   self->checksums_dir = g_file_get_child (self->state_dir, "checksums");
-  self->ccache_dir = g_file_get_child (self->state_dir, "ccache");
+
+  // Check, if CCACHE_DIR is set in environment and use it, instead of subdir of state_dir
+  const char * env_ccache_dir = g_getenv ("CCACHE_DIR");
+  if (env_ccache_dir && g_path_is_absolute(env_ccache_dir))
+    {
+      g_debug ("Using CCACHE_DIR '%s'", env_ccache_dir);
+      self->ccache_dir = g_file_new_for_path (env_ccache_dir);
+    }
+    else
+    {
+      self->ccache_dir = g_file_get_child(self->state_dir, "ccache");
+    }
 }
 
 static void
