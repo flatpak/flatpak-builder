@@ -3834,6 +3834,7 @@ builder_manifest_install_dep (BuilderManifest *self,
 {
   g_autofree char *ref = NULL;
   g_autofree char *commit = NULL;
+  g_autoptr(GError) first_error = NULL;
 
   if (version == NULL)
     version = builder_manifest_get_runtime_version (self);
@@ -3869,17 +3870,22 @@ builder_manifest_install_dep (BuilderManifest *self,
 	  if (builder_manifest_install_single_dep (ref, remote, opt_user, opt_installation,
                                                    &current_error))
 	  {
-	    current_error = g_steal_pointer(error);
 	    return TRUE;
 	  }
-	  else if (*error == NULL)
-	    {
-	      *error = g_steal_pointer(&current_error);
-	    }
-	  if ((*error)->domain != G_SPAWN_EXIT_ERROR)
-	    return FALSE;
+	  else {
+	    gboolean fatal_error = current_error->domain != G_SPAWN_EXIT_ERROR;
+	    if (first_error == NULL)
+	      {
+	        first_error = g_steal_pointer(&current_error);
+	      }
+	    if (fatal_error)
+	      {
+		break;
+	      }
+	  }
 	}
     }
+  *error = g_steal_pointer(&first_error);
   return FALSE;
 }
 
