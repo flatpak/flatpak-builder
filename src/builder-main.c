@@ -198,7 +198,6 @@ do_export (BuilderContext *build_context,
   int i;
 
   g_autoptr(GPtrArray) args = NULL;
-  g_autoptr(GSubprocess) subp = NULL;
 
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
@@ -244,16 +243,8 @@ do_export (BuilderContext *build_context,
 
   g_ptr_array_add (args, NULL);
 
-  subp =
-    g_subprocess_newv ((const gchar * const *) args->pdata,
-                       G_SUBPROCESS_FLAGS_NONE,
-                       error);
-
-  if (subp == NULL ||
-      !g_subprocess_wait_check (subp, NULL, error))
-    return FALSE;
-
-  return TRUE;
+  return flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
+                         (const gchar * const *) args->pdata);
 }
 
 static gboolean
@@ -266,7 +257,6 @@ do_install (BuilderContext *build_context,
   g_autofree char *ref = NULL;
 
   g_autoptr(GPtrArray) args = NULL;
-  g_autoptr(GSubprocess) subp = NULL;
 
   args = g_ptr_array_new_with_free_func (g_free);
   g_ptr_array_add (args, g_strdup ("flatpak"));
@@ -292,16 +282,8 @@ do_install (BuilderContext *build_context,
 
   g_ptr_array_add (args, NULL);
 
-  subp =
-    g_subprocess_newv ((const gchar * const *) args->pdata,
-                       G_SUBPROCESS_FLAGS_NONE,
-                       error);
-
-  if (subp == NULL ||
-      !g_subprocess_wait_check (subp, NULL, error))
-    return FALSE;
-
-  return TRUE;
+  return flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
+                         (const gchar * const *) args->pdata);
 }
 
 static gboolean
