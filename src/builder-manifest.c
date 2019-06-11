@@ -1638,9 +1638,7 @@ builder_manifest_init_app_dir (BuilderManifest *self,
 {
   GFile *app_dir = builder_context_get_app_dir (context);
 
-  g_autoptr(GSubprocess) subp = NULL;
   g_autoptr(GPtrArray) args = NULL;
-  g_autofree char *commandline = NULL;
   GList *l;
   int i;
 
@@ -1723,16 +1721,8 @@ builder_manifest_init_app_dir (BuilderManifest *self,
   g_ptr_array_add (args, g_strdup (builder_manifest_get_runtime_version (self)));
   g_ptr_array_add (args, NULL);
 
-  commandline = flatpak_quote_argv ((const char **) args->pdata);
-  g_debug ("Running '%s'", commandline);
-
-  subp =
-    g_subprocess_newv ((const gchar * const *) args->pdata,
-                       G_SUBPROCESS_FLAGS_NONE,
-                       error);
-
-  if (subp == NULL ||
-      !g_subprocess_wait_check (subp, NULL, error))
+  if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
+                       (const gchar * const *) args->pdata))
     return FALSE;
 
   if (self->build_runtime && self->separate_locales)
@@ -2760,10 +2750,8 @@ builder_manifest_finish (BuilderManifest *self,
   g_autoptr(GFile) sources_dir = NULL;
   g_autoptr(GFile) locale_parent_dir = NULL;
   g_autofree char *json = NULL;
-  g_autofree char *commandline = NULL;
   g_autoptr(GPtrArray) args = NULL;
   g_autoptr(GPtrArray) inherit_extensions = NULL;
-  g_autoptr(GSubprocess) subp = NULL;
   int i;
   GList *l;
 
@@ -2956,16 +2944,8 @@ builder_manifest_finish (BuilderManifest *self,
       g_ptr_array_add (args, g_file_get_path (app_dir));
       g_ptr_array_add (args, NULL);
 
-      commandline = flatpak_quote_argv ((const char **) args->pdata);
-      g_debug ("Running '%s'", commandline);
-
-      subp =
-        g_subprocess_newv ((const gchar * const *) args->pdata,
-                           G_SUBPROCESS_FLAGS_NONE,
-                           error);
-
-      if (subp == NULL ||
-          !g_subprocess_wait_check (subp, NULL, error))
+      if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
+                           (const gchar * const *) args->pdata))
         return FALSE;
 
       json = builder_manifest_serialize (self);
@@ -3178,9 +3158,7 @@ builder_manifest_create_platform_base (BuilderManifest *self,
     {
       GFile *app_dir = NULL;
       g_autoptr(GFile) platform_dir = NULL;
-      g_autoptr(GSubprocess) subp = NULL;
       g_autoptr(GPtrArray) args = NULL;
-      g_autofree char *commandline = NULL;
       int i;
 
       g_print ("Creating platform based on %s\n", self->runtime);
@@ -3216,16 +3194,8 @@ builder_manifest_create_platform_base (BuilderManifest *self,
 
       g_ptr_array_add (args, NULL);
 
-      commandline = flatpak_quote_argv ((const char **) args->pdata);
-      g_debug ("Running '%s'", commandline);
-
-      subp =
-        g_subprocess_newv ((const gchar * const *) args->pdata,
-                           G_SUBPROCESS_FLAGS_NONE,
-                           error);
-
-      if (subp == NULL ||
-          !g_subprocess_wait_check (subp, NULL, error))
+      if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
+                           (const gchar * const *) args->pdata))
         return FALSE;
 
       if (self->separate_locales)
