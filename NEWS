@@ -1,3 +1,10 @@
+Changes in 1.0.8
+================
+
+ * Support multiple instances of --install-dep-from
+ * Ensure shallow git mirrors are updated when the git ref changes
+ * Improved error reporting
+
 Changes in 1.0.7
 ================
 
