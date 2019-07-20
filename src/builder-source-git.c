@@ -46,6 +46,7 @@ struct BuilderSourceGit
   char         *orig_ref;
   gboolean      disable_fsckobjects;
   gboolean      disable_shallow_clone;
+  gboolean      disable_submodules;
 };
 
 typedef struct
@@ -64,6 +65,7 @@ enum {
   PROP_COMMIT,
   PROP_DISABLE_FSCKOBJECTS,
   PROP_DISABLE_SHALLOW_CLONE,
+  PROP_DISABLE_SUBMODULES,
   LAST_PROP
 };
 
@@ -120,6 +122,10 @@ builder_source_git_get_property (GObject    *object,
       g_value_set_boolean (value, self->disable_shallow_clone);
       break;
 
+    case PROP_DISABLE_SUBMODULES:
+      g_value_set_boolean (value, self->disable_submodules);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -166,6 +172,10 @@ builder_source_git_set_property (GObject      *object,
 
     case PROP_DISABLE_SHALLOW_CLONE:
       self->disable_shallow_clone = g_value_get_boolean (value);
+      break;
+
+    case PROP_DISABLE_SUBMODULES:
+      self->disable_submodules = g_value_get_boolean (value);
       break;
 
     default:
@@ -226,7 +236,7 @@ builder_source_git_download (BuilderSource  *source,
 {
   BuilderSourceGit *self = BUILDER_SOURCE_GIT (source);
   g_autofree char *location = NULL;
-  FlatpakGitMirrorFlags flags;
+  FlatpakGitMirrorFlags flags = 0;
 
   location = get_url_or_path (self, context, error);
   if (location == NULL)
@@ -235,7 +245,8 @@ builder_source_git_download (BuilderSource  *source,
   if (self->tag != NULL && self->branch != NULL)
     return flatpak_fail (error, "Both tag (%s) and branch (%s) specified for git source", self->tag, self->branch);
 
-  flags = FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+  if (!self->disable_submodules)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
   if (update_vcs)
     flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
   if (self->disable_fsckobjects)
@@ -441,6 +452,14 @@ builder_source_git_class_init (BuilderSourceGitClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_DISABLE_SHALLOW_CLONE,
                                    g_param_spec_boolean ("disable-shallow-clone",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DISABLE_SUBMODULES,
+                                   g_param_spec_boolean ("disable-submodules",
                                                          "",
                                                          "",
                                                          FALSE,

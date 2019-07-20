@@ -710,6 +710,10 @@
                         <term><option>disable-shallow-clone</option> (boolean)</term>
                         <listitem><para>Don't optimize by making a shallow clone when downloading the git repo.</para></listitem>
                     </varlistentry>
+                    <varlistentry>
+                        <term><option>disable-submodules</option> (boolean)</term>
+                        <listitem><para>Don't checkout the git submodules when cloning the repository.</para></listitem>
+                    </varlistentry>
                 </variablelist>
             </refsect3>
             <refsect3>
