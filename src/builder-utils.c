@@ -423,7 +423,8 @@ parse_yaml_node_to_json (yaml_document_t *doc, yaml_node_t *node)
                   json_node_init_int (json, num);
                   break;
                 }
-              else if (*endptr == '.')
+              // Make sure that N.N, N., and .N (where N is a digit) are picked up as numbers.
+              else if (*endptr == '.' && (endptr != scalar || endptr[1] != '\0'))
                 {
                   g_ascii_strtoll (endptr + 1, &endptr, 10);
                   if (*endptr == '\0')
