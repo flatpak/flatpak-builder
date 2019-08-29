@@ -215,7 +215,7 @@
                 <listitem><para>
                   Run a command in a sandbox based on the build dir. This starts flatpak build, with some extra
                   arguments to give the same environment as the build, and the same permissions the final app
-                  will have. The command to run must be the last argument passed to
+                  will have (except filesystem permissions). The command to run must be the last argument passed to
                   flatpak-builder, after the directory and the manifest.
                   </para>
 
