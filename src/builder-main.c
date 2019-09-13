@@ -154,13 +154,13 @@ static GOptionEntry run_entries[] = {
 
 static GOptionEntry show_deps_entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
-  { "show-deps", 0, 0, G_OPTION_ARG_NONE, &opt_show_deps, "List the dependencies of the json file (see --show-deps --help)", NULL },
+  { "show-deps", 0, 0, G_OPTION_ARG_NONE, &opt_show_deps, "List the dependencies of the json file", NULL },
   { NULL }
 };
 
 static GOptionEntry show_manifest_entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
-  { "show-manifest", 0, 0, G_OPTION_ARG_NONE, &opt_show_manifest, "Print out the manifest file in standard json format (see --show-manifest --help)", NULL },
+  { "show-manifest", 0, 0, G_OPTION_ARG_NONE, &opt_show_manifest, "Print out the manifest file in standard json format", NULL },
   { NULL }
 };
 
@@ -692,7 +692,7 @@ main (int    argc,
   if (is_show_manifest)
     {
       g_autofree char *json = builder_manifest_serialize (manifest);
-      g_print ("%s", json);
+      g_print ("%s\n", json);
       return 0;
     }
 
