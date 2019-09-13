@@ -936,6 +936,14 @@ builder_module_get_name (BuilderModule *self)
   return self->name;
 }
 
+void
+builder_module_set_name (BuilderModule *self,
+                         const char *name)
+{
+  g_free (self->name);
+  self->name = g_strdup (name);
+}
+
 gboolean
 builder_module_is_enabled (BuilderModule *self,
                            BuilderContext *context)
