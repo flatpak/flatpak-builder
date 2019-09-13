@@ -40,6 +40,8 @@ typedef struct BuilderModule BuilderModule;
 GType builder_module_get_type (void);
 
 const char * builder_module_get_name (BuilderModule *self);
+void         builder_module_set_name (BuilderModule *self,
+                                      const char *name);
 gboolean     builder_module_is_enabled (BuilderModule *self,
                                         BuilderContext *context);
 gboolean     builder_module_get_disabled (BuilderModule *self);
