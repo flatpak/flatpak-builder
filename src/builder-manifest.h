@@ -134,6 +134,7 @@ gboolean        builder_manifest_create_platform (BuilderManifest *self,
                                                   BuilderCache    *cache,
                                                   BuilderContext  *context,
                                                   GError         **error);
+char *          builder_manifest_serialize       (BuilderManifest *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderManifest, g_object_unref)
 

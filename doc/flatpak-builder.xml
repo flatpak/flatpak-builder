@@ -49,6 +49,12 @@
                 <arg choice="opt" rep="repeat">OPTION</arg>
                 <arg choice="plain">MANIFEST</arg>
             </cmdsynopsis>
+            <cmdsynopsis>
+                <command>flatpak-builder</command>
+                <arg choice="plain">--show-manifest</arg>
+                <arg choice="opt" rep="repeat">OPTION</arg>
+                <arg choice="plain">MANIFEST</arg>
+            </cmdsynopsis>
     </refsynopsisdiv>
 
     <refsect1>
@@ -244,6 +250,23 @@
 
                 <listitem><para>
                   List all the (local) files that the manifest depends on.
+                  </para>
+
+                  <para>
+                  Only the <option>--verbose</option> option can be combined
+                  with this option.
+                  </para>
+                </listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>--show-manifest</option></term>
+
+                <listitem><para>
+                  Loads the manifest, including any included files and prints it in a canonical json format.
+                  This is useful for tools that want to handle manifest files to avoid having to support both
+                  yaml and json, as well as some non-standard json handling that is supported (for example
+                  comments and multiline strings).
                   </para>
 
                   <para>
