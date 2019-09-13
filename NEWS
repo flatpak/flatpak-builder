@@ -1,3 +1,14 @@
+Changes in 1.0.9
+================
+
+ * More detailed commandline output with --verbose enabled
+ * Support for including yaml module snippets
+ * Support the CCACHE_DIR environment variable
+ * New option disable-submodules for git sources
+ * New commandline option --show-manifest
+ * Multiple modules with the same name in the same manifest is
+   now supported.
+
 Changes in 1.0.8
 ================
 
