@@ -226,6 +226,9 @@ expand_modules (BuilderContext *context, GList *modules,
     {
       BuilderModule *m = l->data;
       GList *submodules = NULL;
+      g_autofree char *new_name = NULL;
+      int new_name_counter;
+      const char *orig_name;
       const char *name;
 
       if (!builder_module_is_enabled (m, context))
@@ -237,7 +240,6 @@ expand_modules (BuilderContext *context, GList *modules,
       *expanded = g_list_concat (*expanded, submodules);
 
       name = builder_module_get_name (m);
-
       if (name == NULL)
         {
           /* FIXME: We'd like to report *something* for the user
@@ -247,13 +249,22 @@ expand_modules (BuilderContext *context, GList *modules,
                        "Module has no 'name' attribute set");
           return FALSE;
         }
+      orig_name = name;
 
-      if (g_hash_table_lookup (names, name) != NULL)
+      /* Duplicated name happen sometimes, like e.g. when including snippets out of your control.
+       * It is not a huge problem for building, but we need unique names for e.g the cache, so
+       * uniquify on collision */
+      new_name_counter = 2;
+      while (g_hash_table_lookup (names, name) != NULL)
         {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "Duplicate modules named '%s'", name);
-          return FALSE;
+          g_free (new_name);
+          new_name = g_strdup_printf ("%s-%d", orig_name, new_name_counter++);
+          name = new_name;
         }
+
+      if (name != orig_name)
+        builder_module_set_name (m, name);
+
       g_hash_table_insert (names, (char *)name, (char *)name);
       *expanded = g_list_append (*expanded, m);
     }
