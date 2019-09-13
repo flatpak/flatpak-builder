@@ -47,6 +47,7 @@ static gboolean opt_build_only;
 static gboolean opt_finish_only;
 static gboolean opt_export_only;
 static gboolean opt_show_deps;
+static gboolean opt_show_manifest;
 static gboolean opt_disable_download;
 static gboolean opt_disable_updates;
 static gboolean opt_ccache;
@@ -109,6 +110,7 @@ static GOptionEntry entries[] = {
   { "export-only", 0, 0, G_OPTION_ARG_NONE, &opt_export_only, "Only run export phase", NULL },
   { "allow-missing-runtimes", 0, 0, G_OPTION_ARG_NONE, &opt_allow_missing_runtimes, "Don't fail if runtime and sdk missing", NULL },
   { "show-deps", 0, 0, G_OPTION_ARG_NONE, &opt_show_deps, "List the dependencies of the json file (see --show-deps --help)", NULL },
+  { "show-manifest", 0, 0, G_OPTION_ARG_NONE, &opt_show_manifest, "Print out the manifest file in standard json format (see --show-manifest --help)", NULL },
   { "require-changes", 0, 0, G_OPTION_ARG_NONE, &opt_require_changes, "Don't create app dir or export if no changes", NULL },
   { "keep-build-dirs", 0, 0, G_OPTION_ARG_NONE, &opt_keep_build_dirs, "Don't remove build directories after install", NULL },
   { "delete-build-dirs", 0, 0, G_OPTION_ARG_NONE, &opt_delete_build_dirs, "Always remove build directories, even after build failure", NULL },
@@ -153,6 +155,12 @@ static GOptionEntry run_entries[] = {
 static GOptionEntry show_deps_entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
   { "show-deps", 0, 0, G_OPTION_ARG_NONE, &opt_show_deps, "List the dependencies of the json file (see --show-deps --help)", NULL },
+  { NULL }
+};
+
+static GOptionEntry show_manifest_entries[] = {
+  { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
+  { "show-manifest", 0, 0, G_OPTION_ARG_NONE, &opt_show_manifest, "Print out the manifest file in standard json format (see --show-manifest --help)", NULL },
   { NULL }
 };
 
@@ -379,6 +387,7 @@ main (int    argc,
   g_autofree char **orig_argv = NULL;
   gboolean is_run = FALSE;
   gboolean is_show_deps = FALSE;
+  gboolean is_show_manifest = FALSE;
   gboolean app_dir_is_empty = FALSE;
   gboolean prune_unused_stages = FALSE;
   g_autoptr(FlatpakContext) arg_context = NULL;
@@ -426,6 +435,8 @@ main (int    argc,
         is_run = TRUE;
       if (strcmp (argv[i], "--show-deps") == 0)
         is_show_deps = TRUE;
+      if (strcmp (argv[i], "--show-manifest") == 0)
+        is_show_manifest = TRUE;
     }
 
   if (is_run)
@@ -442,6 +453,11 @@ main (int    argc,
     {
       context = g_option_context_new ("MANIFEST - Show manifest dependencies");
       g_option_context_add_main_entries (context, show_deps_entries, NULL);
+    }
+  else if (is_show_manifest)
+    {
+      context = g_option_context_new ("MANIFEST - Show manifest");
+      g_option_context_add_main_entries (context, show_manifest_entries, NULL);
     }
   else
     {
@@ -466,7 +482,7 @@ main (int    argc,
 
   argnr = 1;
 
-  if (!is_show_deps)
+  if (!is_show_deps && !is_show_manifest)
     {
       if (argc == argnr)
         return usage (context, "DIRECTORY must be specified");
@@ -574,7 +590,7 @@ main (int    argc,
       if (opt_disable_updates)
         {
           mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
-	}
+        }
 
       if (!builder_git_mirror_repo (opt_from_git,
                                     NULL,
@@ -670,6 +686,13 @@ main (int    argc,
           return 1;
         }
 
+      return 0;
+    }
+
+  if (is_show_manifest)
+    {
+      g_autofree char *json = builder_manifest_serialize (manifest);
+      g_print ("%s", json);
       return 0;
     }
 

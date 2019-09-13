@@ -1289,7 +1289,7 @@ serializable_iface_init (JsonSerializableIface *serializable_iface)
   serializable_iface->get_property = builder_serializable_get_property;
 }
 
-static char *
+char *
 builder_manifest_serialize (BuilderManifest *self)
 {
   JsonNode *node;
