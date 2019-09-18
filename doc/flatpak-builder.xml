@@ -388,7 +388,10 @@
                 <term><option>--repo=DIR</option></term>
 
                 <listitem><para>
-                    When build is done, run export the result to this repository.
+                    After the build finishes, run <command>flatpak build-export</command> to
+                    export the result to the repository <arg choice="plain">DIR</arg>. If
+                    <arg choice="plain">DIR</arg> exists, it must be an OSTree repository;
+                    otherwise a new one will be created.
                 </para></listitem>
             </varlistentry>
 
