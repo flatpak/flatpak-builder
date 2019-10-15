@@ -73,7 +73,7 @@
                     <term><option>default-branch</option> (string)</term>
                     <listitem><para>The default branch to use when
                     exporting the application. Defaults to master. </para>
-                    <para>This key can be overriden by the
+                    <para>This key can be overridden by the
                     --default-branch commandline
                     option.</para></listitem>
                 </varlistentry>
@@ -441,7 +441,7 @@
                 </varlistentry>
             </variablelist>
             <para>
-              Additionally the standard flatpak extension properies
+              Additionally the standard flatpak extension properties
               are supported, and put directly into the metadata file:
               autodelete, no-autodownload, subdirectories,
               add-ld-path, download-if, enable-if, merge-dirs,
