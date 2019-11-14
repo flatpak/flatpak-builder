@@ -1914,7 +1914,7 @@ compare_checksum (const char *name,
   if (strcmp (expected_checksum, measured_checksum) != 0)
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                   "Wrong %s checksum for %s, expected %s, was %s", type_name, name,
+                   "Wrong %s checksum for %s, expected \"%s\", was \"%s\"", type_name, name,
                    expected_checksum, measured_checksum);
       return FALSE;
     }
