@@ -83,7 +83,8 @@ typedef enum {
   TAR_LZMA,
   TAR_LZOP,
   TAR_XZ,
-  ZIP
+  ZIP,
+  SEVENZ,
 } BuilderArchiveType;
 
 static gboolean
@@ -464,6 +465,19 @@ unzip (GFile   *dir,
 }
 
 static gboolean
+un7z (GFile       *dir,
+      const char  *sevenz_path,
+      GError     **error)
+{
+  gboolean res;
+  const gchar *argv[] = { "7z",  "x", sevenz_path, NULL };
+
+  res = flatpak_spawnv (dir, NULL, 0, error, argv);
+
+  return res;
+}
+
+static gboolean
 unrpm (GFile   *dir,
        const char *rpm_path,
        GError **error)
@@ -657,6 +671,7 @@ get_type_from_prop (BuilderSourceArchive *self)
       { "tar-lzma", TAR_LZMA },
       { "tar-xz", TAR_XZ },
       { "zip", ZIP },
+      { "7z", SEVENZ },
   };
   guint i;
 
@@ -719,6 +734,23 @@ builder_source_archive_extract (BuilderSource  *source,
       if (self->strip_components > 0)
         {
           if (!strip_components_into (dest, zip_dest, self->strip_components, error))
+            return FALSE;
+        }
+    }
+  else if (type == SEVENZ)
+    {
+      g_autoptr(GFile) sevenz_dest = NULL;
+
+      sevenz_dest = create_uncompress_directory (self, dest, error);
+      if (sevenz_dest == NULL)
+        return FALSE;
+
+      if (!un7z (sevenz_dest, archive_path, error))
+        return FALSE;
+
+      if (self->strip_components > 0)
+        {
+          if (!strip_components_into (dest, sevenz_dest, self->strip_components, error))
             return FALSE;
         }
     }
