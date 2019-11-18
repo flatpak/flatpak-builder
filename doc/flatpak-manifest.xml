@@ -645,6 +645,13 @@
                         <listitem><para>Whether to initialise the repository as a git repository.</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>archive-type</option> (string)</term>
+                        <listitem><para>
+                            The type of archive if it cannot be guessed from the path. Possible values are "rpm", "tar",
+                            "tar-gzip", "tar-compress", "tar-bzip2", "tar-lzip", "tar-lzma", "tar-lzop", "tar-xz" and "zip".
+                        </para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>md5</option> (string)</term>
                         <listitem><para>The md5 checksum of the file, verified after download</para>
                         <para>Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.</para>
