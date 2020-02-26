@@ -3,6 +3,7 @@ runtime: org.test.Platform
 sdk: org.test.Sdk
 command: hello2.sh
 tags: [test]
+token-type: 0
 finish-args:
   - --share=network
 build-options:

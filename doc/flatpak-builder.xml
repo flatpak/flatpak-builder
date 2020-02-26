@@ -429,6 +429,19 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--token-type=VAL</option></term>
+
+                <listitem><para>
+                    Set type of token needed to install this commit.
+                    Setting this to a value greater than 0 implies that
+                    authentication will be needed to install the
+                    flatpak. A <option>token-type</option> property set
+                    in the manifest takes precedence over this option.
+                    Used when exporting the build results.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--gpg-sign=KEYID</option></term>
 
                 <listitem><para>

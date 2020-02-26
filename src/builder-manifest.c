@@ -63,6 +63,7 @@ struct BuilderManifest
   char           *branch;
   char           *default_branch;
   char           *collection_id;
+  gint32          token_type;
   char           *extension_tag;
   char           *type;
   char           *runtime;
@@ -167,6 +168,7 @@ enum {
   PROP_ADD_EXTENSIONS,
   PROP_ADD_BUILD_EXTENSIONS,
   PROP_EXTENSION_TAG,
+  PROP_TOKEN_TYPE,
   LAST_PROP
 };
 
@@ -470,6 +472,10 @@ builder_manifest_get_property (GObject    *object,
       g_value_set_string (value, self->extension_tag);
       break;
 
+    case PROP_TOKEN_TYPE:
+      g_value_set_int (value, (int)self->token_type);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -727,6 +733,10 @@ builder_manifest_set_property (GObject      *object,
     case PROP_EXTENSION_TAG:
       g_free (self->extension_tag);
       self->extension_tag = g_value_dup_string (value);
+      break;
+
+    case PROP_TOKEN_TYPE:
+      self->token_type = (gint32)g_value_get_int (value);
       break;
 
     default:
@@ -1070,11 +1080,22 @@ builder_manifest_class_init (BuilderManifestClass *klass)
                                                         "",
                                                         NULL,
                                                         G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_TOKEN_TYPE,
+                                   g_param_spec_int ("token-type",
+                                                     "",
+                                                     "",
+                                                     -1,
+                                                     G_MAXINT32,
+                                                     -1,
+                                                     G_PARAM_READWRITE));
 }
 
 static void
 builder_manifest_init (BuilderManifest *self)
 {
+  self->token_type = -1;
   self->appstream_compose = TRUE;
   self->separate_locales = TRUE;
 }
@@ -1424,6 +1445,20 @@ builder_manifest_set_default_collection_id (BuilderManifest *self,
 {
   if (self->collection_id == NULL)
     self->collection_id = g_strdup (default_collection_id);
+}
+
+gint32
+builder_manifest_get_token_type (BuilderManifest *self)
+{
+  return self->token_type;
+}
+
+void
+builder_manifest_set_default_token_type (BuilderManifest *self,
+                                         gint32           default_token_type)
+{
+  if (self->token_type == -1)
+    self->token_type = default_token_type;
 }
 
 void
