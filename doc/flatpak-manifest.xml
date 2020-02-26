@@ -102,6 +102,13 @@
                     then an error will occur.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>token-type</option> (integer)</term>
+                    <listitem><para>The type of token needed to install
+                    this commit. Setting this to a value greater than 0
+                    implies that authentication will be needed to
+                    install the flatpak.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>runtime</option> (string)</term>
                     <listitem><para>The name of the runtime that the application uses.</para></listitem>
                 </varlistentry>

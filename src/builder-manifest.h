@@ -62,9 +62,12 @@ GList *         builder_manifest_get_add_build_extensions (BuilderManifest *self
 const char *    builder_manifest_get_branch (BuilderManifest *self,
                                              BuilderContext  *context);
 const char *    builder_manifest_get_collection_id (BuilderManifest *self);
+gint32          builder_manifest_get_token_type (BuilderManifest *self);
 const char *    builder_manifest_get_extension_tag (BuilderManifest *self);
 void            builder_manifest_set_default_collection_id (BuilderManifest *self,
                                                             const char      *default_collection_id);
+void            builder_manifest_set_default_token_type (BuilderManifest *self,
+                                                         gint32           default_token_type);
 
 void            builder_manifest_add_tags (BuilderManifest *self,
                                            const char      **add_tags);

@@ -71,6 +71,7 @@ static char *opt_repo;
 static char *opt_subject;
 static char *opt_body;
 static char *opt_collection_id = NULL;
+static int opt_token_type = -1;
 static char *opt_gpg_homedir;
 static char **opt_key_ids;
 static char **opt_sources_dirs;
@@ -118,6 +119,7 @@ static GOptionEntry entries[] = {
   { "subject", 's', 0, G_OPTION_ARG_STRING, &opt_subject, "One line subject (passed to build-export)", "SUBJECT" },
   { "body", 'b', 0, G_OPTION_ARG_STRING, &opt_body, "Full description (passed to build-export)", "BODY" },
   { "collection-id", 0, 0, G_OPTION_ARG_STRING, &opt_collection_id, "Collection ID (passed to build-export)", "COLLECTION-ID" },
+  { "token-type", 0, 0, G_OPTION_ARG_INT, &opt_token_type, "Set type of token needed to install this commit (passed to build-export)", "VAL" },
   { "gpg-sign", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_key_ids, "GPG Key ID to sign the commit with", "KEY-ID"},
   { "gpg-homedir", 0, 0, G_OPTION_ARG_STRING, &opt_gpg_homedir, "GPG Homedir to use when looking for keyrings", "HOMEDIR"},
   { "force-clean", 0, 0, G_OPTION_ARG_NONE, &opt_force_clean, "Erase previous contents of DIRECTORY", NULL },
@@ -199,6 +201,7 @@ do_export (BuilderContext *build_context,
            char          **exclude_dirs,
            const gchar    *branch,
            const gchar    *collection_id,
+           gint32          token_type,
            ...)
 {
   va_list ap;
@@ -231,8 +234,11 @@ do_export (BuilderContext *build_context,
   if (collection_id)
     g_ptr_array_add (args, g_strdup_printf ("--collection-id=%s", collection_id));
 
+  if (token_type >= 0)
+    g_ptr_array_add (args, g_strdup_printf ("--token-type=%d", token_type));
+
   /* Additional flags. */
-  va_start (ap, collection_id);
+  va_start (ap, token_type);
   while ((arg = va_arg (ap, const gchar *)))
     if (arg != skip_arg)
       g_ptr_array_add (args, g_strdup ((gchar *) arg));
@@ -501,6 +507,16 @@ main (int    argc,
       return 1;
     }
 
+  if (opt_token_type < -1
+#if G_MAXINT > 0x7fffffff
+      || opt_token_type > G_MAXINT32
+#endif
+      )
+    {
+      g_printerr ("--token-type value must be a 32 bit integer >= 0\n");
+      return 1;
+    }
+
   if (app_dir_path)
     app_dir = g_file_new_for_path (app_dir_path);
   cwd = g_get_current_dir ();
@@ -668,6 +684,9 @@ main (int    argc,
 
   if (opt_collection_id)
     builder_manifest_set_default_collection_id (manifest, opt_collection_id);
+
+  if (opt_token_type >= 0)
+    builder_manifest_set_default_token_type (manifest, (gint32)opt_token_type);
 
   if (is_run && argc == 3)
     return usage (context, "Program to run must be specified");
@@ -993,6 +1012,7 @@ main (int    argc,
                       flatpak_file_get_path_cached (export_repo),
                       app_dir_path, exclude_dirs, builder_manifest_get_branch (manifest, build_context),
                       builder_manifest_get_collection_id (manifest),
+                      builder_manifest_get_token_type (manifest),
                       "--exclude=/lib/debug/*",
                       "--include=/lib/debug/app",
                       builder_context_get_separate_locales (build_context) ? "--exclude=/share/runtime/locale/*/*" : skip_arg,
@@ -1027,6 +1047,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           metadata_arg,
                           files_arg,
                           NULL))
@@ -1047,6 +1068,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           "--metadata=metadata.debuginfo",
                           builder_context_get_build_runtime (build_context) ? "--files=usr/lib/debug" : "--files=files/lib/debug",
                           NULL))
@@ -1078,6 +1100,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           metadata_arg, files_arg,
                           NULL))
             {
@@ -1097,6 +1120,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           "--metadata=metadata.sources",
                           "--files=sources",
                           NULL))
@@ -1117,6 +1141,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           "--metadata=metadata.platform",
                           "--files=platform",
                           builder_context_get_separate_locales (build_context) ? "--exclude=/share/runtime/locale/*/*" : skip_arg,
@@ -1151,6 +1176,7 @@ main (int    argc,
                           flatpak_file_get_path_cached (export_repo),
                           app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
                           builder_manifest_get_collection_id (manifest),
+                          builder_manifest_get_token_type (manifest),
                           metadata_arg,
                           files_arg,
                           NULL))
