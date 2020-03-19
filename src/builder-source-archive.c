@@ -75,6 +75,7 @@ enum {
 typedef enum {
   UNKNOWN,
   RPM,
+  DEB,
   TAR,
   TAR_GZIP,
   TAR_COMPRESS,
@@ -493,6 +494,21 @@ unrpm (GFile   *dir,
   return res;
 }
 
+static gboolean
+dpkg_deb_extract (GFile      *dir,
+                  const char *deb_path,
+                  GError    **error)
+{
+  g_autofree char *dir_path = g_file_get_path (dir);
+
+  gboolean res;
+  const gchar *argv[] = { "dpkg-deb", "-x", deb_path, dir_path, NULL };
+
+  res = flatpak_spawnv (dir, NULL, 0, error, argv);
+
+  return res;
+}
+
 static BuilderArchiveType
 get_type (GFile *archivefile)
 {
@@ -539,6 +555,9 @@ get_type (GFile *archivefile)
 
   if (g_str_has_suffix (lower, ".rpm"))
     return RPM;
+
+  if (g_str_has_suffix (lower, ".deb"))
+    return DEB;
 
   return UNKNOWN;
 }
@@ -663,6 +682,7 @@ get_type_from_prop (BuilderSourceArchive *self)
     BuilderArchiveType type;
   } str_to_types[] = {
       { "rpm", RPM },
+      { "deb", DEB },
       { "tar", TAR },
       { "tar-gzip", TAR_GZIP },
       { "tar-compress", TAR_COMPRESS },
@@ -768,6 +788,23 @@ builder_source_archive_extract (BuilderSource  *source,
       if (self->strip_components > 0)
         {
           if (!strip_components_into (dest, rpm_dest, self->strip_components, error))
+            return FALSE;
+        }
+    }
+  else if (type == DEB)
+    {
+      g_autoptr(GFile) deb_dest = NULL;
+
+      deb_dest = create_uncompress_directory (self, dest, error);
+      if (deb_dest == NULL)
+        return FALSE;
+
+      if (!dpkg_deb_extract (deb_dest, archive_path, error))
+        return FALSE;
+
+      if (self->strip_components > 0)
+        {
+          if (!strip_components_into (dest, deb_dest, self->strip_components, error))
             return FALSE;
         }
     }
