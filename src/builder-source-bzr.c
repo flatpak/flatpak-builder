@@ -120,11 +120,14 @@ bzr (GFile   *dir,
      GError **error,
      ...)
 {
+  g_autofree char *brz = NULL;
   gboolean res;
   va_list ap;
 
+  brz = g_find_program_in_path ("brz");
+
   va_start (ap, error);
-  res = flatpak_spawn (dir, output, 0, error, "bzr", ap);
+  res = flatpak_spawn (dir, output, 0, error, brz ? brz : "bzr", ap);
   va_end (ap);
 
   return res;
