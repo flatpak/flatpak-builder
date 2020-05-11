@@ -418,7 +418,7 @@ builder_cache_lookup (BuilderCache *self,
       g_variant_get (variant, "(a{sv}aya(say)&s&stayay)", NULL, NULL, NULL,
                      &subject, NULL, NULL, NULL, NULL);
 
-      if (strcmp (subject, self->current_checksum) == 0)
+      if (subject != NULL && strcmp (subject, self->current_checksum) == 0)
         {
           g_free (self->last_parent);
           self->last_parent = g_steal_pointer (&commit);
