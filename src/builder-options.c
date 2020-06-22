@@ -1203,9 +1203,6 @@ builder_options_get_test_args (BuilderOptions *self,
   /* Last argument wins, so reverse the list for per-module to win */
   options = g_list_reverse (options);
 
-  /* Always run tests readonly */
-  g_ptr_array_add (array, g_strdup ("--readonly"));
-
   for (l = options; l != NULL; l = l->next)
     {
       BuilderOptions *o = l->data;
@@ -1222,6 +1219,9 @@ builder_options_get_test_args (BuilderOptions *self,
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't specify test-args in sandboxed build");
       return NULL;
     }
+
+  /* Always run tests readonly */
+  g_ptr_array_add (array, g_strdup ("--readonly"));
 
   g_ptr_array_add (array, NULL);
 
