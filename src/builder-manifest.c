@@ -3782,12 +3782,12 @@ builder_manifest_install_single_dep (const char *ref,
   add_installation_args (args, opt_user, opt_installation);
 
   g_ptr_array_add (args, g_strdup ("install"));
-  g_ptr_array_add (args, g_strdup (remote));
-  
+
   g_ptr_array_add (args, g_strdup ("-y"));
   if (flatpak_version_check (1, 2, 0))
     g_ptr_array_add (args, g_strdup ("--noninteractive"));
 
+  g_ptr_array_add (args, g_strdup (remote));
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
