@@ -285,13 +285,17 @@ builder_source_git_extract (BuilderSource  *source,
 {
   BuilderSourceGit *self = BUILDER_SOURCE_GIT (source);
   g_autofree char *location = NULL;
+  FlatpakGitMirrorFlags mirror_flags = 0;
 
   location = get_url_or_path (self, context, error);
   if (location == NULL)
     return FALSE;
 
+  if (!self->disable_submodules)
+    mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+
   if (!builder_git_checkout (location, get_branch (self),
-                             dest, context, error))
+                             dest, context, mirror_flags, error))
     return FALSE;
 
   return TRUE;
