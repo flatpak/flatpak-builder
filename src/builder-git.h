@@ -48,6 +48,7 @@ gboolean builder_git_checkout           (const char      *repo_location,
                                          const char      *branch,
                                          GFile           *dest,
                                          BuilderContext  *context,
+                                         FlatpakGitMirrorFlags mirror_flags,
                                          GError         **error);
 gboolean builder_git_shallow_mirror_ref (const char     *repo_location,
                                          const char     *destination_path,

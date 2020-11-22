@@ -621,6 +621,7 @@ main (int    argc,
                                  git_branch,
                                  build_subdir,
                                  build_context,
+                                 mirror_flags,
                                  &error))
         {
           g_printerr ("Can't check out manifest repo: %s\n", error->message);

@@ -828,6 +828,7 @@ builder_git_checkout (const char     *repo_location,
                       const char     *branch,
                       GFile          *dest,
                       BuilderContext *context,
+                      FlatpakGitMirrorFlags mirror_flags,
                       GError        **error)
 {
   g_autoptr(GFile) mirror_dir = NULL;
@@ -857,8 +858,9 @@ builder_git_checkout (const char     *repo_location,
             "checkout", branch, NULL))
     return FALSE;
 
-  if (!git_extract_submodule (repo_location, dest, branch, context, error))
-    return FALSE;
+  if (mirror_flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
+    if (!git_extract_submodule (repo_location, dest, branch, context, error))
+      return FALSE;
 
   return TRUE;
 }
