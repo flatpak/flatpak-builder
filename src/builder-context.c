@@ -770,7 +770,7 @@ rofiles_umount_handler (int signum)
                      NULL };
 
   argv[2] = rofiles_unmount_path;
-  g_debug ("unmounting rofiles-fuse %s", rofiles_unmount_path);
+  g_debug ("Unmounting read-only fs: %s %s %s", argv[0], argv[1], argv[2]);
   g_spawn_sync (NULL, (char **)argv, NULL,
                 G_SPAWN_SEARCH_PATH | G_SPAWN_CLOEXEC_PIPES | G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_STDERR_TO_DEV_NULL,
                 NULL, NULL, NULL, NULL, NULL, NULL);
@@ -874,7 +874,7 @@ builder_context_enable_rofiles (BuilderContext *self,
   rofiles_dir = g_object_ref (self->rofiles_allocated_dir);
   argv[4] = (char *)flatpak_file_get_path_cached (rofiles_dir);
 
-  g_debug ("starting: rofiles-fuse %s %s", argv[3], argv[4]);
+  g_debug ("Mounting read-only fs: %s %s %s", argv[0], argv[3], argv[4]);
   if (!g_spawn_sync (NULL, (char **)argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_CLOEXEC_PIPES, rofiles_child_setup, NULL, NULL, NULL, &exit_status, error))
     {
       g_prefix_error (error, "Can't spawn rofiles-fuse");
