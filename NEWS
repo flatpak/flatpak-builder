@@ -1,3 +1,9 @@
+Changes in 1.0.12
+=================
+
+ * Make --run work if manifest has --metadata in build-finish
+ * Don't try to extract git submodules if they were disabled
+
 Changes in 1.0.11
 =================
 
