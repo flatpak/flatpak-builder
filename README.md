@@ -8,16 +8,33 @@ See http://flatpak.org/ for more information.
 
 Read documentation for the flatpak-builder [commandline tools](http://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html).
 
-# INSTALLATION
+# Installation
 
-Flatpak-builder uses a traditional autoconf-style build mechanism. To build just do
+Flatpak-builder uses a the Meson build system. To build just do:
 ```
- ./configure [args]
- make
- make install
+ ./meson . _build [args]
+ ninja -C _build
+ ninja -C _build install
 ```
 
-Most configure arguments are documented in `./configure --help`. However,
-there are some options that are a bit more complicated.
+Configure arguments are documented in `meson_options.txt`.
+
+Flatpak-builder depends on the following executables being present in the
+host system:
+
+ * tar
+ * unzip
+ * sh
+ * patch
+ * cp
+
+Optionally, flatpak-builder may try to execute the following programs if the
+manifest file requires:
+
+ * bzr
+ * git
+ * rpm2cpio & cpio
+ * svn
+ * 7z
 
 Flatpak-builder relies on flatpak, so it must be installed first.

@@ -38,7 +38,7 @@
 #include <sys/ioctl.h>
 
 #include <glib.h>
-#include "libglnx/libglnx.h"
+#include "libglnx.h"
 #include <gio/gunixoutputstream.h>
 #include <gio/gunixinputstream.h>
 
