@@ -29,7 +29,7 @@
 
 #include <gio/gio.h>
 #include <ostree.h>
-#include "libglnx/libglnx.h"
+#include "libglnx.h"
 
 #include "builder-flatpak-utils.h"
 #include "builder-utils.h"

@@ -28,7 +28,7 @@
 #include <sys/statfs.h>
 
 #include <gio/gio.h>
-#include "libglnx/libglnx.h"
+#include "libglnx.h"
 
 #include "builder-flatpak-utils.h"
 #include "builder-utils.h"

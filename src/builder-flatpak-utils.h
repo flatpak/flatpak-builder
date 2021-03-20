@@ -23,7 +23,7 @@
 
 #include <string.h>
 
-#include "libglnx/libglnx.h"
+#include "libglnx.h"
 #include <gio/gio.h>
 #include <gio/gunixfdlist.h>
 #include <ostree.h>

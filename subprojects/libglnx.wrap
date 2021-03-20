@@ -1,0 +1,6 @@
+[wrap-git]
+url = https://gitlab.gnome.org/GNOME/libglnx.git
+revision = head
+
+[provide]
+libglnx = libglnx_dep
