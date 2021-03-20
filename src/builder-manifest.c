@@ -36,7 +36,7 @@
 
 #include <libxml/parser.h>
 
-#include "libglnx/libglnx.h"
+#include "libglnx.h"
 
 #define LOCALES_SEPARATE_DIR "share/runtime/locale"
 
