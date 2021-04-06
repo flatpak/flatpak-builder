@@ -1,18 +1,5 @@
 AC_PREREQ([2.63])
 
-# Making releases:
-#   FLATPAK_MICRO_VERSION += 1;
-#   FLATPAK_INTERFACE_AGE += 1;
-#   FLATPAK_BINARY_AGE += 1;
-# if any functions have been added, set FLATPAK_INTERFACE_AGE to 0.
-# if backwards compatibility has been broken,
-# set FLATPAK_BINARY_AGE and FLATPAK_INTERFACE_AGE to 0.
-#
-# in easier to understand terms:
-#
-# on the stable branch, interface age == micro
-# on the unstable (ie master), interface age = 0
-
 m4_define([flatpak_builder_major_version], [1])
 m4_define([flatpak_builder_minor_version], [0])
 m4_define([flatpak_builder_micro_version], [12])
