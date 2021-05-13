@@ -409,7 +409,7 @@ git_mirror_submodules (const char     *repo_location,
           g_debug ("mirror submodule %s at revision %s\n", absolute_url, words[2]);
           if (shallow)
             {
-              if (!builder_git_shallow_mirror_ref (absolute_url, destination_path, words[2], context, error))
+              if (!builder_git_shallow_mirror_ref (absolute_url, destination_path, flags, words[2], context, error))
                 return FALSE;
             }
           else
@@ -652,6 +652,7 @@ builder_git_mirror_repo (const char     *repo_location,
 gboolean
 builder_git_shallow_mirror_ref (const char     *repo_location,
                                 const char     *destination_path,
+                                FlatpakGitMirrorFlags flags,
                                 const char     *ref,
                                 BuilderContext *context,
                                 GError        **error)
@@ -712,10 +713,13 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
   if (current_commit == NULL)
     return FALSE;
 
-  if (!git_mirror_submodules (repo_location, destination_path, TRUE,
-                              FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES | FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK,
-                              mirror_dir, current_commit, context, error))
-    return FALSE;
+  if (flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
+    {
+      if (!git_mirror_submodules (repo_location, destination_path, TRUE,
+                                  flags | FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK,
+                                  mirror_dir, current_commit, context, error))
+        return FALSE;
+    }
 
   return TRUE;
 }
