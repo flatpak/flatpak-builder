@@ -310,7 +310,7 @@ builder_source_git_bundle (BuilderSource  *source,
 
   g_autofree char *location = NULL;
   g_autoptr(GFile) mirror_dir = NULL;
-
+  FlatpakGitMirrorFlags flags = 0;
   location = get_url_or_path (self, context, error);
 
   g_print ("builder_source_git_bundle %s\n", location);
@@ -324,8 +324,12 @@ builder_source_git_bundle (BuilderSource  *source,
   if (!flatpak_mkdir_p (mirror_dir, NULL, error))
     return FALSE;
 
+  if (!self->disable_submodules)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+
   if (!builder_git_shallow_mirror_ref (location,
                                        flatpak_file_get_path_cached (mirror_dir),
+                                       flags,
                                        self->orig_ref,
                                        context,
                                        error))
