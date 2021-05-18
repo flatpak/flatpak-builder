@@ -18,11 +18,13 @@ fi
 # regenerated from their corresponding *.in files by ./configure anyway.
 touch INSTALL
 
-if ! test -f libglnx/README.md -a -f bubblewrap/README.md; then
+if ! test -f libglnx/README.md; then
     git submodule update --init
 fi
 # Workaround automake bug with subdir-objects and computed paths
-sed -e 's,$(libglnx_srcpath),libglnx,g' < libglnx/Makefile-libglnx.am >libglnx/Makefile-libglnx.am.inc
+sed -e 's,$(libglnx_srcpath),subprojects/libglnx,g' \
+    < subprojects/libglnx/Makefile-libglnx.am \
+    > subprojects/libglnx/Makefile-libglnx.am.inc
 
 autoreconf --force --install --verbose || exit $?
 

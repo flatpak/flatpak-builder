@@ -21,12 +21,13 @@ SUBDIRS += . doc
 endif
 
 FLATPAK_BINDIR=$(bindir)
-ACLOCAL_AMFLAGS = -I m4 -I libglnx ${ACLOCAL_FLAGS}
+ACLOCAL_AMFLAGS = -I m4 -I subprojects/libglnx ${ACLOCAL_FLAGS}
 AM_CPPFLAGS =							\
 	-DFLATPAK_BINDIR=\"$(FLATPAK_BINDIR)\"			\
 	-DFLATPAK_BASEDIR=\"$(pkgdatadir)\"			\
 	-DG_LOG_DOMAIN=\"flatpak-builder\"			\
-	-I$(srcdir)/libglnx					\
+	-I$(srcdir)/subprojects					\
+	-I$(srcdir)/subprojects/libglnx				\
 	-include "config.h"					\
 	$(NULL)
 
@@ -34,7 +35,7 @@ AM_CFLAGS = $(WARN_CFLAGS)
 
 lib_LTLIBRARIES =
 noinst_LTLIBRARIES += libglnx.la
-libglnx_srcpath := $(srcdir)/libglnx
+libglnx_srcpath := $(srcdir)/subprojects/libglnx
 libglnx_cflags := \
 	$(BASE_CFLAGS) \
 	"-I$(libglnx_srcpath)" \
@@ -42,7 +43,7 @@ libglnx_cflags := \
 	$(HIDDEN_VISIBILITY_CFLAGS) \
 	$(NULL)
 libglnx_libs := $(BASE_LIBS)
-include libglnx/Makefile-libglnx.am.inc
+include subprojects/libglnx/Makefile-libglnx.am.inc
 
 include src/Makefile.am.inc
 include tests/Makefile.am.inc
