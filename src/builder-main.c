@@ -1097,9 +1097,13 @@ main (int    argc,
                                        builder_context_get_build_runtime (build_context) ? "usr" : "files",
                                        builder_extension_get_directory (e));
 
+          const char *extension_branch = builder_extension_get_version (e);
+          if (extension_branch == NULL)
+            extension_branch = builder_manifest_get_branch (manifest, build_context);
+
           if (!do_export (build_context, &error, TRUE,
                           flatpak_file_get_path_cached (export_repo),
-                          app_dir_path, NULL, builder_manifest_get_branch (manifest, build_context),
+                          app_dir_path, NULL, extension_branch,
                           builder_manifest_get_collection_id (manifest),
                           builder_manifest_get_token_type (manifest),
                           metadata_arg, files_arg,
