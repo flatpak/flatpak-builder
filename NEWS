@@ -1,3 +1,10 @@
+Changes in 1.0.14
+=================
+
+ * Ensure that sources cannot create files outside the build directory.
+ * If --sandbox is enabled, ensure sources can't real files outside the
+   manifest directory.
+
 Changes in 1.0.13
 =================
 
