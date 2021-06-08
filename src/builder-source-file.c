@@ -187,6 +187,20 @@ builder_source_file_set_property (GObject      *object,
     }
 }
 
+static gboolean
+builder_source_file_validate (BuilderSource  *source,
+                              GError        **error)
+{
+  BuilderSourceFile *self = BUILDER_SOURCE_FILE (source);
+
+  if (self->dest_filename != NULL &&
+      strchr (self->dest_filename, '/') != NULL)
+    return flatpak_fail (error, "No slashes allowed in dest-filename");
+
+  return TRUE;
+}
+
+
 static SoupURI *
 get_uri (BuilderSourceFile *self,
          GError           **error)
@@ -588,6 +602,7 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
   source_class->bundle = builder_source_file_bundle;
   source_class->update = builder_source_file_update;
   source_class->checksum = builder_source_file_checksum;
+  source_class->validate = builder_source_file_validate;
 
   g_object_class_install_property (object_class,
                                    PROP_PATH,

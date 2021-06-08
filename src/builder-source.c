@@ -286,35 +286,46 @@ builder_source_from_json (JsonNode *node)
 {
   JsonObject *object = json_node_get_object (node);
   const gchar *type;
+  BuilderSource *source = NULL;
 
   type = json_object_get_string_member (object, "type");
 
   if (type == NULL)
     g_warning ("Missing source type");
   else if (strcmp (type, "archive") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_ARCHIVE, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_ARCHIVE, node);
   else if (strcmp (type, "file") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_FILE, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_FILE, node);
   else if (strcmp (type, "dir") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_DIR, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_DIR, node);
   else if (strcmp (type, "script") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SCRIPT, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SCRIPT, node);
   else if (strcmp (type, "shell") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SHELL, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SHELL, node);
   else if (strcmp (type, "extra-data") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_EXTRA_DATA, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_EXTRA_DATA, node);
   else if (strcmp (type, "patch") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_PATCH, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_PATCH, node);
   else if (strcmp (type, "git") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_GIT, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_GIT, node);
   else if (strcmp (type, "bzr") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_BZR, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_BZR, node);
   else if (strcmp (type, "svn") == 0)
-    return (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SVN, node);
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SVN, node);
   else
     g_warning ("Unknown source type %s", type);
 
-  return NULL;
+  if (source != NULL)
+    {
+      g_autoptr(GError) error = NULL;
+      if (!builder_source_validate (source, &error))
+        {
+          g_warning ("Invalid source: %s", error->message);
+          g_clear_object (&source);
+        }
+    }
+
+  return source;
 }
 
 gboolean
@@ -418,6 +429,19 @@ builder_source_finish (BuilderSource  *self,
   if (class->finish)
     class->finish (self, args, context);
 }
+
+gboolean
+builder_source_validate (BuilderSource  *self,
+                         GError        **error)
+{
+  BuilderSourceClass *class = BUILDER_SOURCE_GET_CLASS (self);
+
+  if (class->validate)
+    return class->validate (self, error);
+
+  return TRUE;
+}
+
 
 gboolean
 builder_source_is_enabled (BuilderSource *self,
