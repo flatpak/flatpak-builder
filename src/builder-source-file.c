@@ -294,9 +294,18 @@ get_source_file (BuilderSourceFile *self,
 
   if (self->path != NULL && self->path[0] != 0)
     {
+      g_autoptr(GFile) file = NULL;
       *is_local = TRUE;
       *is_inline = FALSE;
-      return g_file_resolve_relative_path (base_dir, self->path);
+      file = g_file_resolve_relative_path (base_dir, self->path);
+
+      if (!builder_context_ensure_parent_dir_sandboxed (context, file, error))
+        {
+          g_prefix_error (error, "Unable to get source file '%s': ", self->path);
+          return NULL;
+        }
+
+      return g_steal_pointer (&file);
     }
 
   g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "source file path or url not specified");

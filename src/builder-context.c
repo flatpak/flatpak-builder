@@ -761,6 +761,32 @@ builder_context_set_bundle_sources (BuilderContext *self,
   self->bundle_sources = !!bundle_sources;
 }
 
+gboolean
+builder_context_ensure_file_sandboxed (BuilderContext *self,
+                                       GFile          *file,
+                                       GError        **error)
+{
+  if (!g_file_query_exists (file, NULL))
+    return flatpak_fail (error, "File '%s' not found", flatpak_file_get_path_cached (file));
+
+  if (self->sandboxed)
+    {
+      if (!flatpak_file_is_in (file, self->base_dir))
+        return flatpak_fail (error, "File '%s' not inside manifest directory (in sandboxed build)", flatpak_file_get_path_cached (file));
+    }
+
+  return TRUE;
+}
+
+gboolean
+builder_context_ensure_parent_dir_sandboxed (BuilderContext *self,
+                                             GFile          *file,
+                                             GError        **error)
+{
+  g_autoptr(GFile) parent_file = g_file_get_parent (file);
+  return builder_context_ensure_file_sandboxed (self, parent_file, error);
+}
+
 static char *rofiles_unmount_path = NULL;
 
 static void

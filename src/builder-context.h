@@ -93,6 +93,12 @@ void            builder_context_set_delete_build_dirs (BuilderContext *self,
 gboolean        builder_context_get_keep_build_dirs (BuilderContext *self);
 void            builder_context_set_sandboxed (BuilderContext *self,
                                                gboolean        sandboxed);
+gboolean        builder_context_ensure_file_sandboxed (BuilderContext *self,
+                                                       GFile          *file,
+                                                       GError        **error);
+gboolean        builder_context_ensure_parent_dir_sandboxed (BuilderContext *self,
+                                                             GFile          *file,
+                                                             GError        **error);
 gboolean        builder_context_get_sandboxed (BuilderContext *self);
 void            builder_context_set_global_cleanup (BuilderContext *self,
                                                     const char    **cleanup);
