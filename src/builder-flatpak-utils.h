@@ -202,6 +202,12 @@ gboolean flatpak_file_rename (GFile *from,
                               GCancellable  *cancellable,
                               GError       **error);
 
+GFile * flatpak_canonicalize_file (GFile *file,
+                                   GError **error);
+/* NOTE: This requires both files to exist */
+gboolean flatpak_file_is_in (GFile *file,
+                             GFile *toplevel);
+
 typedef enum {
   FLATPAK_CP_FLAGS_NONE = 0,
   FLATPAK_CP_FLAGS_MERGE = 1<<0,
