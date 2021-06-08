@@ -205,8 +205,7 @@ builder_source_dir_extract (BuilderSource  *source,
     return FALSE;
 
   skip = builder_source_dir_get_skip (source, context);
-  g_mkdir_with_parents (flatpak_file_get_path_cached (src), 0755);
-  if (!flatpak_cp_a (src, dest,
+  if (!flatpak_cp_a (src, dest, source_dir,
                      FLATPAK_CP_FLAGS_MERGE|FLATPAK_CP_FLAGS_NO_CHOWN,
                      skip, NULL, error))
     return FALSE;
@@ -242,7 +241,7 @@ builder_source_dir_bundle (BuilderSource  *source,
 
   skip = builder_source_dir_get_skip (source, context);
   g_mkdir_with_parents (flatpak_file_get_path_cached (dest), 0755);
-  if (!flatpak_cp_a (src, dest,
+  if (!flatpak_cp_a (src, dest, NULL,
                      FLATPAK_CP_FLAGS_MERGE|FLATPAK_CP_FLAGS_NO_CHOWN,
                      skip, NULL, error))
     return FALSE;

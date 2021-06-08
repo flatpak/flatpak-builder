@@ -333,7 +333,7 @@ migrate_locale_dir (GFile      *source_dir,
           if (!flatpak_mkdir_p (locale_subdir, NULL, error))
             return FALSE;
 
-          if (!flatpak_cp_a (child, locale_subdir,
+          if (!flatpak_cp_a (child, locale_subdir, NULL,
                              FLATPAK_CP_FLAGS_MERGE | FLATPAK_CP_FLAGS_MOVE,
                              NULL, NULL, error))
             return FALSE;
