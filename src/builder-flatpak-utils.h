@@ -192,6 +192,7 @@ gboolean            flatpak_spawnv (GFile                *dir,
                                     const gchar * const  *argv);
 
 const char *flatpak_file_get_path_cached (GFile *file);
+gboolean flatpak_file_query_exists_nofollow (GFile *file);
 
 GFile *flatpak_build_file_va (GFile *base,
                               va_list args);

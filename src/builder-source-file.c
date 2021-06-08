@@ -447,7 +447,8 @@ builder_source_file_extract (BuilderSource  *source,
   /* If the destination file exists, just delete it. We can encounter errors when
    * trying to overwrite files that are not writable.
    */
-  if (g_file_query_exists (dest_file, NULL) && !g_file_delete (dest_file, NULL, error))
+  if (flatpak_file_query_exists_nofollow (dest_file) &&
+      !g_file_delete (dest_file, NULL, error))
     return FALSE;
 
   if (is_inline)
