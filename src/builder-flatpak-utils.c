@@ -691,6 +691,42 @@ flatpak_file_get_path_cached (GFile *file)
   return path;
 }
 
+/* NOTE: This requires that file exists */
+GFile *
+flatpak_canonicalize_file (GFile *file, GError **error)
+{
+  g_autofree char *canonical_path = NULL;
+
+  canonical_path = realpath (flatpak_file_get_path_cached (file), NULL);
+  if (canonical_path == NULL)
+    {
+      glnx_set_error_from_errno (error);
+      return NULL;
+    }
+
+  return g_file_new_for_path (canonical_path);
+}
+
+/* NOTE: This requires both files to exist */
+gboolean
+flatpak_file_is_in (GFile *file,
+                    GFile *toplevel)
+{
+  g_autoptr(GFile) canonical_file = NULL;
+  g_autoptr(GFile) canonical_toplevel = NULL;
+
+  canonical_toplevel = flatpak_canonicalize_file (toplevel, NULL);
+  if (canonical_toplevel == NULL)
+    return FALSE;
+
+  canonical_file = flatpak_canonicalize_file (file, NULL);
+  if (canonical_file == NULL)
+    return FALSE;
+
+  return g_file_equal (canonical_file, canonical_toplevel) ||
+    g_file_has_prefix (canonical_file, canonical_toplevel);
+}
+
 gboolean
 flatpak_cp_a (GFile         *src,
               GFile         *dest,

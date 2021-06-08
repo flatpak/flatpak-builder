@@ -28,6 +28,7 @@
 #include <sys/statfs.h>
 
 #include "builder-utils.h"
+#include "builder-flatpak-utils.h"
 #include "builder-source.h"
 #include "builder-source-archive.h"
 #include "builder-source-patch.h"
@@ -353,6 +354,34 @@ builder_source_download (BuilderSource  *self,
   return class->download (self, update_vcs, context, error);
 }
 
+/* Ensure the destination exists (by making directories if needed) and
+   that it is inside the build directory. It could be outside the build
+   dir either if the specified path makes it so, of if some symlink inside
+   the source tree points outside it. */
+static gboolean
+ensure_dir_inside_toplevel (GFile          *dest,
+                            GFile          *toplevel_dir,
+                            GError        **error)
+{
+  if (!g_file_query_exists (dest, NULL))
+    {
+      g_autoptr(GFile) parent = g_file_get_parent (dest);
+      if (parent == NULL)
+        return flatpak_fail (error, "No parent directory found");
+
+      if (!ensure_dir_inside_toplevel (parent, toplevel_dir, error))
+        return FALSE;
+
+      if (!g_file_make_directory (dest, NULL, error))
+        return FALSE;
+    }
+
+  if (!flatpak_file_is_in (dest, toplevel_dir))
+    return flatpak_fail (error, "dest is not pointing inside build directory");
+
+  return TRUE;
+}
+
 gboolean
 builder_source_extract (BuilderSource  *self,
                         GFile          *source_dir,
@@ -370,8 +399,7 @@ builder_source_extract (BuilderSource  *self,
     {
       real_dest = g_file_resolve_relative_path (source_dir, self->dest);
 
-      if (!g_file_query_exists (real_dest, NULL) &&
-          !g_file_make_directory_with_parents (real_dest, NULL, error))
+      if (!ensure_dir_inside_toplevel (real_dest, source_dir, error))
         return FALSE;
     }
   else
