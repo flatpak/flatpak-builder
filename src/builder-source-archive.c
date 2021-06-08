@@ -705,6 +705,7 @@ get_type_from_prop (BuilderSourceArchive *self)
 static gboolean
 builder_source_archive_extract (BuilderSource  *source,
                                 GFile          *dest,
+                                GFile          *source_dir,
                                 BuilderOptions *build_options,
                                 BuilderContext *context,
                                 GError        **error)

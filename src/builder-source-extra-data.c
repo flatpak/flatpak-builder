@@ -171,6 +171,7 @@ builder_source_extra_data_download (BuilderSource  *source,
 static gboolean
 builder_source_extra_data_extract (BuilderSource  *source,
                                    GFile          *dest,
+                                   GFile          *source_dir,
                                    BuilderOptions *build_options,
                                    BuilderContext *context,
                                    GError        **error)

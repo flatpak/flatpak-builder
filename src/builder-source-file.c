@@ -411,6 +411,7 @@ builder_source_file_download (BuilderSource  *source,
 static gboolean
 builder_source_file_extract (BuilderSource  *source,
                              GFile          *dest,
+                             GFile          *source_dir,
                              BuilderOptions *build_options,
                              BuilderContext *context,
                              GError        **error)

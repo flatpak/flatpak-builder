@@ -139,6 +139,7 @@ builder_source_script_download (BuilderSource  *source,
 static gboolean
 builder_source_script_extract (BuilderSource  *source,
                                GFile          *dest,
+                               GFile          *source_dir,
                                BuilderOptions *build_options,
                                BuilderContext *context,
                                GError        **error)
