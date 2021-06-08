@@ -74,6 +74,8 @@ typedef struct
   void (* finish)(BuilderSource  *self,
                   GPtrArray      *args,
                   BuilderContext *context);
+  gboolean (* validate)(BuilderSource  *self,
+                        GError        **error);
 } BuilderSourceClass;
 
 GType builder_source_get_type (void);
@@ -109,6 +111,8 @@ void     builder_source_checksum (BuilderSource  *self,
 void     builder_source_finish (BuilderSource  *self,
                                 GPtrArray      *args,
                                 BuilderContext *context);
+gboolean builder_source_validate (BuilderSource  *self,
+                                  GError        **error);
 
 gboolean builder_source_is_enabled (BuilderSource *self,
                                     BuilderContext *context);

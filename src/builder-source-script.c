@@ -115,6 +115,19 @@ builder_source_script_set_property (GObject      *object,
 }
 
 static gboolean
+builder_source_script_validate (BuilderSource  *source,
+                                GError        **error)
+{
+  BuilderSourceScript *self = BUILDER_SOURCE_SCRIPT (source);
+
+  if (self->dest_filename != NULL &&
+      strchr (self->dest_filename, '/') != NULL)
+    return flatpak_fail (error, "No slashes allowed in dest-filename");
+
+  return TRUE;
+}
+
+static gboolean
 builder_source_script_download (BuilderSource  *source,
                                 gboolean        update_vcs,
                                 BuilderContext *context,
@@ -209,6 +222,7 @@ builder_source_script_class_init (BuilderSourceScriptClass *klass)
   source_class->extract = builder_source_script_extract;
   source_class->bundle = builder_source_script_bundle;
   source_class->checksum = builder_source_script_checksum;
+  source_class->validate = builder_source_script_validate;
 
   g_object_class_install_property (object_class,
                                    PROP_COMMANDS,
