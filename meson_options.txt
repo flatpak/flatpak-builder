@@ -1,0 +1,20 @@
+option('yaml',
+  type : 'feature',
+  value: 'enabled',
+  description : 'Whether to support YAML manifests',
+)
+option('dwarf_header_dir',
+  type : 'string',
+  value : '',
+  description : 'The directory where the dwarf.h header is located, if not in include directories.',
+)
+option('docs',
+  type : 'boolean',
+  value : false,
+  description : 'Whether to build the DocBook documentation and man pages.'
+)
+option('tests',
+  type : 'boolean',
+  value: false,
+  description : 'Whether to run the unit tests',
+)
