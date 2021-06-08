@@ -281,6 +281,7 @@ patch (GFile      *dir,
 static gboolean
 builder_source_patch_extract (BuilderSource  *source,
                               GFile          *dest,
+                              GFile          *source_dir,
                               BuilderOptions *build_options,
                               BuilderContext *context,
                               GError        **error)

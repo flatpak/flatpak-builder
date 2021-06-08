@@ -191,6 +191,7 @@ builder_source_dir_get_skip (BuilderSource  *source,
 static gboolean
 builder_source_dir_extract (BuilderSource  *source,
                             GFile          *dest,
+                            GFile          *source_dir,
                             BuilderOptions *build_options,
                             BuilderContext *context,
                             GError        **error)

@@ -152,6 +152,7 @@ builder_source_real_download (BuilderSource  *self,
 static gboolean
 builder_source_real_extract (BuilderSource  *self,
                              GFile          *dest,
+                             GFile          *source_dir,
                              BuilderOptions *build_options,
                              BuilderContext *context,
                              GError        **error)
@@ -354,7 +355,7 @@ builder_source_download (BuilderSource  *self,
 
 gboolean
 builder_source_extract (BuilderSource  *self,
-                        GFile          *dest,
+                        GFile          *source_dir,
                         BuilderOptions *build_options,
                         BuilderContext *context,
                         GError        **error)
@@ -367,7 +368,7 @@ builder_source_extract (BuilderSource  *self,
 
   if (self->dest != NULL)
     {
-      real_dest = g_file_resolve_relative_path (dest, self->dest);
+      real_dest = g_file_resolve_relative_path (source_dir, self->dest);
 
       if (!g_file_query_exists (real_dest, NULL) &&
           !g_file_make_directory_with_parents (real_dest, NULL, error))
@@ -375,11 +376,10 @@ builder_source_extract (BuilderSource  *self,
     }
   else
     {
-      real_dest = g_object_ref (dest);
+      real_dest = g_object_ref (source_dir);
     }
 
-
-  return class->extract (self, real_dest, build_options, context, error);
+  return class->extract (self, real_dest, source_dir, build_options, context, error);
 }
 
 gboolean

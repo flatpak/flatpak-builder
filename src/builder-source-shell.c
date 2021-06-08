@@ -167,6 +167,7 @@ run_script (BuilderContext *context,
 static gboolean
 builder_source_shell_extract (BuilderSource  *source,
                               GFile          *dest,
+                              GFile          *source_dir,
                               BuilderOptions *build_options,
                               BuilderContext *context,
                               GError        **error)
