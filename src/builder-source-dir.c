@@ -124,7 +124,16 @@ get_source_file (BuilderSourceDir *self,
 
   if (self->path != NULL && self->path[0] != 0)
     {
-      return g_file_resolve_relative_path (base_dir, self->path);
+      g_autoptr(GFile) file = NULL;
+      file = g_file_resolve_relative_path (base_dir, self->path);
+
+      if (!builder_context_ensure_file_sandboxed (context, file, error))
+        {
+          g_prefix_error (error, "Unable to get source file '%s': ", self->path);
+          return NULL;
+        }
+
+      return g_steal_pointer (&file);
     }
 
   g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "source dir path not specified");
