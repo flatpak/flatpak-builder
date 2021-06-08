@@ -691,6 +691,22 @@ flatpak_file_get_path_cached (GFile *file)
   return path;
 }
 
+gboolean
+flatpak_file_query_exists_nofollow (GFile *file)
+{
+  GFileInfo *info;
+
+  info = g_file_query_info (file, G_FILE_ATTRIBUTE_STANDARD_TYPE,
+                            G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, FALSE, NULL);
+  if (info != NULL)
+    {
+      g_object_unref (info);
+      return TRUE;
+    }
+
+  return FALSE;
+}
+
 /* NOTE: This requires that file exists */
 GFile *
 flatpak_canonicalize_file (GFile *file, GError **error)
