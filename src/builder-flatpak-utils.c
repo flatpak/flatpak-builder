@@ -746,6 +746,7 @@ flatpak_file_is_in (GFile *file,
 gboolean
 flatpak_cp_a (GFile         *src,
               GFile         *dest,
+              GFile         *keep_in_toplevel,
               FlatpakCpFlags flags,
               GPtrArray     *skip_files,
               GCancellable  *cancellable,
@@ -779,11 +780,20 @@ flatpak_cp_a (GFile         *src,
   do
     r = mkdir (flatpak_file_get_path_cached (dest), 0755);
   while (G_UNLIKELY (r == -1 && errno == EINTR));
-  if (r == -1 &&
-      (!merge || errno != EEXIST))
+  if (r == -1)
     {
-      glnx_set_error_from_errno (error);
-      goto out;
+      if (!merge || errno != EEXIST)
+        {
+          glnx_set_error_from_errno (error);
+          goto out;
+        }
+
+      /* When merging, ensure the new dir is inside the toplevel instead of a symlink outside */
+      if (keep_in_toplevel != NULL && !flatpak_file_is_in (dest, keep_in_toplevel))
+        {
+          flatpak_fail (error, "Recursive copy outside destination bounds");
+          goto out;
+        }
     }
 
   if (!glnx_opendirat (AT_FDCWD, flatpak_file_get_path_cached (dest), TRUE,
@@ -840,7 +850,7 @@ flatpak_cp_a (GFile         *src,
         }
       else if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
         {
-          if (!flatpak_cp_a (src_child, dest_child, flags, skip_files,
+          if (!flatpak_cp_a (src_child, dest_child, keep_in_toplevel, flags, skip_files,
                              cancellable, error))
             goto out;
         }
