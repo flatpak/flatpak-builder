@@ -73,7 +73,9 @@ static char *opt_body;
 static char *opt_collection_id = NULL;
 static int opt_token_type = -1;
 static char *opt_gpg_homedir;
+static char **opt_gpg_key_ids;
 static char **opt_key_ids;
+static char *opt_sign_name;
 static char **opt_sources_dirs;
 static char **opt_sources_urls;
 static char **opt_add_tags;
@@ -120,8 +122,10 @@ static GOptionEntry entries[] = {
   { "body", 'b', 0, G_OPTION_ARG_STRING, &opt_body, "Full description (passed to build-export)", "BODY" },
   { "collection-id", 0, 0, G_OPTION_ARG_STRING, &opt_collection_id, "Collection ID (passed to build-export)", "COLLECTION-ID" },
   { "token-type", 0, 0, G_OPTION_ARG_INT, &opt_token_type, "Set type of token needed to install this commit (passed to build-export)", "VAL" },
-  { "gpg-sign", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_key_ids, "GPG Key ID to sign the commit with", "KEY-ID"},
+  { "gpg-sign", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_gpg_key_ids, "GPG Key ID to sign the commit with", "KEY-ID"},
   { "gpg-homedir", 0, 0, G_OPTION_ARG_STRING, &opt_gpg_homedir, "GPG Homedir to use when looking for keyrings", "HOMEDIR"},
+  { "sign", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_key_ids, "Key ID to sign the commit with", "KEY-ID"},
+  { "sign-type", 0, 0, G_OPTION_ARG_STRING, &opt_sign_name, "Signature type to use (defaults to 'ed25519')", "NAME"},
   { "force-clean", 0, 0, G_OPTION_ARG_NONE, &opt_force_clean, "Erase previous contents of DIRECTORY", NULL },
   { "sandbox", 0, 0, G_OPTION_ARG_NONE, &opt_sandboxed, "Enforce sandboxing, disabling build-args", NULL },
   { "stop-at", 0, 0, G_OPTION_ARG_STRING, &opt_stop_at, "Stop building at this module (implies --build-only)", "MODULENAME"},
@@ -228,8 +232,14 @@ do_export (BuilderContext *build_context,
   if (opt_gpg_homedir)
     g_ptr_array_add (args, g_strdup_printf ("--gpg-homedir=%s", opt_gpg_homedir));
 
+  for (i = 0; opt_gpg_key_ids != NULL && opt_gpg_key_ids[i] != NULL; i++)
+    g_ptr_array_add (args, g_strdup_printf ("--gpg-sign=%s", opt_gpg_key_ids[i]));
+
+  if (opt_sign_name)
+    g_ptr_array_add (args, g_strdup_printf ("--sign-type=%s", opt_sign_name));
+
   for (i = 0; opt_key_ids != NULL && opt_key_ids[i] != NULL; i++)
-    g_ptr_array_add (args, g_strdup_printf ("--gpg-sign=%s", opt_key_ids[i]));
+    g_ptr_array_add (args, g_strdup_printf ("--sign=%s", opt_key_ids[i]));
 
   if (collection_id)
     g_ptr_array_add (args, g_strdup_printf ("--collection-id=%s", collection_id));
