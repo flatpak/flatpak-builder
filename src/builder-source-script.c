@@ -122,7 +122,7 @@ builder_source_script_validate (BuilderSource  *source,
 
   if (self->dest_filename != NULL &&
       strchr (self->dest_filename, '/') != NULL)
-    return flatpak_fail (error, "No slashes allowed in dest-filename");
+    return flatpak_fail (error, "No slashes allowed in dest-filename, use dest property for directory");
 
   return TRUE;
 }
