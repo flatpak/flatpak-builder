@@ -867,6 +867,30 @@
                 </variablelist>
             </refsect3>
             <refsect3>
+                <title>Inline data sources</title>
+                <para>
+                    This is a way to create a file with given contents.
+                </para>
+                <variablelist>
+                    <varlistentry>
+                        <term><option>type</option></term>
+                        <listitem><para>"inline"</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>dest-filename</option> (string)</term>
+                        <listitem><para>Filename to use inside the source dir.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>contents</option> (string)</term>
+                        <listitem><para>Text data that will be put in the file.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>base64</option> (boolean)</term>
+                        <listitem><para>Whether content is base64-encoded.</para></listitem>
+                    </varlistentry>
+                </variablelist>
+            </refsect3>
+            <refsect3>
                 <title>Shell sources</title>
                 <para>
                     This is a way to create/modify the sources by running shell commands.

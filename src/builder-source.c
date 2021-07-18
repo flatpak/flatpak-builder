@@ -38,6 +38,7 @@
 #include "builder-source-file.h"
 #include "builder-source-dir.h"
 #include "builder-source-script.h"
+#include "builder-source-inline.h"
 #include "builder-source-shell.h"
 #include "builder-source-extra-data.h"
 
@@ -262,6 +263,8 @@ builder_source_to_json (BuilderSource *self)
     type = "dir";
   else if (BUILDER_IS_SOURCE_SCRIPT (self))
     type = "script";
+  else if (BUILDER_IS_SOURCE_INLINE (self))
+    type = "inline";
   else if (BUILDER_IS_SOURCE_SHELL (self))
     type = "shell";
   else if (BUILDER_IS_SOURCE_EXTRA_DATA (self))
@@ -302,6 +305,8 @@ builder_source_from_json (JsonNode *node)
     source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_DIR, node);
   else if (strcmp (type, "script") == 0)
     source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SCRIPT, node);
+  else if (strcmp (type, "inline") == 0)
+    source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_INLINE, node);
   else if (strcmp (type, "shell") == 0)
     source = (BuilderSource *) json_gobject_deserialize (BUILDER_TYPE_SOURCE_SHELL, node);
   else if (strcmp (type, "extra-data") == 0)
