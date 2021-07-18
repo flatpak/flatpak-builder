@@ -28,6 +28,8 @@ flatpak_builder_SOURCES = \
 	src/builder-source-file.h \
 	src/builder-source-script.c \
 	src/builder-source-script.h \
+	src/builder-source-inline.c \
+	src/builder-source-inline.h \
 	src/builder-source-shell.c \
 	src/builder-source-shell.h \
 	src/builder-source-extra-data.c \
