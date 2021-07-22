@@ -220,7 +220,9 @@ builder_source_patch_download (BuilderSource  *source,
       GFile *src = g_ptr_array_index (srcs, i);
       if (!g_file_query_exists (src, NULL))
         {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", self->path);
+          GFile *base_dir = BUILDER_SOURCE (self)->base_dir;
+          g_autofree char *path = g_file_get_relative_path (base_dir, src);
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", path);
           return FALSE;
         }
     }
@@ -293,9 +295,15 @@ builder_source_patch_extract (BuilderSource  *source,
 
   if (self->use_git && self->use_git_am)
     {
+      const char *path = self->path;
+      if (path == NULL && self->paths != NULL)
+        path = self->paths[0];
+      if (path == NULL)
+        path = "<unset>";
+
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
                    "Patch '%s' cannot be applied: Both 'use-git' and 'use-git-am' are set. Only one can be set at a time",
-                   self->path);
+                   path);
       return FALSE;
     }
 
