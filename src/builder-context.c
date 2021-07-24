@@ -81,6 +81,7 @@ struct BuilderContext
   gboolean        have_rofiles;
   gboolean        run_tests;
   gboolean        no_shallow_clone;
+  gboolean        no_resolved_manifest;
 
   BuilderSdkConfig *sdk_config;
 };
@@ -1000,6 +1001,19 @@ builder_context_set_rebuild_on_sdk_change (BuilderContext *self,
                                            gboolean        rebuild_on_sdk_change)
 {
   self->rebuild_on_sdk_change = !!rebuild_on_sdk_change;
+}
+
+void
+builder_context_set_no_resolved_manifest (BuilderContext *self,
+                                          gboolean        no_resolved_manifest)
+{
+  self->no_resolved_manifest = !!no_resolved_manifest;
+}
+
+gboolean
+builder_context_get_no_resolved_manifest (BuilderContext *self)
+{
+  return self->no_resolved_manifest;
 }
 
 gboolean

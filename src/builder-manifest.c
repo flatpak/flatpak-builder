@@ -3021,9 +3021,12 @@ builder_manifest_finish (BuilderManifest *self,
             return FALSE;
         }
 
-      if (!g_file_set_contents (flatpak_file_get_path_cached (manifest_file),
-                                json, strlen (json), error))
-        return FALSE;
+      if (!builder_context_get_no_resolved_manifest (context))
+        {
+          if (!g_file_set_contents (flatpak_file_get_path_cached (manifest_file),
+                                    json, strlen (json), error))
+            return FALSE;
+        }
 
       if (self->build_runtime)
         {

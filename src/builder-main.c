@@ -87,6 +87,7 @@ static char *opt_installation;
 static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
+static gboolean opt_no_resolved_manifest;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -141,6 +142,7 @@ static GOptionEntry entries[] = {
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
+  { "no-resolved-manifest", 0, 0, G_OPTION_ARG_NONE, &opt_no_resolved_manifest, "Don't add /app/manifest.json to the build", NULL },
   { NULL }
 };
 
@@ -533,6 +535,7 @@ main (int    argc,
   builder_context_set_jobs (build_context, opt_jobs);
   builder_context_set_rebuild_on_sdk_change (build_context, opt_rebuild_on_sdk_change);
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
+  builder_context_set_no_resolved_manifest (build_context, opt_no_resolved_manifest);
 
   git_init_email ();
 
