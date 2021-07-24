@@ -45,9 +45,13 @@ modules:
             path: 0001-Add-test-logo.patch
             use-git: true
       - name: test2
-        build-commands: ['echo foo2 > /app/out2']
+        build-commands:
+          - echo foo2 > /app/out2
+          - cp source[12] /app
         buildsystem: simple
         sources:
           - type: file
             path: app-data
+          - include1/source1.json
+          - include1/include2/source2.json
       - name: empty

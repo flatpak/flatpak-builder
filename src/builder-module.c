@@ -787,6 +787,7 @@ load_sources_from_json (const char *sources_relpath)
   else
     return NULL;
 
+  builder_manifest_set_demarshal_base_dir (saved_demarshal_base_dir);
   return g_steal_pointer (&sources);
 }
 
