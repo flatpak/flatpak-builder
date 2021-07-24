@@ -1,0 +1,4 @@
+{
+    "type": "shell",
+    "commands": ["echo 'Hello, from source 2' > source2"]
+}

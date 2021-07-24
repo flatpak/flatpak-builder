@@ -43,11 +43,13 @@ cp $(dirname $0)/0001-Add-test-logo.patch .
 mkdir include1
 cp $(dirname $0)/module1.json include1/
 cp $(dirname $0)/module1.yaml include1/
+cp $(dirname $0)/source1.json include1/
 cp $(dirname $0)/data1 include1/
 cp $(dirname $0)/data1.patch include1/
 mkdir include1/include2
 cp $(dirname $0)/module2.json include1/include2/
 cp $(dirname $0)/module2.yaml include1/include2/
+cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
 ${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.json
@@ -67,6 +69,9 @@ assert_has_file appdir/files/share/icons/org.test.Hello.png
 
 assert_file_has_content appdir/files/out '^foo$'
 assert_file_has_content appdir/files/out2 '^foo2$'
+
+assert_file_has_content appdir/files/source1 'Hello, from source 1'
+assert_file_has_content appdir/files/source2 'Hello, from source 2'
 
 ${FLATPAK} build appdir /app/bin/hello2.sh > hello_out2
 assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
