@@ -388,6 +388,12 @@
                     <listitem><para>This is an array containing extra options to pass to configure.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>secret-opts</option> (array of strings)</term>
+                    <listitem><para>This is an array of options that will be passed to
+                    configure, meant to be used to pass secrets through host environment variables. Put
+                    the option with an environment variables and will be resolved beforehand. '-DSECRET_ID=$CI_SECRET'</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>make-args</option> (array of strings)</term>
                     <listitem><para>An array of extra arguments that will be passed to make</para></listitem>
                 </varlistentry>
@@ -488,6 +494,12 @@
                 <varlistentry>
                     <term><option>config-opts</option> (array of strings)</term>
                     <listitem><para>An array of options that will be passed to configure</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>secret-opts</option> (array of strings)</term>
+                    <listitem><para>An array of options that will be passed to configure,
+                    meant to be used to pass secrets through host environment variables. Put the option
+                    with an environment variables and will be resolved beforehand. '-DSECRET_ID=$CI_SECRET'</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>make-args</option> (array of strings)</term>
