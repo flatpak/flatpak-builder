@@ -46,6 +46,7 @@ struct BuilderModule
   char           *subdir;
   char          **post_install;
   char          **config_opts;
+  char          **secret_opts;
   char          **make_args;
   char          **make_install_args;
   char           *install_rule;
@@ -99,6 +100,7 @@ enum {
   PROP_BUILDSYSTEM,
   PROP_BUILDDIR,
   PROP_CONFIG_OPTS,
+  PROP_SECRET_OPTS,
   PROP_MAKE_ARGS,
   PROP_MAKE_INSTALL_ARGS,
   PROP_ENSURE_WRITABLE,
@@ -144,6 +146,7 @@ builder_module_finalize (GObject *object)
   g_free (self->buildsystem);
   g_strfreev (self->post_install);
   g_strfreev (self->config_opts);
+  g_strfreev (self->secret_opts);
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_strfreev (self->ensure_writable);
@@ -227,6 +230,10 @@ builder_module_get_property (GObject    *object,
 
     case PROP_CONFIG_OPTS:
       g_value_set_boxed (value, self->config_opts);
+      break;
+
+    case PROP_SECRET_OPTS:
+      g_value_set_boxed (value, self->secret_opts);
       break;
 
     case PROP_MAKE_ARGS:
@@ -367,6 +374,12 @@ builder_module_set_property (GObject      *object,
     case PROP_CONFIG_OPTS:
       tmp = self->config_opts;
       self->config_opts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_SECRET_OPTS:
+      tmp = self->secret_opts;
+      self->secret_opts = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -568,6 +581,15 @@ builder_module_class_init (BuilderModuleClass *klass)
                                                        "",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SECRET_OPTS,
+                                   g_param_spec_boxed ("secret-opts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+
   g_object_class_install_property (object_class,
                                    PROP_MAKE_ARGS,
                                    g_param_spec_boxed ("make-args",
@@ -1251,6 +1273,7 @@ shell (GFile          *app_dir,
 
 static const char skip_arg[] = "skip";
 static const char strv_arg[] = "strv";
+static const char secret_arg[] = "secret";
 
 static gboolean
 build (GFile          *app_dir,
@@ -1276,13 +1299,34 @@ build (GFile          *app_dir,
   g_ptr_array_add (args, g_strdup (argv1));
   while ((arg = va_arg (ap, const gchar *)))
     {
-      if (arg == strv_arg)
+      if (arg == strv_arg || arg == secret_arg)
         {
           argv = va_arg (ap, const gchar **);
           if (argv != NULL)
             {
               for (i = 0; argv[i] != NULL; i++)
-                g_ptr_array_add (args, g_strdup (argv[i]));
+                {
+                  if (arg == secret_arg)
+                    {
+                      const char *cur = strchr (argv[i], '$');
+
+                      if (cur)
+                        {
+                          g_autofree char *secret_key = g_strndup (argv[i], cur - argv[i]);
+                          const char *secret_value = getenv (cur + 1);
+
+                          if (secret_value)
+                            {
+                              g_autofree char *secret_opt = g_strconcat (secret_key, secret_value, NULL);
+                              g_ptr_array_add (args, g_strdup (secret_opt));
+                            }
+                        }
+                    }
+                  else
+                    {
+                      g_ptr_array_add (args, g_strdup (argv[i]));
+                    }
+                }
             }
         }
       else if (arg != skip_arg)
@@ -1408,6 +1452,7 @@ builder_module_build_helper (BuilderModule  *self,
   g_auto(GStrv) env = NULL;
   g_auto(GStrv) build_args = NULL;
   g_auto(GStrv) config_opts = NULL;
+  g_auto(GStrv) secret_opts = NULL;
   g_autoptr(GFile) source_subdir = NULL;
   const char *source_subdir_relative = NULL;
   g_autofree char *source_dir_path = NULL;
@@ -1440,6 +1485,7 @@ builder_module_build_helper (BuilderModule  *self,
 
   env = builder_options_get_env (self->build_options, context);
   config_opts = builder_options_get_config_opts (self->build_options, context, self->config_opts);
+  secret_opts = builder_options_get_secret_opts (self->build_options, context, self->secret_opts);
 
   n_jobs = g_strdup_printf ("%d", self->no_parallel_make ? 1 : builder_context_get_jobs (context));
   env = g_environ_setenv (env, "FLATPAK_BUILDER_N_JOBS", n_jobs, FALSE);
@@ -1679,7 +1725,7 @@ builder_module_build_helper (BuilderModule  *self,
       configure_args = (char **) g_ptr_array_free (g_steal_pointer (&configure_args_arr), FALSE);
 
       if (!build (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error,
-                  configure_cmd, strv_arg, configure_args, strv_arg, config_opts, NULL))
+                  configure_cmd, strv_arg, configure_args, strv_arg, config_opts, secret_arg, secret_opts, NULL))
         return FALSE;
     }
   else
@@ -1976,6 +2022,7 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_str (cache, self->subdir);
   builder_cache_checksum_strv (cache, self->post_install);
   builder_cache_checksum_strv (cache, self->config_opts);
+  builder_cache_checksum_strv (cache, self->secret_opts);
   builder_cache_checksum_strv (cache, self->make_args);
   builder_cache_checksum_strv (cache, self->make_install_args);
   builder_cache_checksum_strv (cache, self->ensure_writable);
