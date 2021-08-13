@@ -271,7 +271,7 @@ patch (GFile      *dir,
   }
   g_ptr_array_add (args, NULL);
 
-  res = flatpak_spawnv (dir, NULL, 0, error, (const char **) args->pdata);
+  res = flatpak_spawnv (dir, NULL, 0, error, (const char **) args->pdata, NULL);
 
   g_ptr_array_free (args, TRUE);
 

@@ -702,7 +702,8 @@ builder_host_spawnv (GFile                *dir,
                      char                **output,
                      GSubprocessFlags      flags,
                      GError              **error,
-                     const gchar * const  *argv)
+                     const gchar * const  *argv,
+                     const gchar * const  *unresolved_argv)
 {
   static FlatpakHostCommandFlags cmd_flags = FLATPAK_HOST_COMMAND_FLAGS_CLEAR_ENV | FLATPAK_HOST_COMMAND_FLAGS_WATCH_BUS;
   guint32 client_pid;
@@ -736,7 +737,10 @@ builder_host_spawnv (GFile                *dir,
       dir = cwd;
     }
 
-  commandline = flatpak_quote_argv ((const char **) argv);
+  if (unresolved_argv != NULL)
+    commandline = flatpak_quote_argv ((const char **) unresolved_argv);
+  else
+    commandline = flatpak_quote_argv ((const char **) argv);
   g_debug ("Running '%s' on host", commandline);
 
   connection = g_bus_get_sync (G_BUS_TYPE_SESSION, NULL, error);
@@ -906,12 +910,13 @@ builder_maybe_host_spawnv (GFile                *dir,
                            char                **output,
                            GSubprocessFlags      flags,
                            GError              **error,
-                           const gchar * const  *argv)
+                           const gchar * const  *argv,
+                           const gchar * const  *unresolved_argv)
 {
   if (flatpak_is_in_sandbox ())
-    return builder_host_spawnv (dir, output, flags, error, argv);
+    return builder_host_spawnv (dir, output, flags, error, argv, unresolved_argv);
 
-  return flatpak_spawnv (dir, output, flags, error, argv);
+  return flatpak_spawnv (dir, output, flags, error, argv, unresolved_argv);
 }
 
 /**

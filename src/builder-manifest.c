@@ -1545,7 +1545,7 @@ flatpak (GError **error,
   va_end (ap);
 
   res = builder_maybe_host_spawnv (NULL, &output, 0, error,
-                                   (const gchar * const *)ar->pdata);
+                                   (const gchar * const *)ar->pdata, NULL);
 
   if (res)
     {
@@ -1589,7 +1589,7 @@ flatpak_info (gboolean opt_user,
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
-  res = builder_maybe_host_spawnv (NULL, &output, G_SUBPROCESS_FLAGS_STDERR_SILENCE, error, (const char * const *)args->pdata);
+  res = builder_maybe_host_spawnv (NULL, &output, G_SUBPROCESS_FLAGS_STDERR_SILENCE, error, (const char * const *)args->pdata, NULL);
 
   if (res)
     {
@@ -1768,7 +1768,7 @@ builder_manifest_init_app_dir (BuilderManifest *self,
   g_ptr_array_add (args, NULL);
 
   if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
-                       (const gchar * const *) args->pdata))
+                       (const gchar * const *) args->pdata, NULL))
     return FALSE;
 
   if (self->build_runtime && self->separate_locales)
@@ -2144,7 +2144,7 @@ command (GFile      *app_dir,
   g_ptr_array_add (args, g_strdup (commandline));
   g_ptr_array_add (args, NULL);
 
-  return builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata);
+  return builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL);
 }
 
 typedef gboolean (*ForeachFileFunc) (BuilderManifest *self,
@@ -2314,7 +2314,7 @@ appstream_compose (GFile   *app_dir,
   g_ptr_array_add (args, NULL);
   va_end (ap);
 
-  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL))
     {
       g_prefix_error (error, "ERROR: appstream-compose failed: ");
       return FALSE;
@@ -2991,7 +2991,7 @@ builder_manifest_finish (BuilderManifest *self,
       g_ptr_array_add (args, NULL);
 
       if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
-                           (const gchar * const *) args->pdata))
+                           (const gchar * const *) args->pdata, NULL))
         return FALSE;
 
       json = builder_manifest_serialize (self);
@@ -3241,7 +3241,7 @@ builder_manifest_create_platform_base (BuilderManifest *self,
       g_ptr_array_add (args, NULL);
 
       if (!flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
-                           (const gchar * const *) args->pdata))
+                           (const gchar * const *) args->pdata, NULL))
         return FALSE;
 
       if (self->separate_locales)
@@ -3791,7 +3791,7 @@ builder_manifest_install_single_dep (const char *ref,
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
-  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL))
     {
       g_autofree char *commandline = flatpak_quote_argv ((const char **)args->pdata);
       g_prefix_error (error, "running `%s`: ", commandline);
@@ -3825,7 +3825,7 @@ builder_manifest_update_single_dep (const char *ref,
   g_ptr_array_add (args, g_strdup (ref));
   g_ptr_array_add (args, NULL);
 
-  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata))
+  if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL))
     {
       g_autofree char *commandline = flatpak_quote_argv ((const char **)args->pdata);
       g_prefix_error (error, "running `%s`: ", commandline);
@@ -4155,7 +4155,7 @@ builder_manifest_run (BuilderManifest *self,
 
   if (flatpak_is_in_sandbox ())
     {
-      if (builder_host_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_STDIN_INHERIT, NULL, (const gchar * const  *)args->pdata))
+      if (builder_host_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_STDIN_INHERIT, NULL, (const gchar * const  *)args->pdata, NULL))
         exit (1);
       else
         exit (0);

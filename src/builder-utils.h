@@ -81,12 +81,14 @@ gboolean builder_host_spawnv (GFile                *dir,
                               char                **output,
                               GSubprocessFlags      flags,
                               GError              **error,
-                              const gchar * const  *argv);
+                              const gchar * const  *argv,
+                              const gchar * const  *unresolved_argv);
 gboolean builder_maybe_host_spawnv (GFile                *dir,
                                     char                **output,
                                     GSubprocessFlags      flags,
                                     GError              **error,
-                                    const gchar * const  *argv);
+                                    const gchar * const  *argv,
+                                    const gchar * const  *unresolved_argv);
 
 gboolean builder_download_uri (SoupURI        *uri,
                                GFile          *dest,

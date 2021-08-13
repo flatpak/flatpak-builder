@@ -258,7 +258,7 @@ do_export (BuilderContext *build_context,
   g_ptr_array_add (args, NULL);
 
   return flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
-                         (const gchar * const *) args->pdata);
+                         (const gchar * const *) args->pdata, NULL);
 }
 
 static gboolean
@@ -297,7 +297,7 @@ do_install (BuilderContext *build_context,
   g_ptr_array_add (args, NULL);
 
   return flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
-                         (const gchar * const *) args->pdata);
+                         (const gchar * const *) args->pdata, NULL);
 }
 
 static gboolean
@@ -981,7 +981,8 @@ main (int    argc,
                                           NULL,
                                           0,
                                           &error,
-                                          argv))
+                                          argv,
+                                          NULL))
             {
               g_printerr ("Error mirroring screenshots: %s\n", error->message);
               return 1;
