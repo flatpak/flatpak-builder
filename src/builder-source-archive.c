@@ -485,7 +485,7 @@ un7z (GFile       *dir,
   gboolean res;
   const gchar *argv[] = { "7z",  "x", sevenz_path, NULL };
 
-  res = flatpak_spawnv (dir, NULL, 0, error, argv);
+  res = flatpak_spawnv (dir, NULL, 0, error, argv, NULL);
 
   return res;
 }
@@ -501,7 +501,7 @@ unrpm (GFile   *dir,
       rpm_path, /* shell's $1 */
       NULL };
 
-  res = flatpak_spawnv (dir, NULL, 0, error, argv);
+  res = flatpak_spawnv (dir, NULL, 0, error, argv, NULL);
 
   return res;
 }

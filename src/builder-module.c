@@ -1290,6 +1290,10 @@ build (GFile          *app_dir,
   g_autoptr(GFile) cwd_file = NULL;
   g_autoptr(GPtrArray) args =
     setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env_vars, &cwd_file);
+  g_autoptr(GPtrArray) unresolved_args =
+    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env_vars, &cwd_file);
+  gboolean have_secrets = FALSE;
+  gboolean build_success = FALSE;
   const gchar *arg;
   const gchar **argv;
   va_list ap;
@@ -1297,34 +1301,40 @@ build (GFile          *app_dir,
 
   va_start (ap, argv1);
   g_ptr_array_add (args, g_strdup (argv1));
+  g_ptr_array_add (unresolved_args, g_strdup (argv1));
   while ((arg = va_arg (ap, const gchar *)))
     {
-      if (arg == strv_arg || arg == secret_arg)
+      if (arg == strv_arg)
         {
           argv = va_arg (ap, const gchar **);
           if (argv != NULL)
             {
               for (i = 0; argv[i] != NULL; i++)
                 {
-                  if (arg == secret_arg)
+                  g_ptr_array_add (args, g_strdup (argv[i]));
+                  g_ptr_array_add (unresolved_args, g_strdup (argv[i]));
+                }
+            }
+        }
+      else if (arg == secret_arg)
+        {
+          argv = va_arg (ap, const gchar **);
+          if (argv != NULL)
+            {
+              have_secrets = TRUE;
+              for (i = 0; argv[i] != NULL; i++)
+                {
+                  const char *cur = strchr (argv[i], '$');
+                  if (cur)
                     {
-                      const char *cur = strchr (argv[i], '$');
-
-                      if (cur)
+                      g_autofree char *secret_key = g_strndup (argv[i], cur - argv[i]);
+                      const char *secret_value = getenv (cur + 1);
+                      if (secret_value)
                         {
-                          g_autofree char *secret_key = g_strndup (argv[i], cur - argv[i]);
-                          const char *secret_value = getenv (cur + 1);
-
-                          if (secret_value)
-                            {
-                              g_autofree char *secret_opt = g_strconcat (secret_key, secret_value, NULL);
-                              g_ptr_array_add (args, g_strdup (secret_opt));
-                            }
+                          g_autofree char *secret_opt = g_strconcat (secret_key, secret_value, NULL);
+                          g_ptr_array_add (args, g_strdup (secret_opt));
+                          g_ptr_array_add (unresolved_args, g_strdup_printf ("%s$host:%s", secret_key, cur + 1));
                         }
-                    }
-                  else
-                    {
-                      g_ptr_array_add (args, g_strdup (argv[i]));
                     }
                 }
             }
@@ -1332,13 +1342,20 @@ build (GFile          *app_dir,
       else if (arg != skip_arg)
         {
           g_ptr_array_add (args, g_strdup (arg));
+          g_ptr_array_add (unresolved_args, g_strdup (arg));
         }
     }
   va_end (ap);
 
   g_ptr_array_add (args, NULL);
+  g_ptr_array_add (unresolved_args, NULL);
 
-  if (!builder_maybe_host_spawnv (cwd_file, NULL, 0, error, (const char * const *)args->pdata))
+  if (have_secrets)
+    build_success = builder_maybe_host_spawnv (cwd_file, NULL, 0, error, (const char * const *)args->pdata, (const char * const *)unresolved_args->pdata);
+  else
+    build_success = builder_maybe_host_spawnv (cwd_file, NULL, 0, error, (const char * const *)args->pdata, NULL);
+
+  if (!build_success)
     {
       g_prefix_error (error, "module %s: ", module_name);
       return FALSE;

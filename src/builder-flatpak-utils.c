@@ -541,7 +541,7 @@ flatpak_spawn (GFile       *dir,
     g_ptr_array_add (args, (gchar *) arg);
   g_ptr_array_add (args, NULL);
 
-  res = flatpak_spawnv (dir, output, flags, error, (const gchar * const *) args->pdata);
+  res = flatpak_spawnv (dir, output, flags, error, (const gchar * const *) args->pdata, NULL);
 
   g_ptr_array_free (args, TRUE);
 
@@ -553,7 +553,8 @@ flatpak_spawnv (GFile                *dir,
                 char                **output,
                 GSubprocessFlags      flags,
                 GError              **error,
-                const gchar * const  *argv)
+                const gchar * const  *argv,
+                const gchar * const  *unresolved_argv)
 {
   g_autoptr(GSubprocessLauncher) launcher = NULL;
   g_autoptr(GSubprocess) subp = NULL;
@@ -578,7 +579,10 @@ flatpak_spawnv (GFile                *dir,
       g_subprocess_launcher_set_cwd (launcher, path);
     }
 
-  commandline = flatpak_quote_argv ((const char **)argv);
+  if (unresolved_argv != NULL)
+    commandline = flatpak_quote_argv ((const char **) unresolved_argv);
+  else
+    commandline = flatpak_quote_argv ((const char **) argv);
   g_debug ("Running: %s", commandline);
 
   subp = g_subprocess_launcher_spawnv (launcher, argv, error);
