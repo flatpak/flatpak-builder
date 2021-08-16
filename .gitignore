@@ -36,6 +36,7 @@ flatpak-session-helper
 xdg-document-portal
 xdg-permission-store
 flatpak-builder
+flatpak-builder-debugedit
 testdb
 *~
 profile/flatpak.sh

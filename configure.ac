@@ -15,6 +15,8 @@ AC_INIT([flatpak-builder],
 GLIB_REQS=2.44
 OSTREE_REQS=2017.14
 FLATPAK_REQS=0.99.1
+SYSTEM_DEBUGEDIT_REQS=5.0
+LIBDW_REQS=0.172
 
 AC_USE_SYSTEM_EXTENSIONS
 AC_SYS_LARGEFILE
@@ -132,6 +134,31 @@ AS_IF([test "x$with_dwarf_header" = "xyes"],
        AC_CHECK_HEADER([dwarf.h])
        AS_IF([test "x$ac_cv_header_dwarf_h" != "xyes"],
              [AC_MSG_ERROR([dwarf.h is required but was not found])])])
+
+AC_ARG_VAR([DEBUGEDIT], [debugedit executable])
+AC_ARG_WITH([system-debugedit],
+            [AS_HELP_STRING([--with-system-debugedit], [Use system debugedit [default=check $DEBUGEDIT]])],
+            [DEBUGEDIT="$withval"],
+            [DEBUGEDIT="${DEBUGEDIT:-false}"])
+AS_CASE([$DEBUGEDIT],
+        [yes],
+            [DEBUGEDIT=debugedit],
+        [no],
+            [DEBUGEDIT=false],
+        [auto],
+            [AC_CHECK_PROG([DEBUGEDIT], [debugedit], [debugedit], [false])])
+if test "x$DEBUGEDIT" != xfalse; then
+    DEBUGEDIT_VERSION=`$DEBUGEDIT -V | sed 's,.*\ \([0-9]*\.[0-9]*\.[0-9]*\)$,\1,'`
+    AX_COMPARE_VERSION([$SYSTEM_DEBUGEDIT_REQS],[gt],[$DEBUGEDIT_VERSION],
+                      [AC_MSG_ERROR([You need at least version $SYSTEM_DEBUGEDIT_REQS of debugedit to use the system installed version])])
+    AM_CONDITIONAL([WITH_SYSTEM_DEBUGEDIT], [true])
+else
+    PKG_CHECK_MODULES(LIBDW, [libdw >= $LIBDW_REQS], [have_libdw=yes], [have_libdw=no])
+    if test "x$have_libdw" == xno; then
+        AC_MSG_ERROR([libdw >= $LIBDW_REQS needed by debugedit but not found])
+    fi
+    AM_CONDITIONAL([WITH_SYSTEM_DEBUGEDIT], [false])
+fi
 
 AC_ARG_WITH([yaml],
   [AS_HELP_STRING([--without-yaml],
