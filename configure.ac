@@ -107,34 +107,6 @@ if test x$have_libelf != xyes; then
   AC_MSG_ERROR([libelf not found])
 fi
 
-dnl This only checks for the header, not the library.
-AC_ARG_WITH([dwarf-header],
-            [AS_HELP_STRING([--with-dwarf-header],
-                            [path containing dwarf.h])],
-            [AS_IF([test "x$with_dwarf_header" = "xno"],
-                   [AC_MSG_WARN([either a path containing dwarf.h must be
-provided, or it will be searched for in includedir])])],
-            [with_dwarf_header=yes])
-
-# We need to check these exist, because otherwise -Werror=missing-include-dirs errors out
-LIBDWARF_INCLUDES=
-if test -d $(eval echo \"$includedir\")/libdwarf; then
-   LIBDWARF_INCLUDES="$LIBDWARF_INCLUDES -I$(eval echo \"$includedir\")/libdwarf"
-fi
-if test -d /usr/include/libdwarf; then
-   LIBDWARF_INCLUDES="$LIBDWARF_INCLUDES -I/usr/include/libdwarf"
-fi
-
-AS_IF([test "x$with_dwarf_header" = "xyes"],
-      [CPPFLAGS="$CPPFLAGS $LIBDWARF_INCLUDES"
-       AC_CHECK_HEADER([dwarf.h])
-       AS_IF([test "x$ac_cv_header_dwarf_h" != "xyes"],
-             [AC_MSG_ERROR([dwarf.h is required but was not found; locate it using --with-dwarf-header=/path/containing/header])])],
-      [CPPFLAGS="$CPPFLAGS -I$with_dwarf_header"
-       AC_CHECK_HEADER([dwarf.h])
-       AS_IF([test "x$ac_cv_header_dwarf_h" != "xyes"],
-             [AC_MSG_ERROR([dwarf.h is required but was not found])])])
-
 AC_ARG_VAR([DEBUGEDIT], [debugedit executable])
 AC_ARG_WITH([system-debugedit],
             [AS_HELP_STRING([--with-system-debugedit], [Use system debugedit [default=check $DEBUGEDIT]])],
