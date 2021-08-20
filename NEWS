@@ -1,3 +1,13 @@
+Changes in 1.1.1
+================
+
+This is the first unstable relase in preparation for 1.2.0
+
+ * We now use the external debugedit project instead of using an internal copy.
+   The system version can be used, or if not an internal version is used
+   built using git submodules.
+   Note, this needs libdw 0.172, which may not be available on older distributions.
+
 Changes in 1.0.14
 =================
 
