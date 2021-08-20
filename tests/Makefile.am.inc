@@ -4,6 +4,10 @@ AM_TESTS_ENVIRONMENT = FLATPAK_TESTS_DEBUG=1 \
 	PATH=$$(cd $(top_builddir) && pwd):$${PATH} \
 	$(NULL)
 
+if !WITH_SYSTEM_DEBUGEDIT
+AM_TESTS_ENVIRONMENT += FLATPAK_BUILDER_DEBUGEDIT=$$(cd $(top_builddir) && pwd)/flatpak-builder-debugedit
+endif
+
 dist_installed_test_extra_scripts += \
 	buildutil/tap-driver.sh \
 	tests/empty-configure \
