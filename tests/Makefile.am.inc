@@ -21,6 +21,8 @@ dist_installed_test_extra_scripts += \
 dist_installed_test_data = \
 	tests/libtest.sh \
 	tests/org.test.Hello.png \
+	tests/source1.json \
+	tests/source2.json \
 	tests/test.json \
 	tests/test.yaml \
 	tests/test-runtime.json \
