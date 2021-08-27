@@ -47,6 +47,7 @@ struct BuilderModule
   char          **post_install;
   char          **config_opts;
   char          **secret_opts;
+  char          **secret_env;
   char          **make_args;
   char          **make_install_args;
   char           *install_rule;
@@ -101,6 +102,7 @@ enum {
   PROP_BUILDDIR,
   PROP_CONFIG_OPTS,
   PROP_SECRET_OPTS,
+  PROP_SECRET_ENV,
   PROP_MAKE_ARGS,
   PROP_MAKE_INSTALL_ARGS,
   PROP_ENSURE_WRITABLE,
@@ -147,6 +149,7 @@ builder_module_finalize (GObject *object)
   g_strfreev (self->post_install);
   g_strfreev (self->config_opts);
   g_strfreev (self->secret_opts);
+  g_strfreev (self->secret_env);
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_strfreev (self->ensure_writable);
@@ -234,6 +237,10 @@ builder_module_get_property (GObject    *object,
 
     case PROP_SECRET_OPTS:
       g_value_set_boxed (value, self->secret_opts);
+      break;
+
+    case PROP_SECRET_ENV:
+      g_value_set_boxed (value, self->secret_env);
       break;
 
     case PROP_MAKE_ARGS:
@@ -380,6 +387,12 @@ builder_module_set_property (GObject      *object,
     case PROP_SECRET_OPTS:
       tmp = self->secret_opts;
       self->secret_opts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_SECRET_ENV:
+      tmp = self->secret_env;
+      self->secret_env = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -585,6 +598,14 @@ builder_module_class_init (BuilderModuleClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SECRET_OPTS,
                                    g_param_spec_boxed ("secret-opts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SECRET_ENV,
+                                   g_param_spec_boxed ("secret-env",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -1274,6 +1295,7 @@ shell (GFile          *app_dir,
 static const char skip_arg[] = "skip";
 static const char strv_arg[] = "strv";
 static const char secret_arg[] = "secret";
+static const char secret_env_arg[] = "secret_env";
 
 static gboolean
 build (GFile          *app_dir,
@@ -1287,17 +1309,45 @@ build (GFile          *app_dir,
        const gchar    *argv1,
        ...)
 {
+  g_auto(GStrv) env = g_strdupv (env_vars);
+  g_auto(GStrv) unresolved_env = g_strdupv (env_vars);
   g_autoptr(GFile) cwd_file = NULL;
-  g_autoptr(GPtrArray) args =
-    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env_vars, &cwd_file);
-  g_autoptr(GPtrArray) unresolved_args =
-    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env_vars, &cwd_file);
+  g_autoptr(GPtrArray) args = NULL;
+  g_autoptr(GPtrArray) unresolved_args = NULL;
   gboolean have_secrets = FALSE;
   gboolean build_success = FALSE;
   const gchar *arg;
   const gchar **argv;
   va_list ap;
   int i;
+
+  va_start (ap, argv1);
+  while ((arg = va_arg (ap, const gchar *)))
+    {
+      if (arg == secret_env_arg)
+        {
+          have_secrets = TRUE;
+          argv = va_arg (ap, const gchar **);
+          if (argv != NULL)
+            {
+              for (i = 0; argv[i] != NULL; i++)
+                {
+                  const char *secret_value = getenv (argv[i]);
+                  if (secret_value)
+                    {
+                      env = g_environ_setenv (g_strdupv (env), g_strdup (argv[i]), g_strdup (secret_value), FALSE);
+                      unresolved_env = g_environ_setenv (g_strdupv (unresolved_env), g_strdup (argv[i]), g_strdup_printf ("$host:%s", argv[i]), FALSE);
+                    }
+                }
+            }
+        }
+    }
+  va_end (ap);
+
+  args =
+    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env, &cwd_file);
+  unresolved_args =
+    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, unresolved_env, &cwd_file);
 
   va_start (ap, argv1);
   g_ptr_array_add (args, g_strdup (argv1));
@@ -1339,6 +1389,8 @@ build (GFile          *app_dir,
                 }
             }
         }
+      else if (arg == secret_env_arg)
+        va_arg (ap, const gchar **);
       else if (arg != skip_arg)
         {
           g_ptr_array_add (args, g_strdup (arg));
@@ -1470,6 +1522,7 @@ builder_module_build_helper (BuilderModule  *self,
   g_auto(GStrv) build_args = NULL;
   g_auto(GStrv) config_opts = NULL;
   g_auto(GStrv) secret_opts = NULL;
+  g_auto(GStrv) secret_env = NULL;
   g_autoptr(GFile) source_subdir = NULL;
   const char *source_subdir_relative = NULL;
   g_autofree char *source_dir_path = NULL;
@@ -1503,6 +1556,7 @@ builder_module_build_helper (BuilderModule  *self,
   env = builder_options_get_env (self->build_options, context);
   config_opts = builder_options_get_config_opts (self->build_options, context, self->config_opts);
   secret_opts = builder_options_get_secret_opts (self->build_options, context, self->secret_opts);
+  secret_env = builder_options_get_secret_env (self->build_options, context, self->secret_env);
 
   n_jobs = g_strdup_printf ("%d", self->no_parallel_make ? 1 : builder_context_get_jobs (context));
   env = g_environ_setenv (env, "FLATPAK_BUILDER_N_JOBS", n_jobs, FALSE);
@@ -1829,7 +1883,7 @@ builder_module_build_helper (BuilderModule  *self,
     {
       g_print ("Running: %s\n", self->build_commands[i]);
       if (!build (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error,
-                  "/bin/sh", "-c", self->build_commands[i], NULL))
+                  "/bin/sh", "-c", self->build_commands[i], secret_env_arg, secret_env, NULL))
         return FALSE;
     }
 
@@ -1867,7 +1921,7 @@ builder_module_build_helper (BuilderModule  *self,
       for (i = 0; self->post_install[i] != NULL; i++)
         {
           if (!build (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error,
-                      "/bin/sh", "-c", self->post_install[i], NULL))
+                      "/bin/sh", "-c", self->post_install[i], secret_env_arg, secret_env, NULL))
             return FALSE;
         }
     }

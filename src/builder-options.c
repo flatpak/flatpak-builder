@@ -60,6 +60,7 @@ struct BuilderOptions
   char      **test_args;
   char      **config_opts;
   char      **secret_opts;
+  char      **secret_env;
   char      **make_args;
   char      **make_install_args;
   GHashTable *arch;
@@ -96,6 +97,7 @@ enum {
   PROP_TEST_ARGS,
   PROP_CONFIG_OPTS,
   PROP_SECRET_OPTS,
+  PROP_SECRET_ENV,
   PROP_MAKE_ARGS,
   PROP_MAKE_INSTALL_ARGS,
   PROP_APPEND_PATH,
@@ -130,6 +132,7 @@ builder_options_finalize (GObject *object)
   g_strfreev (self->test_args);
   g_strfreev (self->config_opts);
   g_strfreev (self->secret_opts);
+  g_strfreev (self->secret_env);
   g_strfreev (self->make_args);
   g_strfreev (self->make_install_args);
   g_hash_table_destroy (self->arch);
@@ -233,6 +236,10 @@ builder_options_get_property (GObject    *object,
 
     case PROP_SECRET_OPTS:
       g_value_set_boxed (value, self->secret_opts);
+      break;
+
+    case PROP_SECRET_ENV:
+      g_value_set_boxed (value, self->secret_env);
       break;
 
     case PROP_MAKE_ARGS:
@@ -380,6 +387,12 @@ builder_options_set_property (GObject      *object,
     case PROP_SECRET_OPTS:
       tmp = self->secret_opts;
       self->secret_opts = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
+    case PROP_SECRET_ENV:
+      tmp = self->secret_env;
+      self->secret_env = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
       break;
 
@@ -572,6 +585,14 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SECRET_OPTS,
                                    g_param_spec_boxed ("secret-opts",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SECRET_ENV,
+                                   g_param_spec_boxed ("secret-env",
                                                        "",
                                                        "",
                                                        G_TYPE_STRV,
@@ -1305,6 +1326,14 @@ builder_options_get_secret_opts (BuilderOptions *self,
 }
 
 char **
+builder_options_get_secret_env (BuilderOptions *self,
+                                BuilderContext *context,
+                                char          **base_opts)
+{
+  return builder_options_get_strv (self, context, base_opts, G_STRUCT_OFFSET (BuilderOptions, secret_env));
+}
+
+char **
 builder_options_get_make_args (BuilderOptions *self,
                                BuilderContext *context,
                                char          **base_args)
@@ -1343,6 +1372,7 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_compat_strv (cache, self->test_args);
   builder_cache_checksum_strv (cache, self->config_opts);
   builder_cache_checksum_strv (cache, self->secret_opts);
+  builder_cache_checksum_strv (cache, self->secret_env);
   builder_cache_checksum_strv (cache, self->make_args);
   builder_cache_checksum_strv (cache, self->make_install_args);
   builder_cache_checksum_boolean (cache, self->strip);

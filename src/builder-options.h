@@ -63,6 +63,9 @@ char **     builder_options_get_config_opts (BuilderOptions *self,
 char **     builder_options_get_secret_opts (BuilderOptions *self,
                                              BuilderContext *context,
                                              char          **base_opts);
+char **     builder_options_get_secret_env (BuilderOptions *self,
+                                            BuilderContext *context,
+                                            char          **base_opts);
 char **     builder_options_get_make_args (BuilderOptions *self,
                                            BuilderContext *context,
                                            char          **base_args);
