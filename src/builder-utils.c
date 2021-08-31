@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <libelf.h>
 #include <gelf.h>
-#include <dwarf.h>
 #include <sys/mman.h>
 #include <sys/uio.h>
 #include <stdio.h>
