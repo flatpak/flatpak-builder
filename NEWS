@@ -1,3 +1,11 @@
+Changes in 1.1.2
+================
+
+ * New secret-opts feature lets you pass e.g. CI secrets into the build.
+ * Support content-encoding when downloading.
+ * New inline data source allowing easy creation of files from embedded content from
+   the manifest.
+
 Changes in 1.1.1
 ================
 
