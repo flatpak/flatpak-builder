@@ -146,6 +146,8 @@ builder_source_inline_extract (BuilderSource  *source,
   dest_file = g_file_get_child (dest, self->dest_filename);
 
   out = g_file_replace (dest_file, NULL, FALSE, G_FILE_CREATE_REPLACE_DESTINATION, NULL, error);
+  if (out == NULL)
+    return FALSE;
 
   if (self->contents == NULL)
     return TRUE;
