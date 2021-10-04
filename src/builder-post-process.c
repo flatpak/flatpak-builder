@@ -65,7 +65,7 @@ invalidate_old_python_compiled (const char *path,
   if (lstat (pyc, &stbuf) == 0 &&
       stbuf.st_mtime == OSTREE_TIMESTAMP)
     {
-      g_print ("Removing stale file %sc", rel_path);
+      g_print ("Removing stale file %sc\n", rel_path);
       if (unlink (pyc) != 0)
         g_warning ("Unable to delete %s", pyc);
     }
@@ -74,7 +74,7 @@ invalidate_old_python_compiled (const char *path,
   if (lstat (pyo, &stbuf) == 0 &&
       stbuf.st_mtime == OSTREE_TIMESTAMP)
     {
-      g_print ("Removing stale file %so", rel_path);
+      g_print ("Removing stale file %so\n", rel_path);
       if (unlink (pyo) != 0)
         g_warning ("Unable to delete %s", pyo);
     }
@@ -102,7 +102,7 @@ invalidate_old_python_compiled (const char *path,
           if (fstatat (dfd_iter.fd, dent->d_name, &stbuf, AT_SYMLINK_NOFOLLOW) == 0 &&
               stbuf.st_mtime == OSTREE_TIMESTAMP)
             {
-              g_print ("Removing stale file %s/__pycache__/%s", rel_path, dent->d_name);
+              g_print ("Removing stale file %s/__pycache__/%s\n", rel_path, dent->d_name);
               if (unlinkat (dfd_iter.fd, dent->d_name, 0))
                 g_warning ("Unable to delete %s", dent->d_name);
             }
