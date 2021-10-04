@@ -1067,7 +1067,7 @@
       <refsect2>
         <title>Permissions</title>
         <para>
-          Builds have the --allow=devel and --allow=multiarch permissions that regular flatpak runs don't have by default. This allows
+          Builds have the --allow=devel and --allow=multiarch permissions that regular flatpak runs don't have by default. This
           limits the syscall filtering that is normally done so development tools like debuggers work. Otherwise the build sandbox
           is very limited, for example there is no network access.
         </para>
