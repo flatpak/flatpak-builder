@@ -1,3 +1,9 @@
+Changes in 1.2.0
+================
+ * Documentation updates
+ * Add missing newlines in some output
+ * Fix missing error check in the new inline data support
+
 Changes in 1.1.2
 ================
 
