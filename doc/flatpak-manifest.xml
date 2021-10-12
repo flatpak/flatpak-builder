@@ -675,7 +675,7 @@
                         <term><option>archive-type</option> (string)</term>
                         <listitem><para>
                             The type of archive if it cannot be guessed from the path. Possible values are "rpm", "tar",
-                            "tar-gzip", "tar-compress", "tar-bzip2", "tar-lzip", "tar-lzma", "tar-lzop", "tar-xz", "zip" and "7z".
+                            "tar-gzip", "tar-compress", "tar-bzip2", "tar-lzip", "tar-lzma", "tar-lzop", "tar-xz", "tar-zst", "zip" and "7z".
                         </para></listitem>
                     </varlistentry>
                     <varlistentry>
