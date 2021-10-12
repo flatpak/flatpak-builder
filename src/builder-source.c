@@ -327,7 +327,7 @@ builder_source_from_json (JsonNode *node)
       g_autoptr(GError) error = NULL;
       if (!builder_source_validate (source, &error))
         {
-          g_warning ("Invalid source: %s", error->message);
+          g_error ("Invalid source: %s", error->message);
           g_clear_object (&source);
         }
     }
