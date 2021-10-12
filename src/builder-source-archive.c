@@ -83,6 +83,7 @@ typedef enum {
   TAR_LZMA,
   TAR_LZOP,
   TAR_XZ,
+  TAR_ZST,
   ZIP,
   SEVENZ,
 } BuilderArchiveType;
@@ -90,7 +91,7 @@ typedef enum {
 static gboolean
 is_tar (BuilderArchiveType type)
 {
-  return (type >= TAR) && (type <= TAR_XZ);
+  return (type >= TAR) && (type <= TAR_ZST);
 }
 
 static const char *
@@ -122,6 +123,9 @@ tar_decompress_flag (BuilderArchiveType type)
 
     case TAR_XZ:
       return "-J";
+
+    case TAR_ZST:
+      return "--zstd";
     }
 }
 
@@ -547,6 +551,10 @@ get_type (GFile *archivefile)
       g_str_has_suffix (lower, ".txz"))
     return TAR_XZ;
 
+  if (g_str_has_suffix (lower, ".tar.zst") ||
+      g_str_has_suffix (lower, ".tzst"))
+    return TAR_ZST;
+
   if (g_str_has_suffix (lower, ".zip"))
     return ZIP;
 
@@ -683,6 +691,7 @@ get_type_from_prop (BuilderSourceArchive *self)
       { "tar-lzip", TAR_LZIP },
       { "tar-lzma", TAR_LZMA },
       { "tar-xz", TAR_XZ },
+      { "tar-zst", TAR_ZST },
       { "zip", ZIP },
       { "7z", SEVENZ },
   };
