@@ -13,8 +13,7 @@ EXTRA_DIST =
 
 include $(top_srcdir)/buildutil/glib-tap.mk
 
-SUBDIRS =
-
+SUBDIRS = data
 
 if BUILD_DOCUMENTATION
 SUBDIRS += . doc
