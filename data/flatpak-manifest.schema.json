@@ -751,6 +751,23 @@
         }
       }
     },
+    "inline-sources": {
+      "type": "object",
+      "properties": {
+        "dest-filename": {
+          "description": "Filename to use inside the source dir.",
+          "type": "string"
+        },
+        "contents": {
+          "description": "Text data that will be put in the file.",
+          "type": "string"
+        },
+        "base64": {
+          "description": "Whether content is base64-encoded.",
+          "type": "boolean"
+        }
+      }
+    },
     "shell-sources": {
       "type": "object",
       "properties": {
