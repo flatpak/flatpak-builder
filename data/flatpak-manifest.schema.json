@@ -534,6 +534,18 @@
           "if": {
             "properties": {
               "type": {
+                "const": "inline"
+              }
+            }
+          },
+          "then": {
+            "$ref": "#/definitions/inline-sources"
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
                 "const": "shell"
               }
             }
