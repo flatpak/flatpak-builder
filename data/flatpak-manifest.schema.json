@@ -986,7 +986,13 @@
     },
     "add-build-extensions": {
       "description": "This is a dictionary of extension objects similar to add-extensions. The main difference is that the extensions are added early and are available for use during the build.",
-      "type": "object"
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "$ref": "#/definitions/extension"
+        },
+        "additionalProperties": false
+      }
     },
     "cleanup": {
       "description": "An array of file patterns that should be removed at the end. Patterns starting with / are taken to be full pathnames (without the /app prefix), otherwise they just match the basename.",
