@@ -439,6 +439,7 @@
                 "dir",
                 "file",
                 "script",
+                "inline",
                 "shell",
                 "patch",
                 "extra-data"
