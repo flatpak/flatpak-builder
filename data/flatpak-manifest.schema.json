@@ -867,6 +867,10 @@
       "type": "string"
     },
     "branch": {
+      "description": "The branch to use when exporting the application. If this is unset the defaults come from the default-branch option.",
+      "type": "string"
+    },
+    "default-branch": {
       "description": "The default branch to use when exporting the application. Defaults to master. This key can be overridden by the --default-branch commandline option.",
       "type": "string"
     },
