@@ -172,8 +172,8 @@
           "type": "string"
         },
         "download-if": {
-          "description": "If this is true, clear ldflags from previous build options before adding it from these options.",
-          "type": "boolean",
+          "description": "A condition that must be true for the extension to be auto-downloaded.",
+          "type": "string",
           "enum": [
             "active-gl-driver",
             "active-gtk-theme",
