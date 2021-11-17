@@ -3658,6 +3658,7 @@ builder_manifest_bundle_sources (BuilderManifest *self,
   if (!builder_cache_lookup (cache, "bundle-sources"))
     {
       g_autofree char *sources_id = builder_manifest_get_sources_id (self);
+      g_autofree char *main_ref = NULL;
       GFile *app_dir;
       g_autoptr(GFile) metadata_sources_file = NULL;
       g_autoptr(GFile) metadata = NULL;
@@ -3678,10 +3679,19 @@ builder_manifest_bundle_sources (BuilderManifest *self,
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;
 
+      main_ref = flatpak_compose_ref (!self->build_runtime && !self->build_extension,
+                                      builder_manifest_get_id (self),
+                                      builder_manifest_get_branch (self, context),
+                                      builder_context_get_arch (context));
+
       app_dir = builder_context_get_app_dir (context);
       metadata_sources_file = g_file_get_child (app_dir, "metadata.sources");
       metadata_contents = g_strdup_printf ("[Runtime]\n"
-                                           "name=%s\n", sources_id);
+                                           "name=%s\n"
+                                           "\n"
+                                           "[ExtensionOf]\n"
+                                           "ref=%s\n",
+                                           sources_id, main_ref);
       if (!g_file_set_contents (flatpak_file_get_path_cached (metadata_sources_file),
                                 metadata_contents, strlen (metadata_contents), error))
         return FALSE;
