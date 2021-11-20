@@ -660,6 +660,10 @@
         "disable-shallow-clone": {
           "description": "Don't optimize by making a shallow clone when downloading the git repo.",
           "type": "boolean"
+        },
+        "disable-submodules": {
+          "description": "Don't checkout the git submodules when cloning the repository.",
+          "type": "boolean"
         }
       }
     },
