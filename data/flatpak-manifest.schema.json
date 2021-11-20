@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
   "$comment": "https://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html#flatpak-manifest",
-  "definitions": {
+  "$defs": {
     "build-options": {
       "description": "Object specifying the build environment.",
       "type": "object",
@@ -131,7 +131,7 @@
           "type": "object",
           "patternProperties": {
             ".*": {
-              "$ref": "#/definitions/build-options"
+              "$ref": "#/$defs/build-options"
             },
             "additionalProperties": false
           }
@@ -232,7 +232,7 @@
           "items": {
             "oneOf": [
               {
-                "$ref": "#/definitions/sources"
+                "$ref": "#/$defs/sources"
               },
               {
                 "type": "string",
@@ -314,7 +314,7 @@
           "type": "string"
         },
         "build-options": {
-          "$ref": "#/definitions/build-options"
+          "$ref": "#/$defs/build-options"
         },
         "build-commands": {
           "description": "An array of commands to run during build (between make and make install if those are used). This is primarily useful when using the simple buildsystem. Each command is run in /bin/sh -c, so it can use standard POSIX shell syntax such as piping output.",
@@ -390,7 +390,7 @@
           "items": {
             "oneOf": [
               {
-                "$ref": "#/definitions/module"
+                "$ref": "#/$defs/module"
               },
               {
                 "type": "string",
@@ -456,7 +456,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/archive-sources"
+            "$ref": "#/$defs/archive-sources"
           }
         },
         {
@@ -468,7 +468,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/git-sources"
+            "$ref": "#/$defs/git-sources"
           }
         },
         {
@@ -480,7 +480,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/bzr-sources"
+            "$ref": "#/$defs/bzr-sources"
           }
         },
         {
@@ -492,7 +492,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/svn-sources"
+            "$ref": "#/$defs/svn-sources"
           }
         },
         {
@@ -504,7 +504,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/dir-sources"
+            "$ref": "#/$defs/dir-sources"
           }
         },
         {
@@ -516,7 +516,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/file-sources"
+            "$ref": "#/$defs/file-sources"
           }
         },
         {
@@ -528,7 +528,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/script-sources"
+            "$ref": "#/$defs/script-sources"
           }
         },
         {
@@ -540,7 +540,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/inline-sources"
+            "$ref": "#/$defs/inline-sources"
           }
         },
         {
@@ -552,7 +552,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/shell-sources"
+            "$ref": "#/$defs/shell-sources"
           }
         },
         {
@@ -564,7 +564,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/patch-sources"
+            "$ref": "#/$defs/patch-sources"
           }
         },
         {
@@ -576,7 +576,7 @@
             }
           },
           "then": {
-            "$ref": "#/definitions/extra-data-sources"
+            "$ref": "#/$defs/extra-data-sources"
           }
         }
       ]
@@ -991,7 +991,7 @@
       }
     },
     "build-options": {
-      "$ref": "#/definitions/build-options"
+      "$ref": "#/$defs/build-options"
     },
     "modules": {
       "description": "An array of objects or strings specifying the modules to be built in order. String members in the array are interpreted as the name of a separate json or yaml file that contains a module.",
@@ -999,7 +999,7 @@
       "items": {
         "oneOf": [
           {
-            "$ref": "#/definitions/module"
+            "$ref": "#/$defs/module"
           },
           {
             "type": "string",
@@ -1013,7 +1013,7 @@
       "type": "object",
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/extension"
+          "$ref": "#/$defs/extension"
         },
         "additionalProperties": false
       }
@@ -1023,7 +1023,7 @@
       "type": "object",
       "patternProperties": {
         ".*": {
-          "$ref": "#/definitions/extension"
+          "$ref": "#/$defs/extension"
         },
         "additionalProperties": false
       }
