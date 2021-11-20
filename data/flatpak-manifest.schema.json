@@ -1110,5 +1110,13 @@
     },
     "additionalProperties": false
   },
+  "patternProperties": {
+    "^x-.*": {
+      "description": "Custom property (ignored by flatpak-builder)"
+    },
+    "^//.*": {
+      "description": "Comment property (ignored by flatpak-builder)"
+    }
+  },
   "additionalProperties": false
 }
