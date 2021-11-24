@@ -203,6 +203,22 @@
             }
           ]
         },
+        "autoprune-unless": {
+          "description": "A condition that must be false for the extension to be considered unused when pruning. For example, flatpak uninstall --unused uses this information.",
+          "type": "string",
+          "anyOf": [
+            {
+              "enum": [
+                "active-gl-driver",
+                "active-gtk-theme",
+                "have-intel-gpu"
+              ]
+            },
+            {
+              "pattern": "^on-xdg-desktop-.*"
+            }
+          ]
+        },
         "merge-dirs": {
           "description": "A list of relative paths of directories below the extension point directory that will be merged. Available since 0.9.1, and backported to the 0.8.x branch in 0.8.3.",
           "type": "string"
