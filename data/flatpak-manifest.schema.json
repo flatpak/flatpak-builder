@@ -174,21 +174,33 @@
         "download-if": {
           "description": "A condition that must be true for the extension to be auto-downloaded.",
           "type": "string",
-          "enum": [
-            "active-gl-driver",
-            "active-gtk-theme",
-            "have-intel-gpu",
-            "on-xdg-desktop-*"
+          "anyOf": [
+            {
+              "enum": [
+                "active-gl-driver",
+                "active-gtk-theme",
+                "have-intel-gpu"
+              ]
+            },
+            {
+              "pattern": "^on-xdg-desktop-.*"
+            }
           ]
         },
         "enable-if": {
           "description": "A condition that must be true for the extension to be enabled. As of 1.1.1 this supports multiple conditions separated by semi-colons.",
           "type": "string",
-          "enum": [
-            "active-gl-driver",
-            "active-gtk-theme",
-            "have-intel-gpu",
-            "on-xdg-desktop-*"
+          "anyOf": [
+            {
+              "enum": [
+                "active-gl-driver",
+                "active-gtk-theme",
+                "have-intel-gpu"
+              ]
+            },
+            {
+              "pattern": "^on-xdg-desktop-.*"
+            }
           ]
         },
         "merge-dirs": {
