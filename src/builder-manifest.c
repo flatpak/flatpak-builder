@@ -2406,7 +2406,7 @@ rewrite_appdata (GFile *file,
 
 static GFile *
 builder_manifest_find_appdata_file (BuilderManifest *self,
-				    GFile *app_root)
+                                    GFile           *app_root)
 {
   /* We order these so that share/appdata/XXX.appdata.xml if found
      first, as this is the target name, and apps may have both, which will
@@ -2426,18 +2426,18 @@ builder_manifest_find_appdata_file (BuilderManifest *self,
     {
       g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, dirs[j]);
       for (i = 0; i < G_N_ELEMENTS (extensions); i++)
-	{
-	  g_autofree char *basename = NULL;
+        {
+          g_autofree char *basename = NULL;
 
-	  if (self->rename_appdata_file != NULL)
-	    basename = g_strdup (self->rename_appdata_file);
-	  else
-	    basename = g_strconcat (self->id, extensions[i], NULL);
+          if (self->rename_appdata_file != NULL)
+            basename = g_strdup (self->rename_appdata_file);
+          else
+            basename = g_strconcat (self->id, extensions[i], NULL);
 
-	  source = g_file_get_child (appdata_dir, basename);
-	  if (g_file_query_exists (source, NULL))
-	    return g_steal_pointer (&source);
-	}
+          source = g_file_get_child (appdata_dir, basename);
+          if (g_file_query_exists (source, NULL))
+            return g_steal_pointer (&source);
+        }
     }
   return NULL;
 }
@@ -2515,30 +2515,30 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       appdata_source = builder_manifest_find_appdata_file (self, app_root);
       if (appdata_source)
-	{
-	  /* We always use the old name / dir, in case the runtime has older appdata tools */
-	  g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
-	  g_autofree char *appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
+        {
+          /* We always use the old name / dir, in case the runtime has older appdata tools */
+          g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
+          g_autofree char *appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
 
-	  appdata_file = g_file_get_child (appdata_dir, appdata_basename);
+          appdata_file = g_file_get_child (appdata_dir, appdata_basename);
 
-	  if (!g_file_equal (appdata_source, appdata_file))
-	    {
-	      g_autofree char *src_basename = g_file_get_basename (appdata_source);
-	      g_print ("Renaming %s to share/appdata/%s\n", src_basename, appdata_basename);
+          if (!g_file_equal (appdata_source, appdata_file))
+            {
+              g_autofree char *src_basename = g_file_get_basename (appdata_source);
+              g_print ("Renaming %s to share/appdata/%s\n", src_basename, appdata_basename);
 
               if (!flatpak_mkdir_p (appdata_dir, NULL, error))
                 return FALSE;
-	      if (!g_file_move (appdata_source, appdata_file, 0, NULL, NULL, NULL, error))
-		return FALSE;
-	    }
+              if (!g_file_move (appdata_source, appdata_file, 0, NULL, NULL, NULL, error))
+                return FALSE;
+            }
 
-	  if (self->appdata_license != NULL && self->appdata_license[0] != 0)
-	    {
-	      if (!rewrite_appdata (appdata_file, self->appdata_license, error))
-		return FALSE;
-	    }
-	}
+          if (self->appdata_license != NULL && self->appdata_license[0] != 0)
+            {
+              if (!rewrite_appdata (appdata_file, self->appdata_license, error))
+                return FALSE;
+            }
+        }
 
       if (self->rename_desktop_file != NULL)
         {
