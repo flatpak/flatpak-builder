@@ -259,7 +259,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-appdata-file</option> (string)</term>
-                    <listitem><para>Any appdata file with this name will be renamed to a name based on id during the cleanup phase.</para></listitem>
+                    <listitem><para>Any appdata (metainfo) file with this name will be renamed to a name based on id during the cleanup phase.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-icon</option> (string)</term>
@@ -267,7 +267,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>appdata-license</option> (string)</term>
-                    <listitem><para>Replace the appdata
+                    <listitem><para>Replace the appdata (metainfo)
                     project_license field with this string. This is
                     useful as the upstream license is typically only
                     about the application itself, whereas the bundled
