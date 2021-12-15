@@ -1113,7 +1113,7 @@
       "type": "string"
     },
     "rename-appdata-file": {
-      "description": "Any appdata file with this name will be renamed to a name based on id during the cleanup phase.",
+      "description": "Any appdata (metainfo) file with this name will be renamed to a name based on id during the cleanup phase.",
       "type": "string"
     },
     "rename-icon": {
@@ -1121,7 +1121,7 @@
       "type": "string"
     },
     "appdata-license": {
-      "description": "Replace the appdata project_license field with this string. This is useful as the upstream license is typically only about the application itself, whereas the bundled app can contain other licenses too.",
+      "description": "Replace the appdata (metainfo) project_license field with this string. This is useful as the upstream license is typically only about the application itself, whereas the bundled app can contain other licenses too.",
       "type": "string"
     },
     "copy-icon": {
