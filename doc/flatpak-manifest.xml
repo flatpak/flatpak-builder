@@ -196,12 +196,12 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>inherit-extensions</option> (array of strings)</term>
-                    <listitem><para>Inherit these extra extensions points from the base application or sdk when
+                    <listitem><para>Inherit these extra extension points from the base application or sdk when
                     finishing the build.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>inherit-sdk-extensions</option> (array of strings)</term>
-                    <listitem><para>Inherit these extra extensions points from the base application or sdk when
+                    <listitem><para>Inherit these extra extension points from the base application or sdk when
                     finishing the build, but do not inherit them into the platform.</para></listitem>
                 </varlistentry>
 

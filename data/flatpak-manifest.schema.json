@@ -999,18 +999,18 @@
       }
     },
     "inherit-extensions": {
-      "description": "Inherit these extra extensions points from the base application or sdk when finishing the build.",
+      "description": "Inherit these extra extension points from the base application or sdk when finishing the build.",
       "type": "array",
       "items": {
-        "description": "Inherit this extra extensions point from the base application or sdk when finishing the build.",
+        "description": "Inherit this extra extension point from the base application or sdk when finishing the build.",
         "type": "string"
       }
     },
     "inherit-sdk-extensions": {
-      "description": "Inherit these extra extensions points from the base application or sdk when finishing the build, but do not inherit them into the platform.",
+      "description": "Inherit these extra extension points from the base application or sdk when finishing the build, but do not inherit them into the platform.",
       "type": "array",
       "items": {
-        "description": "Inherit this extra extensions point from the base application or sdk when finishing the build, but do not inherit them into the platform.",
+        "description": "Inherit this extra extension point from the base application or sdk when finishing the build, but do not inherit into the platform.",
         "type": "string"
       }
     },
