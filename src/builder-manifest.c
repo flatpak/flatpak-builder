@@ -2405,19 +2405,20 @@ rewrite_appdata (GFile *file,
 }
 
 static GFile *
-builder_manifest_find_appdata_file (BuilderManifest *self,
-                                    GFile           *app_root)
+builder_manifest_find_metainfo_file (BuilderManifest *self,
+                                     GFile           *app_root)
 {
-  /* We order these so that share/appdata/XXX.appdata.xml if found
-     first, as this is the target name, and apps may have both, which will
-     cause issues with the rename. */
+  /* We order these so that share/metainfo/XXX.metainfo.xml is found
+   * first, as this is the target name, and apps may have both, which will
+   * cause issues with the rename.
+   */
   const char *extensions[] = {
-    ".appdata.xml",
     ".metainfo.xml",
+    ".appdata.xml",
   };
   const char *dirs[] = {
-    "share/appdata",
     "share/metainfo",
+    "share/appdata",
   };
   g_autoptr(GFile) source = NULL;
 
@@ -2451,8 +2452,8 @@ builder_manifest_cleanup (BuilderManifest *self,
   g_autoptr(GFile) app_root = NULL;
   GList *l;
   g_auto(GStrv) env = NULL;
-  g_autoptr(GFile) appdata_file = NULL;
-  g_autoptr(GFile) appdata_source = NULL;
+  g_autoptr(GFile) metainfo_file = NULL;
+  g_autoptr(GFile) metainfo_source = NULL;
   int i;
 
   builder_manifest_checksum_for_cleanup (self, cache, context);
@@ -2513,29 +2514,33 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       app_root = g_file_get_child (app_dir, "files");
 
-      appdata_source = builder_manifest_find_appdata_file (self, app_root);
-      if (appdata_source)
+      metainfo_source = builder_manifest_find_metainfo_file (self, app_root);
+      if (metainfo_source)
         {
-          /* We always use the old name / dir, in case the runtime has older appdata tools */
-          g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
-          g_autofree char *appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
+          /* Export to share/metainfo which usurped share/appdata as the
+           * correct directory in 2016 and is well-supported even on old
+           * distributions. However since we used to export to share/appdata
+           * Flatpak still looks there when exporting metainfo.
+           */
+          g_autoptr(GFile) metainfo_dir = g_file_resolve_relative_path (app_root, "share/metainfo");
+          g_autofree char *metainfo_basename = g_strdup_printf ("%s.metainfo.xml", self->id);
 
-          appdata_file = g_file_get_child (appdata_dir, appdata_basename);
+          metainfo_file = g_file_get_child (metainfo_dir, metainfo_basename);
 
-          if (!g_file_equal (appdata_source, appdata_file))
+          if (!g_file_equal (metainfo_source, metainfo_file))
             {
-              g_autofree char *src_basename = g_file_get_basename (appdata_source);
-              g_print ("Renaming %s to share/appdata/%s\n", src_basename, appdata_basename);
+              g_autofree char *src_basename = g_file_get_basename (metainfo_source);
+              g_print ("Renaming %s to share/metainfo/%s\n", src_basename, metainfo_basename);
 
-              if (!flatpak_mkdir_p (appdata_dir, NULL, error))
+              if (!flatpak_mkdir_p (metainfo_dir, NULL, error))
                 return FALSE;
-              if (!g_file_move (appdata_source, appdata_file, 0, NULL, NULL, NULL, error))
+              if (!g_file_move (metainfo_source, metainfo_file, 0, NULL, NULL, NULL, error))
                 return FALSE;
             }
 
           if (self->appdata_license != NULL && self->appdata_license[0] != 0)
             {
-              if (!rewrite_appdata (appdata_file, self->appdata_license, error))
+              if (!rewrite_appdata (metainfo_file, self->appdata_license, error))
                 return FALSE;
             }
         }
@@ -2551,7 +2556,7 @@ builder_manifest_cleanup (BuilderManifest *self,
           if (!g_file_move (src, dest, 0, NULL, NULL, NULL, error))
             return FALSE;
 
-          if (appdata_file != NULL)
+          if (metainfo_file != NULL)
             {
               FlatpakXml *n_id;
               FlatpakXml *n_root;
@@ -2560,7 +2565,7 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_autoptr(GInputStream) in = NULL;
               g_autoptr(GString) new_contents = NULL;
 
-              in = (GInputStream *) g_file_read (appdata_file, NULL, error);
+              in = (GInputStream *) g_file_read (metainfo_file, NULL, error);
               if (!in)
                 return FALSE;
               xml_root = flatpak_xml_parse (in, FALSE, NULL, error);
@@ -2601,7 +2606,7 @@ builder_manifest_cleanup (BuilderManifest *self,
 
               new_contents = g_string_new ("");
               flatpak_xml_to_string (xml_root, new_contents);
-              if (!g_file_set_contents (flatpak_file_get_path_cached (appdata_file),
+              if (!g_file_set_contents (flatpak_file_get_path_cached (metainfo_file),
                                         new_contents->str,
                                         new_contents->len,
                                         error))
@@ -2749,7 +2754,7 @@ builder_manifest_cleanup (BuilderManifest *self,
             return FALSE;
         }
 
-      if (self->appstream_compose && appdata_file != NULL)
+      if (self->appstream_compose && metainfo_file != NULL)
         {
           g_autofree char *basename_arg = g_strdup_printf ("--basename=%s", self->id);
           g_print ("Running appstream-compose\n");
