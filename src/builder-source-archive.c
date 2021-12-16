@@ -561,6 +561,9 @@ get_type (GFile *archivefile)
   if (g_str_has_suffix (lower, ".rpm"))
     return RPM;
 
+  if (g_str_has_suffix (lower, ".7z"))
+    return SEVENZ;
+
   return UNKNOWN;
 }
 
