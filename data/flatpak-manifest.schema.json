@@ -260,7 +260,7 @@
           "items": {
             "oneOf": [
               {
-                "$ref": "#/$defs/sources"
+                "$ref": "#/$defs/source"
               },
               {
                 "type": "string",
@@ -430,7 +430,7 @@
       },
       "additionalProperties": false
     },
-    "sources": {
+    "source": {
       "description": " These contain a pointer to the source that will be extracted into the source directory before the build starts. They can be of several types, distinguished by the type property. Additionally, the sources list can contain a plain string, which is interpreted as the name of a separate json or yaml file that is read and inserted at this point. The file can contain a single source, or an array of sources.",
       "type": "object",
       "allOf": [
@@ -484,7 +484,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/archive-sources"
+            "$ref": "#/$defs/source-archive"
           }
         },
         {
@@ -496,7 +496,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/git-sources"
+            "$ref": "#/$defs/source-git"
           }
         },
         {
@@ -508,7 +508,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/bzr-sources"
+            "$ref": "#/$defs/source-bzr"
           }
         },
         {
@@ -520,7 +520,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/svn-sources"
+            "$ref": "#/$defs/source-svn"
           }
         },
         {
@@ -532,7 +532,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/dir-sources"
+            "$ref": "#/$defs/source-dir"
           }
         },
         {
@@ -544,7 +544,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/file-sources"
+            "$ref": "#/$defs/source-file"
           }
         },
         {
@@ -556,7 +556,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/script-sources"
+            "$ref": "#/$defs/source-script"
           }
         },
         {
@@ -568,7 +568,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/inline-sources"
+            "$ref": "#/$defs/source-inline"
           }
         },
         {
@@ -580,7 +580,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/shell-sources"
+            "$ref": "#/$defs/source-shell"
           }
         },
         {
@@ -592,7 +592,7 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/patch-sources"
+            "$ref": "#/$defs/source-patch"
           }
         },
         {
@@ -604,12 +604,12 @@
             }
           },
           "then": {
-            "$ref": "#/$defs/extra-data-sources"
+            "$ref": "#/$defs/source-extra-data"
           }
         }
       ]
     },
-    "archive-sources": {
+    "source-archive": {
       "type": "object",
       "properties": {
         "path": {
@@ -658,7 +658,7 @@
         }
       }
     },
-    "git-sources": {
+    "source-git": {
       "type": "object",
       "properties": {
         "path": {
@@ -695,7 +695,7 @@
         }
       }
     },
-    "bzr-sources": {
+    "source-bzr": {
       "type": "object",
       "properties": {
         "url": {
@@ -708,7 +708,7 @@
         }
       }
     },
-    "svn-sources": {
+    "source-svn": {
       "type": "object",
       "properties": {
         "url": {
@@ -721,7 +721,7 @@
         }
       }
     },
-    "dir-sources": {
+    "source-dir": {
       "type": "object",
       "properties": {
         "path": {
@@ -738,7 +738,7 @@
         }
       }
     },
-    "file-sources": {
+    "source-file": {
       "type": "object",
       "properties": {
         "path": {
@@ -779,7 +779,7 @@
         }
       }
     },
-    "script-sources": {
+    "source-script": {
       "type": "object",
       "properties": {
         "commands": {
@@ -796,7 +796,7 @@
         }
       }
     },
-    "inline-sources": {
+    "source-inline": {
       "type": "object",
       "properties": {
         "dest-filename": {
@@ -813,7 +813,7 @@
         }
       }
     },
-    "shell-sources": {
+    "source-shell": {
       "type": "object",
       "properties": {
         "commands": {
@@ -826,7 +826,7 @@
         }
       }
     },
-    "patch-sources": {
+    "source-patch": {
       "type": "object",
       "properties": {
         "path": {
@@ -863,7 +863,7 @@
         }
       }
     },
-    "extra-data-sources": {
+    "source-extra-data": {
       "type": "object",
       "properties": {
         "filename": {
