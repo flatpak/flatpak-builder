@@ -411,13 +411,15 @@ builder_post_process_debuginfo (GFile          *app_dir,
       if (is_stripped)
         continue;
 
-      if (g_str_has_prefix (rel_path_dir, "files/"))
+      if (g_str_has_prefix (rel_path_dir, "files/")
+          && !g_str_has_prefix (rel_path_dir, "files/lib/debug/"))
         {
           debug_dir = g_build_filename (app_dir_path, "files/lib/debug", rel_path_dir + strlen ("files/"), NULL);
           real_debug_dir = g_build_filename ("/app/lib/debug", rel_path_dir + strlen ("files/"), NULL);
           source_dir_path = g_build_filename (app_dir_path, "files/lib/debug/source", NULL);
         }
-      else if (g_str_has_prefix (rel_path_dir, "usr/"))
+      else if (g_str_has_prefix (rel_path_dir, "usr/")
+               && !g_str_has_prefix (rel_path_dir, "usr/lib/debug/"))
         {
           debug_dir = g_build_filename (app_dir_path, "usr/lib/debug", rel_path_dir, NULL);
           real_debug_dir = g_build_filename ("/usr/lib/debug", rel_path_dir, NULL);
