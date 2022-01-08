@@ -1,3 +1,12 @@
+Changes in 1.2.1
+================
+ * Fix debuginfo being re-processed multiple times in a manifest
+ * Change manifest parsing issues from warnings to fatal errors
+ * Add `.tar.zst` archive support
+ * Fix auto-detection of `.7z` archives
+ * Install a JSON schema for manifest format
+ * Documentation updates
+
 Changes in 1.2.0
 ================
  * Documentation updates
