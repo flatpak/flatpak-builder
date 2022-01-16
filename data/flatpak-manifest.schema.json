@@ -80,7 +80,14 @@
         },
         "env": {
           "description": "This is a dictionary defining environment variables to be set during the build. Elements in this override the properties that set the environment, like cflags and ldflags. Keys with a null value unset the corresponding variable.",
-          "type": "object"
+          "type": "object",
+          "patternProperties": {
+            "^[^=]+$": {
+              "description": "An environment variable.",
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         },
         "build-args": {
           "description": "This is an array containing extra options to pass to flatpak build.",
