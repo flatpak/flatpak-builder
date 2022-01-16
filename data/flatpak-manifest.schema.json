@@ -620,6 +620,18 @@
     "source-archive": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "path": {
           "description": "The path of the archive.",
           "type": "string"
@@ -682,11 +694,28 @@
           "description": "Filename to for the downloaded file, defaults to the basename of url.",
           "type": "string"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-git": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "path": {
           "description": "The path to a local checkout of the git repository. Due to how git-clone works, this will be much faster than specifying a URL of file:///...",
           "type": "string"
@@ -719,11 +748,28 @@
           "description": "Don't checkout the git submodules when cloning the repository.",
           "type": "boolean"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-bzr": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "url": {
           "description": "URL of the bzr repository.",
           "type": "string"
@@ -732,11 +778,28 @@
           "description": "A specific revision to use in the branch.",
           "type": "string"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-svn": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "url": {
           "description": "URL of the svn repository, including branch/tag part.",
           "type": "string"
@@ -745,11 +808,28 @@
           "description": "A specific revision number to use.",
           "type": "string"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-dir": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "path": {
           "description": "The path of a local directory whose content will be copied into the source dir. Note that directory sources don't currently support caching, so they will be rebuilt each time.",
           "type": "string"
@@ -762,11 +842,28 @@
             "type": "string"
           }
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-file": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "path": {
           "description": "The path of a local file that will be copied into the source dir.",
           "type": "string"
@@ -803,11 +900,28 @@
           "description": "Filename to for the downloaded file, defaults to the basename of url.",
           "type": "string"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-script": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "commands": {
           "description": "An array of shell commands that will be put in a shellscript file.",
           "type": "array",
@@ -820,11 +934,28 @@
           "description": "Filename to use inside the source dir, default to autogen.sh.",
           "type": "string"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-inline": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "dest-filename": {
           "description": "Filename to use inside the source dir.",
           "type": "string"
@@ -837,11 +968,28 @@
           "description": "Whether content is base64-encoded.",
           "type": "boolean"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-shell": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "commands": {
           "description": "An array of shell commands that will be run during source extraction.",
           "type": "array",
@@ -850,11 +998,28 @@
             "type": "string"
           }
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-patch": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "path": {
           "description": "The path of a patch file that will be applied in the source dir.",
           "type": "string"
@@ -887,11 +1052,28 @@
             "type": "string"
           }
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     },
     "source-extra-data": {
       "type": "object",
       "properties": {
+        "type": {
+          "$ref": "#/$defs/source/allOf/0/properties/type"
+        },
+        "only-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/only-arches"
+        },
+        "skip-arches": {
+          "$ref": "#/$defs/source/allOf/0/properties/skip-arches"
+        },
+        "dest": {
+          "$ref": "#/$defs/source/allOf/0/properties/dest"
+        },
         "filename": {
           "description": "The name to use for the downloaded extra data",
           "type": "string"
@@ -912,7 +1094,12 @@
           "description": "The extra installed size this adds to the app (optional).",
           "type": "number"
         }
-      }
+      },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
+      "additionalProperties": false
     }
   },
   "properties": {
