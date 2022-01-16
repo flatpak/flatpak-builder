@@ -628,6 +628,24 @@
             "type": "string"
           }
         },
+        "archive-type": {
+          "description": "The type of archive if it cannot be guessed from the path.",
+          "type": "string",
+          "enum": [
+            "rpm",
+            "tar",
+            "tar-gzip",
+            "tar-compress",
+            "tar-bzip2",
+            "tar-lzip",
+            "tar-lzma",
+            "tar-lzop",
+            "tar-xz",
+            "tar-zst",
+            "zip",
+            "7z"
+          ]
+        },
         "git-init": {
           "description": "Whether to initialise the repository as a git repository.",
           "type": "boolean"
