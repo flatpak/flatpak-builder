@@ -1177,7 +1177,7 @@ setup_build_args (GFile          *app_dir,
     builddir = "/run/build/";
 
   g_ptr_array_add (args, g_strdup_printf ("--env=FLATPAK_BUILDER_BUILDDIR=%s%s", builddir, module_name));
-  g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
+  g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
 
   /* We mount the canonical location, because bind-mounts of symlinks don't really work */
   g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s", source_dir_path_canonical));

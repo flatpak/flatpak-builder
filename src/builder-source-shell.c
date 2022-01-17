@@ -136,7 +136,7 @@ run_script (BuilderContext *context,
 
   source_dir_path_canonical = realpath (source_dir_path, NULL);
 
-  g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
+  g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
   g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s", source_dir_path_canonical));
 
   if (env)
