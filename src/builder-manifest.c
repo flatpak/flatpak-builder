@@ -2124,7 +2124,7 @@ command (GFile      *app_dir,
   g_ptr_array_add (args, g_strdup ("build"));
 
   g_ptr_array_add (args, g_strdup ("--die-with-parent"));
-  g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
+  g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
   if (extra_args)
     {
       for (i = 0; extra_args[i] != NULL; i++)
@@ -2304,7 +2304,7 @@ appstream_compose (GFile   *app_dir,
   g_ptr_array_add (args, g_strdup ("flatpak"));
   g_ptr_array_add (args, g_strdup ("build"));
   g_ptr_array_add (args, g_strdup ("--die-with-parent"));
-  g_ptr_array_add (args, g_strdup ("--nofilesystem=host"));
+  g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
   g_ptr_array_add (args, g_file_get_path (app_dir));
   g_ptr_array_add (args, g_strdup ("appstream-compose"));
 
