@@ -50,7 +50,9 @@ if ! test -f .testtmp; then
     touch .testtmp
 fi
 
-export G_DEBUG=fatal-warnings
+# Disable fatal-warnings for now as it breaks with the host:reset warning
+# Revert this when switching CI to new flatpak
+#export G_DEBUG=fatal-warnings
 
 # Also, unbreak `tar` inside `make check`...Automake will inject
 # TAR_OPTIONS: --owner=0 --group=0 --numeric-owner presumably so that
