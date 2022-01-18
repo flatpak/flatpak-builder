@@ -1,3 +1,35 @@
+Changes in 1.2.2
+================
+
+This is a security update to resolve CVE-2022-21682.
+Upgrading both Flatpak and flatpak-builder is required.
+
+CVE-2022-21682 is a vulnerability in how flatpak-builder uses flatpak,
+which can cause `flatpak-builder --mirror-screenshots-url` commands to be
+allowed to create directories outside the build directory.
+
+flatpak-builder >= 1.2.2 uses a new option `--nofilesystem=host:reset`
+to cancel out filesystem permissions in the application manifest and
+overrides. This is only effective when using Flatpak >= 1.12.4, or a
+version that has a backport of the `--nofilesystem=host:reset` feature
+(such as 1.10.x versions >= 1.10.7).
+
+When using an older version of Flatpak, this version of flatpak-builder
+will still work, but it will show a warning: "Unexpected filesystem
+suffix reset, ignoring". In this situation, it is still vulnerable
+to CVE-2022-21682.
+
+Other changes:
+
+ * Make FUSE 2 optimizations opt-in.
+   By default, this version of flatpak-builder is compatible with versions
+   of ostree that have been compiled against either FUSE 2 or FUSE 3.
+   Older distributions that use FUSE 2 can configure --with-fuse=2 for better
+   performance, but the resulting flatpak-builder executable will not work
+   with versions of ostree >= 2022.1 that have been compiled with FUSE 3
+   (this is the same behaviour as in 1.2.1).
+ * Make the JSON schema introduced in 1.2.1 more complete
+
 Changes in 1.2.1
 ================
  * Fix debuginfo being re-processed multiple times in a manifest
