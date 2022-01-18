@@ -828,7 +828,15 @@ builder_context_enable_rofiles (BuilderContext *self,
   g_autofree char *tmpdir_name = NULL;
   char *argv[] = { "rofiles-fuse",
                    "-o",
-                   "kernel_cache,entry_timeout=60,attr_timeout=60,splice_write,splice_move",
+                   (
+                    "kernel_cache,entry_timeout=60,attr_timeout=60"
+#ifdef ASSUME_FUSE_2
+                    /* These options are not valid with FUSE 3, only
+                     * with FUSE 2, where they give a performance
+                     * improvement. */
+                    ",splice_write,splice_move"
+#endif
+                   ),
                    (char *)flatpak_file_get_path_cached (self->app_dir),
                    NULL,
                    NULL };

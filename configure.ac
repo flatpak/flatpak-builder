@@ -197,6 +197,15 @@ AM_CONDITIONAL(DOCBOOK_DOCS_ENABLED, test x$enable_docbook_docs = xyes)
 AC_ARG_VAR([XMLTO],[Define/override the 'xmlto' location.])
 AC_ARG_VAR([XMLTO_FLAGS],[Define/override 'xmlto' options, like '--skip-validation'.])
 
+AC_ARG_WITH([fuse],
+            [AS_HELP_STRING([--with-fuse={2,3}],
+                            [Only support this major version of FUSE])],
+            [fuse_major="$withval"],
+            [fuse_major=maximize-compatibility])
+AS_IF([test $fuse_major = 2],
+      [AC_DEFINE([ASSUME_FUSE_2], [],
+                 [Define to speed up FUSE 2 at the cost of FUSE 3 compatibility])])
+
 GLIB_TESTS
 
 FLATPAK_BUILDER_VERSION=flatpak_builder_version
