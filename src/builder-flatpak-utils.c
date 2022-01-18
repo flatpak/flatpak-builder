@@ -1196,6 +1196,7 @@ typedef enum {
 
 /* In numerical order of more privs */
 typedef enum {
+  FLATPAK_FILESYSTEM_MODE_NONE         = 0,
   FLATPAK_FILESYSTEM_MODE_READ_ONLY    = 1,
   FLATPAK_FILESYSTEM_MODE_READ_WRITE   = 2,
   FLATPAK_FILESYSTEM_MODE_CREATE       = 3,
@@ -1770,6 +1771,13 @@ parse_filesystem_flags (const char *filesystem, FlatpakFilesystemMode *mode)
       if (mode)
         *mode = FLATPAK_FILESYSTEM_MODE_CREATE;
     }
+  else if (g_str_equal (filesystem, "host:reset"))
+    {
+      filesystem = "host-reset";
+
+      if (mode)
+        *mode = FLATPAK_FILESYSTEM_MODE_NONE;
+    }
 
   return g_strndup (filesystem, len);
 }
@@ -1810,9 +1818,12 @@ static void
 flatpak_context_remove_filesystem (FlatpakContext *context,
                                    const char     *what)
 {
+  FlatpakFilesystemMode mode;
+  g_autofree char *fs = parse_filesystem_flags (what, &mode);
+
   g_hash_table_insert (context->filesystems,
-                       parse_filesystem_flags (what, NULL),
-                       NULL);
+                       g_steal_pointer (&fs),
+                       GINT_TO_POINTER (mode));
 }
 
 static gboolean
@@ -2222,10 +2233,18 @@ flatpak_context_to_args (FlatpakContext *context,
       g_ptr_array_add (args, g_strdup_printf ("--system-%s-name=%s", flatpak_policy_to_string (policy), name));
     }
 
+  if (g_hash_table_lookup_extended (context->filesystems, "host-reset", NULL, NULL))
+    {
+      g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
+    }
+
   g_hash_table_iter_init (&iter, context->filesystems);
   while (g_hash_table_iter_next (&iter, &key, &value))
     {
       FlatpakFilesystemMode mode = GPOINTER_TO_INT (value);
+
+      if (g_str_equal (key, "host-reset"))
+        continue;
 
       if (mode == FLATPAK_FILESYSTEM_MODE_READ_ONLY)
         g_ptr_array_add (args, g_strdup_printf ("--filesystem=%s:ro", (char *)key));
