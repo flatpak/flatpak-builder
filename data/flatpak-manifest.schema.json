@@ -198,6 +198,9 @@
               ]
             },
             {
+              "pattern": "^have-kernel-module-.*"
+            },
+            {
               "pattern": "^on-xdg-desktop-.*"
             }
           ]
@@ -214,6 +217,9 @@
               ]
             },
             {
+              "pattern": "^have-kernel-module-.*"
+            },
+            {
               "pattern": "^on-xdg-desktop-.*"
             }
           ]
@@ -228,6 +234,9 @@
                 "active-gtk-theme",
                 "have-intel-gpu"
               ]
+            },
+            {
+              "pattern": "^have-kernel-module-.*"
             },
             {
               "pattern": "^on-xdg-desktop-.*"
