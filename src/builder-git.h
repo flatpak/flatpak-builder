@@ -56,6 +56,7 @@ gboolean builder_git_shallow_mirror_ref (const char     *repo_location,
                                          const char     *ref,
                                          BuilderContext *context,
                                          GError        **error);
+char *   builder_git_get_default_branch (const char *repo_location);
 
 G_END_DECLS
 

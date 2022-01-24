@@ -44,6 +44,7 @@ struct BuilderSourceGit
   char         *tag;
   char         *commit;
   char         *orig_ref;
+  char         *default_branch_name;
   gboolean      disable_fsckobjects;
   gboolean      disable_shallow_clone;
   gboolean      disable_submodules;
@@ -80,6 +81,7 @@ builder_source_git_finalize (GObject *object)
   g_free (self->tag);
   g_free (self->commit);
   g_free (self->orig_ref);
+  g_free (self->default_branch_name);
 
   G_OBJECT_CLASS (builder_source_git_parent_class)->finalize (object);
 }
@@ -184,7 +186,8 @@ builder_source_git_set_property (GObject      *object,
 }
 
 static const char *
-get_branch (BuilderSourceGit *self)
+get_branch (BuilderSourceGit *self,
+            const char       *repo_location)
 {
   if (self->branch)
     return self->branch;
@@ -193,7 +196,12 @@ get_branch (BuilderSourceGit *self)
   else if (self->commit)
     return self->commit;
   else
-    return "master";
+    {
+      if (self->default_branch_name == NULL)
+        self->default_branch_name = builder_git_get_default_branch (repo_location);
+
+      return self->default_branch_name;
+    }
 }
 
 static char *
@@ -257,7 +265,7 @@ builder_source_git_download (BuilderSource  *source,
     flags |= FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM;
 
   if (!builder_git_mirror_repo (location, NULL, flags,
-                                get_branch (self),
+                                get_branch (self, location),
                                 context,
                                 error))
     return FALSE;
@@ -265,8 +273,8 @@ builder_source_git_download (BuilderSource  *source,
   if (self->commit != NULL && (self->branch != NULL || self->tag != NULL))
     {
       /* We want to support the commit being both a tag object and the real commit object that it points too */
-      g_autofree char *current_commit = builder_git_get_current_commit (location, get_branch (self), FALSE, context, error);
-      g_autofree char *current_commit2 = builder_git_get_current_commit (location, get_branch (self), TRUE, context, error);
+      g_autofree char *current_commit = builder_git_get_current_commit (location, get_branch (self, location), FALSE, context, error);
+      g_autofree char *current_commit2 = builder_git_get_current_commit (location, get_branch (self, location), TRUE, context, error);
       if (current_commit == NULL || current_commit2 == NULL)
         return FALSE;
       if (strcmp (current_commit, self->commit) != 0 && strcmp (current_commit2, self->commit) != 0)
@@ -295,7 +303,7 @@ builder_source_git_extract (BuilderSource  *source,
   if (!self->disable_submodules)
     mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
 
-  if (!builder_git_checkout (location, get_branch (self),
+  if (!builder_git_checkout (location, get_branch (self, location),
                              dest, context, mirror_flags, error))
     return FALSE;
 
@@ -360,7 +368,7 @@ builder_source_git_checksum (BuilderSource  *source,
   location = get_url_or_path (self, context, &error);
   if (location != NULL)
     {
-      current_commit = builder_git_get_current_commit (location,get_branch (self), FALSE, context, &error);
+      current_commit = builder_git_get_current_commit (location, get_branch (self, location), FALSE, context, &error);
       if (current_commit)
         builder_cache_checksum_str (cache, current_commit);
       else if (error)
@@ -385,7 +393,7 @@ builder_source_git_update (BuilderSource  *source,
   if (location == NULL)
     return FALSE;
 
-  self->orig_ref = g_strdup (get_branch (self));
+  self->orig_ref = g_strdup (get_branch (self, location));
   current_commit = builder_git_get_current_commit (location, self->orig_ref, FALSE, context, NULL);
   if (current_commit)
     {

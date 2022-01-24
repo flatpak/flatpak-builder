@@ -868,3 +868,33 @@ builder_git_checkout (const char     *repo_location,
 
   return TRUE;
 }
+
+char *
+builder_git_get_default_branch (const char *repo_location)
+{
+  g_auto(GStrv) parts = NULL;
+  g_autofree char *output = NULL;
+  g_autoptr(GError) error = NULL;
+
+  if (!git (NULL, &output, 0, &error,
+            "ls-remote", "--symref", repo_location, "HEAD", NULL))
+    return g_strdup ("master");
+
+  /* Example output:
+   * $ git ls-remote --symref http://gitlab.gnome.org/GNOME/evince.git HEAD
+   * warning: redirigiendo a https://gitlab.gnome.org/GNOME/evince.git/
+   * ref: refs/heads/main	HEAD
+   * 7a5ceb841874bef4b91282eee1025b0335a21795	HEAD
+   */
+  parts = g_strsplit (output, "\t", 1);
+  if (g_strv_length (parts) > 1 && g_str_has_prefix (parts[1], "HEAD") &&
+      g_strstr_len (parts[0], -1, "ref: "))
+    {
+      char *branch = strrchr (parts[0], '/');
+      if (branch != NULL)
+        return g_strdup (branch + 1);
+    }
+
+  g_debug ("Failed to auto-detect default branch from git output");
+  return g_strdup ("master");
+}
