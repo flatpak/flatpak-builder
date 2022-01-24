@@ -486,5 +486,4 @@ builder_source_git_class_init (BuilderSourceGitClass *klass)
 static void
 builder_source_git_init (BuilderSourceGit *self)
 {
-  self->default_branch_name = NULL;
 }
