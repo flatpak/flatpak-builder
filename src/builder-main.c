@@ -589,7 +589,8 @@ main (int    argc,
   if (opt_from_git)
     {
       g_autofree char *manifest_dirname = g_path_get_dirname (manifest_rel_path);
-      const char *git_branch = opt_from_git_branch ? opt_from_git_branch : "master";
+      g_autofree char *default_branch_name = builder_git_get_default_branch (opt_from_git);
+      const char *git_branch = opt_from_git_branch ? opt_from_git_branch : default_branch_name;
       g_autoptr(GFile) build_subdir = NULL;
 
       build_subdir = builder_context_allocate_build_subdir (build_context, manifest_basename, &error);
