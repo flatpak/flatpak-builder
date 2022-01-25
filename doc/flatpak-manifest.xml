@@ -725,7 +725,7 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>branch</option> (string)</term>
-                        <listitem><para>The branch to use from the git repository</para></listitem>
+                        <listitem><para>The branch to use from the git repository. As of 1.2.3 this will try to auto-detect the upstream default branch. Previously this defaulted to <literal>master</literal>.</para></listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>tag</option> (string)</term>
