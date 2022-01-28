@@ -3673,7 +3673,7 @@ builder_manifest_bundle_sources (BuilderManifest *self,
 
       g_print ("Bundling sources\n");
 
-      builder_set_term_title (_("Bunding sources for %s"), self->id);
+      builder_set_term_title (_("Bundling sources for %s"), self->id);
 
       if (!builder_context_enable_rofiles (context, error))
         return FALSE;
