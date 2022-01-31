@@ -230,11 +230,23 @@ builder_source_archive_set_property (GObject      *object,
     case PROP_MD5:
       g_free (self->md5);
       self->md5 = g_value_dup_string (value);
+      if (self->md5 != NULL && self->md5[0] != '\0')
+        {
+          g_printerr ("The \"md5\" source property is deprecated due to the weakness of MD5 hashes.\n");
+          g_printerr ("Use the \"sha256\" property for the more secure SHA256 hash.\n");
+        }
+
       break;
 
     case PROP_SHA1:
       g_free (self->sha1);
       self->sha1 = g_value_dup_string (value);
+      if (self->sha1 != NULL && self->sha1[0] != '\0')
+        {
+          g_printerr ("The \"sha1\" source property is deprecated due to the weakness of SHA1 hashes.\n");
+          g_printerr ("Use the \"sha256\" property for the more secure SHA256 hash.\n");
+        }
+
       break;
 
     case PROP_SHA256:

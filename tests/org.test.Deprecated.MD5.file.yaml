@@ -1,0 +1,14 @@
+app-id: org.test.Deprecated.MD5
+runtime: org.test.Platform
+sdk: org.test.Sdk
+command: hello.sh
+modules:
+  - name: hello
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin
+      - cp hello.sh /app/bin/hello.sh
+    sources:
+      - type: file
+        path: hello.sh
+        md5: 01b72b71479e0fd308e5129cfb8a2b2b

@@ -40,6 +40,14 @@ dist_installed_test_data = \
 	tests/org.test.Python2.json \
 	tests/importme.py \
 	tests/importme2.py \
+	tests/org.test.Deprecated.MD5.archive.json \
+	tests/org.test.Deprecated.MD5.archive.yaml \
+	tests/org.test.Deprecated.MD5.file.json \
+	tests/org.test.Deprecated.MD5.file.yaml \
+	tests/org.test.Deprecated.SHA1.archive.json \
+	tests/org.test.Deprecated.SHA1.file.json \
+	tests/hello.sh \
+	tests/hello.tar.xz \
 	$(NULL)
 
 installed_test_keyringdir = $(installed_testdir)/test-keyring
@@ -60,6 +68,7 @@ endif
 
 dist_test_scripts = \
 	tests/test-builder.sh \
+	tests/test-builder-deprecated.sh \
 	tests/test-builder-python.sh \
 	$(NULL)
 
