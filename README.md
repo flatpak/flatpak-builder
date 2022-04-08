@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/flatpak/flatpak/blob/master/flatpak.png?raw=true" alt="Flatpak icon"/>
+  <img src="https://raw.githubusercontent.com/flatpak/flatpak/main/flatpak.png" alt="Flatpak icon"/>
 </p>
 
 Flatpak-builder is a tool for building flatpaks from sources.
