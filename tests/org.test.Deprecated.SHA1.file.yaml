@@ -1,0 +1,14 @@
+app-id: org.test.Deprecated.SHA1
+runtime: org.test.Platform
+sdk: org.test.Sdk
+command: hello.sh
+modules:
+  - name: hello
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/bin
+      - cp hello.sh /app/bin/hello.sh
+    sources:
+      - type: file
+        path: hello.sh
+        sha1: e1f2618c8c35d282026ef57dce85c5cb6df1f27b

@@ -1,0 +1,20 @@
+{
+    "app-id": "org.test.Deprecated.MD5",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "command": "hello.sh",
+    "modules": [
+        {
+            "name": "hello",
+            "buildsystem": "simple",
+            "build-commands": [ "mkdir -p /app/bin", "cp hello.sh /app/bin/hello.sh" ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "path": "hello.tar.xz",
+                    "md5": "f5b8be5ff2fa2ed63006b5e9b14e1d13"
+                }
+            ]
+        }
+    ]
+}
