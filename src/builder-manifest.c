@@ -2403,16 +2403,16 @@ static GFile *
 builder_manifest_find_appdata_file (BuilderManifest *self,
                                     GFile           *app_root)
 {
-  /* We order these so that share/appdata/XXX.appdata.xml if found
+  /* We order these so that share/metainfo/$FLATPAK_ID.metainfo.xml is found
      first, as this is the target name, and apps may have both, which will
      cause issues with the rename. */
   const char *extensions[] = {
-    ".appdata.xml",
     ".metainfo.xml",
+    ".appdata.xml",
   };
   const char *dirs[] = {
-    "share/appdata",
     "share/metainfo",
+    "share/appdata",
   };
   g_autoptr(GFile) source = NULL;
 
@@ -2511,16 +2511,15 @@ builder_manifest_cleanup (BuilderManifest *self,
       appdata_source = builder_manifest_find_appdata_file (self, app_root);
       if (appdata_source)
         {
-          /* We always use the old name / dir, in case the runtime has older appdata tools */
-          g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/appdata");
-          g_autofree char *appdata_basename = g_strdup_printf ("%s.appdata.xml", self->id);
+          g_autoptr(GFile) appdata_dir = g_file_resolve_relative_path (app_root, "share/metainfo");
+          g_autofree char *appdata_basename = g_strdup_printf ("%s.metainfo.xml", self->id);
 
           appdata_file = g_file_get_child (appdata_dir, appdata_basename);
 
           if (!g_file_equal (appdata_source, appdata_file))
             {
               g_autofree char *src_basename = g_file_get_basename (appdata_source);
-              g_print ("Renaming %s to share/appdata/%s\n", src_basename, appdata_basename);
+              g_print ("Renaming %s to share/metainfo/%s\n", src_basename, appdata_basename);
 
               if (!flatpak_mkdir_p (appdata_dir, NULL, error))
                 return FALSE;
