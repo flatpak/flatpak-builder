@@ -20,11 +20,11 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake gettext autopoint bison  dbus gtk-doc-tools \
+        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
-        libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
+        libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
       uses: actions/checkout@v1
@@ -49,7 +49,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake gettext autopoint bison  dbus gtk-doc-tools \
+        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
@@ -91,6 +91,7 @@ jobs:
           attr \
           automake \
           autopoint \
+          appstream-compose \
           bison \
           debugedit \
           dbus \
