@@ -15,6 +15,7 @@ AC_INIT([flatpak-builder],
 GLIB_REQS=2.44
 OSTREE_REQS=2017.14
 FLATPAK_REQS=0.99.1
+APPSTREAMCLI_REQS=0.15.0
 SYSTEM_DEBUGEDIT_REQS=5.0
 LIBDW_REQS=0.172
 
@@ -37,7 +38,22 @@ else
                       [AC_MSG_ERROR([You need at least version $FLATPAK_REQS of flatpak, your version is $FLATPAK_VERSION])])
 fi
 
+AC_CHECK_PROG([APPSTREAMCLI], [appstreamcli], [appstreamcli], [false])
+if test "x$APPSTREAMCLI" = xfalse; then
+   AC_MSG_ERROR([You need appstreamcli installed])
+   APPSTREAMCLI_VERSION=`$APPSTREAMCLI --version | sed 's,.*\ \([0-9]*\.[0-9]*\.[0-9]*\)$,\1,'`
+   AX_COMPARE_VERSION([$APPSTREAMCLI_REQS],[gt],[$APPSTREAMCLI_VERSION],
+                      [AC_MSG_ERROR([You need at least version $APPSTREAMCLI_REQS of appstreamcli, your version is $APPSTREAMCLI_VERSION])])
+fi
 
+AC_MSG_CHECKING([whether appstreamcli has compose support])
+AS_IF([appstreamcli compose --help >/dev/null 2>/dev/null],
+      [AC_MSG_RESULT(yes)],
+      [
+       AC_MSG_RESULT(no)
+       AC_MSG_ERROR([appstreamcli must have compose support enabled])
+      ])
+      
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
 
