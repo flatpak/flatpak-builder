@@ -23,7 +23,8 @@ jobs:
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsoup2.4-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
+        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip \
+        appstream
     - name: Check out flatpak
       uses: actions/checkout@v1
       with:
@@ -54,7 +55,8 @@ jobs:
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsoup2.4-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
+        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip \
+        appstream
     - name: Check out flatpak
       uses: actions/checkout@v1
       with:
