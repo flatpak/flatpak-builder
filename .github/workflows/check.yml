@@ -24,7 +24,7 @@ jobs:
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
-        libgirepository1.0-dev libappstream-glib-dev libdconf-dev clang socat flatpak \
+        libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
       uses: actions/checkout@v1
@@ -53,7 +53,7 @@ jobs:
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
-        libgirepository1.0-dev libappstream-glib-dev libdconf-dev clang flatpak \
+        libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
       uses: actions/checkout@v1
@@ -101,7 +101,7 @@ jobs:
           git \
           gobject-introspection \
           gtk-doc-tools \
-          libappstream-glib-dev \
+          libappstream-dev \
           libarchive-dev \
           libattr1-dev \
           libcap-dev \
