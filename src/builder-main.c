@@ -937,18 +937,8 @@ main (int    argc,
       g_autoptr(GFile) cache = flatpak_build_file (builder_context_get_state_dir (build_context), "screenshots-cache", NULL);
       g_autoptr(GFile) screenshots = flatpak_build_file (app_dir, "screenshots", NULL);
       g_autoptr(GFile) screenshots_sub = flatpak_build_file (screenshots, screenshot_subdir, NULL);
-      g_autofree char *fs_app_dir = g_strdup_printf ("--filesystem=%s", flatpak_file_get_path_cached (app_dir));
-      g_autofree char *fs_cache = g_strdup_printf ("--filesystem=%s", flatpak_file_get_path_cached (cache));
       const char *argv[] = {
-        "flatpak",
-        "build",
-        "--die-with-parent",
-        "--nofilesystem=host:reset",
-        fs_app_dir,
-        fs_cache,
-        "--share=network",
-        flatpak_file_get_path_cached (app_dir),
-        "appstreamcli-compose",
+        "appstreamcli", "compose",
         "--media-baseurl", url,
         "--media-dir", flatpak_file_get_path_cached (screenshots_sub),
         flatpak_file_get_path_cached (xml),
@@ -976,12 +966,12 @@ main (int    argc,
               g_printerr ("Error mirroring screenshots: %s\n", error->message);
               return 1;
             }
-          if (!builder_maybe_host_spawnv (NULL,
-                                          NULL,
-                                          0,
-                                          &error,
-                                          argv,
-                                          NULL))
+          if (!flatpak_spawnv (NULL,
+                               NULL,
+                               0,
+                               &error,
+                               argv,
+                               NULL))
             {
               g_printerr ("Error mirroring screenshots: %s\n", error->message);
               return 1;
