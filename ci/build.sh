@@ -8,7 +8,7 @@ dn=$(dirname $0)
 
 pkg_install sudo which attr fuse \
     libubsan libasan libtsan elfutils-libelf-devel libdwarf-devel \
-    elfutils git gettext-devel libappstream-glib-devel bison \
+    elfutils git gettext-devel libappstream-devel bison \
     libcurl-devel dconf-devel fuse-devel \
     /usr/bin/{update-mime-database,update-desktop-database,gtk-update-icon-cache}
 pkg_install_testing ostree-devel ostree libyaml-devel

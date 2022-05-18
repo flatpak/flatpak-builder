@@ -2314,9 +2314,9 @@ cmpstringp (const void *p1, const void *p2)
 }
 
 static gboolean
-appstream_compose (GFile   *app_dir,
-                   GError **error,
-                   ...)
+appstreamcli_compose (GFile   *app_dir,
+                      GError **error,
+                      ...)
 {
   g_autoptr(GPtrArray) args = NULL;
   const gchar *arg;
@@ -2328,7 +2328,7 @@ appstream_compose (GFile   *app_dir,
   g_ptr_array_add (args, g_strdup ("--die-with-parent"));
   g_ptr_array_add (args, g_strdup ("--nofilesystem=host:reset"));
   g_ptr_array_add (args, g_file_get_path (app_dir));
-  g_ptr_array_add (args, g_strdup ("appstream-compose"));
+  g_ptr_array_add (args, g_strdup ("appstreamcli-compose"));
 
   va_start (ap, error);
   while ((arg = va_arg (ap, const gchar *)))
@@ -2338,7 +2338,7 @@ appstream_compose (GFile   *app_dir,
 
   if (!builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL))
     {
-      g_prefix_error (error, "ERROR: appstream-compose failed: ");
+      g_prefix_error (error, "ERROR: appstreamcli-compose failed: ");
       return FALSE;
     }
 
@@ -2773,14 +2773,18 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       if (self->appstream_compose && appdata_file != NULL)
         {
+          g_autofree char *app_root_path = g_file_get_path (app_root);
+          g_autofree char *prefix_arg = g_strdup_printf ("--prefix=%s", app_root_path);
           g_autofree char *basename_arg = g_strdup_printf ("--basename=%s", self->id);
-          g_print ("Running appstream-compose\n");
-          if (!appstream_compose (app_dir, error,
-                                  self->build_runtime ?  "--prefix=/usr" : "--prefix=/app",
-                                  "--origin=flatpak",
-                                  basename_arg,
-                                  self->id,
-                                  NULL))
+          g_autofree char *components_arg = g_strdup_printf ("--components=%s", self->id);
+          g_print ("Running appstreamcli-compose\n");
+          if (!appstreamcli_compose (app_dir, error,
+                                     self->build_runtime ?  "--prefix=/usr" : "--prefix=/app",
+                                     "--origin=flatpak",
+                                     "--result-root=/",
+                                     components_arg,
+                                     "/",
+                                     NULL))
             return FALSE;
         }
 
