@@ -948,12 +948,10 @@ main (int    argc,
         fs_cache,
         "--share=network",
         flatpak_file_get_path_cached (app_dir),
-        "appstream-util",
-        "mirror-screenshots",
+        "appstreamcli-compose",
+        "--media-baseurl", url,
+        "--media-dir", flatpak_file_get_path_cached (screenshots_sub),
         flatpak_file_get_path_cached (xml),
-        url,
-        flatpak_file_get_path_cached (cache),
-        flatpak_file_get_path_cached (screenshots_sub),
         NULL
       };
 
