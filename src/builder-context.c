@@ -593,6 +593,12 @@ builder_context_set_default_branch (BuilderContext *self,
   self->default_branch = g_strdup (default_branch);
 }
 
+gint64
+builder_context_get_source_date_epoch (BuilderContext *self)
+{
+  return self->source_date_epoch;
+}
+
 void
 builder_context_set_source_date_epoch (BuilderContext *self,
                                        gint64 source_date_epoch)

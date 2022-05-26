@@ -77,6 +77,7 @@ void            builder_context_set_arch (BuilderContext *self,
 const char *    builder_context_get_default_branch (BuilderContext *self);
 void            builder_context_set_default_branch (BuilderContext *self,
                                                     const char     *default_branch);
+gint64          builder_context_get_source_date_epoch (BuilderContext *self);
 void            builder_context_set_source_date_epoch (BuilderContext *self,
                                                        gint64 source_date_epoch);
 const char *    builder_context_get_stop_at (BuilderContext *self);
