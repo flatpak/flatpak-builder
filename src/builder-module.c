@@ -871,19 +871,24 @@ builder_module_deserialize_property (JsonSerializable *serializable,
                     g_file_resolve_relative_path (saved_demarshal_base_dir, module_relpath);
                   const char *module_path = flatpak_file_get_path_cached (module_file);
                   g_autofree char *module_contents = NULL;
+                  g_autoptr(GError) error = NULL;
 
-                  if (g_file_get_contents (module_path, &module_contents, NULL, NULL))
+                  if (g_file_get_contents (module_path, &module_contents, NULL, &error))
                     {
                       g_autoptr(GFile) module_file_dir = g_file_get_parent (module_file);
                       builder_manifest_set_demarshal_base_dir (module_file_dir);
                       module = builder_gobject_from_data (BUILDER_TYPE_MODULE,
-                                                          module_relpath, module_contents, NULL);
+                                                          module_relpath, module_contents, &error);
                       builder_manifest_set_demarshal_base_dir (saved_demarshal_base_dir);
                       if (module)
                         {
                           builder_module_set_json_path (BUILDER_MODULE (module), module_path);
                           builder_module_set_base_dir (BUILDER_MODULE (module), module_file_dir);
                         }
+                    }
+                  if (error != NULL)
+                    {
+                      g_error ("Failed to load included manifest (%s): %s", module_path, error->message);
                     }
                 }
               else if (JSON_NODE_HOLDS_OBJECT (element_node))
