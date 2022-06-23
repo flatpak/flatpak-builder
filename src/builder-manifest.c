@@ -1104,12 +1104,12 @@ builder_manifest_class_init (BuilderManifestClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SOURCE_DATE_EPOCH,
                                    g_param_spec_int64 ("source-date-epoch",
-                                                      "",
-                                                      "",
-                                                      0,
-                                                      G_MAXINT64,
-                                                      0,
-                                                      G_PARAM_READWRITE));
+                                                       "",
+                                                       "",
+                                                       0,
+                                                       G_MAXINT64,
+                                                       0,
+                                                       G_PARAM_READWRITE));
 }
 
 static void
