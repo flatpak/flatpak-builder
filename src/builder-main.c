@@ -87,6 +87,7 @@ static char *opt_installation;
 static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
+static gint64 opt_source_date_epoch = -1;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -141,6 +142,7 @@ static GOptionEntry entries[] = {
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
+  { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
   { NULL }
 };
 
@@ -646,7 +648,9 @@ main (int    argc,
       return 1;
     }
 
-  if (stat (flatpak_file_get_path_cached (manifest_file), &statbuf) == 0)
+  if (opt_source_date_epoch > -1)
+    builder_context_set_source_date_epoch (build_context, opt_source_date_epoch);
+  else if (stat (flatpak_file_get_path_cached (manifest_file), &statbuf) == 0)
     builder_context_set_source_date_epoch (build_context, (gint64)statbuf.st_mtime);
 
   manifest_sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, manifest_contents, -1);

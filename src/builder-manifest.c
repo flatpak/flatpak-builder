@@ -107,6 +107,7 @@ struct BuilderManifest
   GList          *expanded_modules;
   GList          *add_extensions;
   GList          *add_build_extensions;
+  gint64          source_date_epoch;
 };
 
 typedef struct
@@ -169,6 +170,7 @@ enum {
   PROP_ADD_BUILD_EXTENSIONS,
   PROP_EXTENSION_TAG,
   PROP_TOKEN_TYPE,
+  PROP_SOURCE_DATE_EPOCH,
   LAST_PROP
 };
 
@@ -476,6 +478,10 @@ builder_manifest_get_property (GObject    *object,
       g_value_set_int (value, (int)self->token_type);
       break;
 
+    case PROP_SOURCE_DATE_EPOCH:
+      g_value_set_int64 (value, self->source_date_epoch);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -737,6 +743,10 @@ builder_manifest_set_property (GObject      *object,
 
     case PROP_TOKEN_TYPE:
       self->token_type = (gint32)g_value_get_int (value);
+      break;
+
+    case PROP_SOURCE_DATE_EPOCH:
+      self->source_date_epoch = g_value_get_int64 (value);
       break;
 
     default:
@@ -1090,6 +1100,16 @@ builder_manifest_class_init (BuilderManifestClass *klass)
                                                      G_MAXINT32,
                                                      -1,
                                                      G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SOURCE_DATE_EPOCH,
+                                   g_param_spec_int64 ("source-date-epoch",
+                                                       "",
+                                                       "",
+                                                       0,
+                                                       G_MAXINT64,
+                                                       0,
+                                                       G_PARAM_READWRITE));
 }
 
 static void
@@ -1628,6 +1648,8 @@ builder_manifest_start (BuilderManifest *self,
   g_autoptr(GHashTable) names = g_hash_table_new (g_str_hash, g_str_equal);
   g_autofree char *sdk_path = NULL;
   const char *stop_at;
+
+  self->source_date_epoch = builder_context_get_source_date_epoch (context);
 
   if (self->sdk == NULL)
     {
