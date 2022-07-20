@@ -71,6 +71,7 @@ struct BuilderManifest
   char           *runtime_version;
   char           *sdk;
   char           *sdk_commit;
+  char           *sdk_version;
   char           *var;
   char           *base;
   char           *base_commit;
@@ -132,6 +133,7 @@ enum {
   PROP_RUNTIME_COMMIT,
   PROP_SDK,
   PROP_SDK_COMMIT,
+  PROP_SDK_VERSION,
   PROP_BASE,
   PROP_BASE_VERSION,
   PROP_BASE_COMMIT,
@@ -189,6 +191,7 @@ builder_manifest_finalize (GObject *object)
   g_free (self->runtime_version);
   g_free (self->sdk);
   g_free (self->sdk_commit);
+  g_free (self->sdk_version);
   g_free (self->base);
   g_free (self->base_commit);
   g_free (self->base_version);
@@ -324,6 +327,10 @@ builder_manifest_get_property (GObject    *object,
 
     case PROP_SDK_COMMIT:
       g_value_set_string (value, self->sdk_commit);
+      break;
+
+    case PROP_SDK_VERSION:
+      g_value_set_string (value, self->sdk_version);
       break;
 
     case PROP_BASE:
@@ -546,6 +553,11 @@ builder_manifest_set_property (GObject      *object,
     case PROP_SDK_COMMIT:
       g_free (self->sdk_commit);
       self->sdk_commit = g_value_dup_string (value);
+      break;
+
+    case PROP_SDK_VERSION:
+      g_free (self->sdk_version);
+      self->sdk_version = g_value_dup_string (value);
       break;
 
     case PROP_BASE:
@@ -833,6 +845,15 @@ builder_manifest_class_init (BuilderManifestClass *klass)
                                                         "",
                                                         NULL,
                                                         G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_SDK_VERSION,
+                                   g_param_spec_string ("sdk-version",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+
   g_object_class_install_property (object_class,
                                    PROP_BASE,
                                    g_param_spec_string ("base",
@@ -1436,6 +1457,12 @@ builder_manifest_get_runtime_version (BuilderManifest *self)
   return self->runtime_version ? self->runtime_version : "master";
 }
 
+static const char *
+builder_manifest_get_sdk_version (BuilderManifest *self)
+{
+  return self->sdk_version ? self->sdk_version : builder_manifest_get_runtime_version(self);
+}
+
 const char *
 builder_manifest_get_branch (BuilderManifest *self,
                              BuilderContext  *context)
@@ -1661,13 +1688,13 @@ builder_manifest_start (BuilderManifest *self,
   arch_option = g_strdup_printf ("--arch=%s", builder_context_get_arch (context));
 
   self->sdk_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->sdk,
-                              builder_manifest_get_runtime_version (self), NULL);
+                              builder_manifest_get_sdk_version (self), NULL);
   if (!download_only && !allow_missing_runtimes && self->sdk_commit == NULL)
     return flatpak_fail (error, "Unable to find sdk %s version %s",
                          self->sdk,
-                         builder_manifest_get_runtime_version (self));
+                         builder_manifest_get_sdk_version (self));
 
-  sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_runtime_version (self), context);
+  sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_sdk_version (self), context);
   if (sdk_path != NULL &&
       !builder_context_load_sdk_config (context, sdk_path, error))
     return FALSE;
@@ -1825,6 +1852,7 @@ builder_manifest_checksum (BuilderManifest *self,
   builder_cache_checksum_str (cache, self->runtime);
   builder_cache_checksum_str (cache, builder_manifest_get_runtime_version (self));
   builder_cache_checksum_str (cache, self->sdk);
+  builder_cache_checksum_str (cache, builder_manifest_get_sdk_version (self));
   /* Always rebuild on sdk change if we're actually including the sdk in the cache */
   if (self->writable_sdk || self->build_runtime ||
       builder_context_get_rebuild_on_sdk_change (context))
@@ -4014,7 +4042,7 @@ builder_manifest_install_deps (BuilderManifest *self,
   else
     {
       sdk = self->sdk;
-      sdk_branch = builder_manifest_get_runtime_version (self);
+      sdk_branch = builder_manifest_get_sdk_version (self);
     }
 
   /* Sdk */

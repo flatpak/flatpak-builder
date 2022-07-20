@@ -1155,6 +1155,10 @@
       "description": "The name of the development runtime that the application builds with.",
       "type": "string"
     },
+    "sdk-version": {
+      "description": "The version of the development runtime that the application builds with, defaults to the runtime version.",
+      "type": "string"
+    },
     "var": {
       "description": "Initialize the (otherwise empty) writable /var in the build with a copy of this runtime.",
       "type": "string"
