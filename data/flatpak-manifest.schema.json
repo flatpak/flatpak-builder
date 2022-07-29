@@ -454,6 +454,10 @@
           }
         }
       },
+      "patternProperties": {
+        "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
+        "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+      },
       "additionalProperties": false
     },
     "source": {
