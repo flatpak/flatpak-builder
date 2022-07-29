@@ -147,9 +147,9 @@
           "patternProperties": {
             ".*": {
               "$ref": "#/$defs/build-options"
-            },
-            "additionalProperties": false
-          }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -1341,9 +1341,9 @@
       "patternProperties": {
         ".*": {
           "$ref": "#/$defs/extension"
-        },
-        "additionalProperties": false
-      }
+        }
+      },
+      "additionalProperties": false
     },
     "add-build-extensions": {
       "description": "This is a dictionary of extension objects similar to add-extensions. The main difference is that the extensions are added early and are available for use during the build.",
@@ -1351,9 +1351,9 @@
       "patternProperties": {
         ".*": {
           "$ref": "#/$defs/extension"
-        },
-        "additionalProperties": false
-      }
+        }
+      },
+      "additionalProperties": false
     },
     "cleanup": {
       "description": "An array of file patterns that should be removed at the end. Patterns starting with / are taken to be full pathnames (without the /app prefix), otherwise they just match the basename.",
@@ -1430,8 +1430,7 @@
     "desktop-file-name-suffix": {
       "description": "This string will be suffixed to the Name key in the main application desktop file.",
       "type": "string"
-    },
-    "additionalProperties": false
+    }
   },
   "patternProperties": {
     "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
