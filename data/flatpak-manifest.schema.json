@@ -458,6 +458,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "name"
+      ],
       "additionalProperties": false
     },
     "source": {
@@ -503,7 +506,10 @@
                 "extra-data"
               ]
             }
-          }
+          },
+          "required": [
+            "type"
+          ]
         },
         {
           "if": {
@@ -721,6 +727,20 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "oneOf": [
+        { "required": [ "url" ] },
+        { "required": [ "path" ] }
+      ],
+      "dependencies": {
+        "url": {
+          "anyOf": [
+            { "required": [ "sha256" ] },
+            { "required": [ "sha512" ] },
+            { "required": [ "sha1" ] },
+            { "required": [ "md5" ] }
+          ]
+        }
+      },
       "additionalProperties": false
     },
     "source-git": {
@@ -775,6 +795,10 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "oneOf": [
+        { "required": [ "url" ] },
+        { "required": [ "path" ] }
+      ],
       "additionalProperties": false
     },
     "source-bzr": {
@@ -805,6 +829,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "url"
+      ],
       "additionalProperties": false
     },
     "source-svn": {
@@ -835,6 +862,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "url"
+      ],
       "additionalProperties": false
     },
     "source-dir": {
@@ -865,6 +895,9 @@
           }
         }
       },
+      "required": [
+        "path"
+      ],
       "patternProperties": {
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
@@ -927,6 +960,20 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "oneOf": [
+        { "required": [ "url" ] },
+        { "required": [ "path" ] }
+      ],
+      "dependencies": {
+        "url": {
+          "anyOf": [
+            { "required": [ "sha256" ] },
+            { "required": [ "sha512" ] },
+            { "required": [ "sha1" ] },
+            { "required": [ "md5" ] }
+          ]
+        }
+      },
       "additionalProperties": false
     },
     "source-script": {
@@ -961,6 +1008,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "commands"
+      ],
       "additionalProperties": false
     },
     "source-inline": {
@@ -995,6 +1045,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "dest-filename"
+      ],
       "additionalProperties": false
     },
     "source-shell": {
@@ -1025,6 +1078,9 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "commands"
+      ],
       "additionalProperties": false
     },
     "source-patch": {
@@ -1079,6 +1135,10 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "oneOf": [
+        { "required": [ "paths" ] },
+        { "required": [ "path" ] }
+      ],
       "additionalProperties": false
     },
     "source-extra-data": {
@@ -1121,6 +1181,12 @@
         "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
+      "required": [
+        "url",
+        "sha256",
+        "size",
+        "filename"
+      ],
       "additionalProperties": false
     }
   },
@@ -1365,5 +1431,19 @@
     "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
     "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
   },
+  "allOf": [
+    {
+      "oneOf": [
+        { "required": [ "id" ] },
+        { "required": [ "app-id" ] }
+      ]
+    },
+    {
+      "required": [
+        "runtime",
+        "sdk"
+      ]
+    }
+  ],
   "additionalProperties": false
 }
