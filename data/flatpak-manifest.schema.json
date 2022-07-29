@@ -344,6 +344,7 @@
         },
         "cmake": {
           "description": "Use cmake instead of configure (deprecated: use buildsystem instead).",
+          "deprecated": true,
           "type": "boolean"
         },
         "buildsystem": {
@@ -700,10 +701,12 @@
         },
         "md5": {
           "description": "The md5 checksum of the file, verified after download. Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.",
+          "deprecated": true,
           "type": "string"
         },
         "sha1": {
           "description": "The sha1 checksum of the file, verified after download. Note that sha1 is no longer considered a safe checksum, we recommend you use at least sha256.",
+          "deprecated": true,
           "type": "string"
         },
         "sha256": {
@@ -937,10 +940,12 @@
         },
         "md5": {
           "description": "The md5 checksum of the file, verified after download. Note that md5 is no longer considered a safe checksum, we recommend you use at least sha256.",
+          "deprecated": true,
           "type": "string"
         },
         "sha1": {
           "description": "The sha1 checksum of the file, verified after download. Note that sha1 is no longer considered a safe checksum, we recommend you use at least sha256.",
+          "deprecated": true,
           "type": "string"
         },
         "sha256": {
@@ -1193,6 +1198,7 @@
   "properties": {
     "app-id": {
       "description": "A string defining the application id.",
+      "deprecated": true,
       "type": "string"
     },
     "id": {
