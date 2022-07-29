@@ -282,15 +282,16 @@
           "description": "An array of objects defining sources that will be downloaded and extracted in order. String members in the array are interpreted as the name of a separate json or yaml file that contains sources.",
           "type": "array",
           "items": {
-            "oneOf": [
-              {
-                "$ref": "#/$defs/source"
-              },
-              {
-                "type": "string",
-                "description": "Name of a separate json or yaml file that contains sources."
-              }
-            ]
+            "if": {
+              "type": "object"
+            },
+            "then": {
+              "$ref": "#/$defs/source"
+            },
+            "else": {
+              "type": "string",
+              "description": "Name of a separate json or yaml file that contains sources."
+            }
           }
         },
         "config-opts": {
@@ -440,15 +441,16 @@
           "description": "An array of objects specifying the modules to be built in order. String members in the array are interpreted as the name of a separate json or yaml file that contains a module.",
           "type": "array",
           "items": {
-            "oneOf": [
-              {
-                "$ref": "#/$defs/module"
-              },
-              {
-                "type": "string",
-                "description": "Name of a separate json or yaml file that contains a module."
-              }
-            ]
+            "if": {
+              "type": "object"
+            },
+            "then": {
+              "$ref": "#/$defs/module"
+            },
+            "else": {
+              "type": "string",
+              "description": "Name of a separate json or yaml file that contains a module."
+            }
           }
         }
       },
@@ -1255,19 +1257,7 @@
       "$ref": "#/$defs/build-options"
     },
     "modules": {
-      "description": "An array of objects or strings specifying the modules to be built in order. String members in the array are interpreted as the name of a separate json or yaml file that contains a module.",
-      "type": "array",
-      "items": {
-        "oneOf": [
-          {
-            "$ref": "#/$defs/module"
-          },
-          {
-            "type": "string",
-            "description": "Name of a separate json or yaml file that contains a module."
-          }
-        ]
-      }
+      "$ref": "#/$defs/module/properties/modules"
     },
     "add-extensions": {
       "description": "This is a dictionary of extension objects. The key is the name of the extension.",
