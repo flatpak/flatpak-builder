@@ -22,7 +22,6 @@
 #define __BUILDER_UTILS_H__
 
 #include <gio/gio.h>
-#include <libsoup/soup.h>
 #include <json-glib/json-glib.h>
 #include <curl/curl.h>
 
@@ -90,12 +89,20 @@ gboolean builder_maybe_host_spawnv (GFile                *dir,
                                     const gchar * const  *argv,
                                     const gchar * const  *unresolved_argv);
 
-gboolean builder_download_uri (SoupURI        *uri,
+gboolean builder_download_uri (GUri           *uri,
                                GFile          *dest,
                                const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                CURL           *curl_session,
                                GError        **error);
+
+gboolean builder_download_uri_buffer (GUri           *uri,
+                                      CURL           *session,
+                                      GOutputStream  *out,
+                                      GChecksum     **checksums,
+                                      gsize           n_checksums,
+                                      GError        **error);
+
 
 gsize builder_get_all_checksums (const char *checksums[BUILDER_CHECKSUMS_LEN],
                                  GChecksumType checksums_type[BUILDER_CHECKSUMS_LEN],

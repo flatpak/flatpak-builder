@@ -1083,18 +1083,18 @@ builder_curl_write_cb (gpointer *buffer,
   return bytes_written;
 }
 
-static gboolean
-builder_download_uri_curl (SoupURI        *uri,
-                           CURL           *session,
-                           GOutputStream  *out,
-                           GChecksum     **checksums,
-                           gsize           n_checksums,
-                           GError        **error)
+gboolean
+builder_download_uri_buffer (GUri           *uri,
+                             CURL           *session,
+                             GOutputStream  *out,
+                             GChecksum     **checksums,
+                             gsize           n_checksums,
+                             GError        **error)
 {
   CURLcode retcode;
   CURLWriteData write_data;
   static gchar error_buffer[CURL_ERROR_SIZE];
-  g_autofree gchar *url = soup_uri_to_string (uri, FALSE);
+  g_autofree gchar *url = g_uri_to_string (uri);
 
   curl_easy_setopt (session, CURLOPT_URL, url);
   curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
@@ -1120,7 +1120,7 @@ builder_download_uri_curl (SoupURI        *uri,
 }
 
 gboolean
-builder_download_uri (SoupURI        *uri,
+builder_download_uri (GUri           *uri,
                       GFile          *dest,
                       const char     *checksums[BUILDER_CHECKSUMS_LEN],
                       GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
@@ -1151,12 +1151,12 @@ builder_download_uri (SoupURI        *uri,
   if (out == NULL)
     return FALSE;
 
-  if (!builder_download_uri_curl (uri,
-                                  curl_session,
-                                  G_OUTPUT_STREAM (out),
-                                  (GChecksum **)checksum_array->pdata,
-                                  checksum_array->len,
-                                  error))
+  if (!builder_download_uri_buffer (uri,
+                                    curl_session,
+                                    G_OUTPUT_STREAM (out),
+                                    (GChecksum **)checksum_array->pdata,
+                                    checksum_array->len,
+                                    error))
     {
       unlink (flatpak_file_get_path_cached (tmp));
       return FALSE;

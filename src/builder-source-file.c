@@ -213,11 +213,11 @@ builder_source_file_validate (BuilderSource  *source,
 }
 
 
-static SoupURI *
+static GUri *
 get_uri (BuilderSourceFile *self,
          GError           **error)
 {
-  SoupURI *uri;
+  GUri *uri;
 
   if (self->url == NULL)
     {
@@ -225,10 +225,9 @@ get_uri (BuilderSourceFile *self,
       return NULL;
     }
 
-  uri = soup_uri_new (self->url);
+  uri = g_uri_parse (self->url, CONTEXT_HTTP_URI_FLAGS, error);
   if (uri == NULL)
     {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Invalid URL '%s'", self->url);
       return NULL;
     }
   return uri;
@@ -240,7 +239,7 @@ get_download_location (BuilderSourceFile *self,
                        BuilderContext    *context,
                        GError           **error)
 {
-  g_autoptr(SoupURI) uri = NULL;
+  g_autoptr(GUri) uri = NULL;
   const char *path;
   g_autofree char *base_name = NULL;
   g_autoptr(GFile) file = NULL;
@@ -251,7 +250,7 @@ get_download_location (BuilderSourceFile *self,
   if (uri == NULL)
     return FALSE;
 
-  path = soup_uri_get_path (uri);
+  path = g_uri_get_path (uri);
 
   if (g_str_has_prefix (self->url, "data:"))
     {
@@ -329,23 +328,27 @@ download_data_uri (const char     *url,
                    BuilderContext *context,
                    GError        **error)
 {
-  SoupSession *session;
-
-  g_autoptr(SoupRequest) req = NULL;
+  CURL *session;
+  g_autoptr(GError) first_error = NULL;  
   g_autoptr(GInputStream) input = NULL;
   g_autoptr(GOutputStream) out = NULL;
+  g_autoptr(GUri) parsed = NULL;
 
-  session = builder_context_get_soup_session (context);
+  parsed = g_uri_parse(url, CONTEXT_HTTP_URI_FLAGS, error);
+  if (!parsed)
+    {
+      return FALSE;
+    }
 
-  req = soup_session_request (session, url, error);
-  if (req == NULL)
-    return NULL;
-
-  input = soup_request_send (req, NULL, error);
-  if (input == NULL)
-    return NULL;
-
+  session = builder_context_get_curl_session (context);
   out = g_memory_output_stream_new_resizable ();
+
+  if (!builder_download_uri_buffer (parsed, session, out, NULL, 0, error))
+    {
+      g_propagate_error (error, g_steal_pointer (&first_error));
+      return NULL;
+    }
+
   if (!g_output_stream_splice (out,
                                input,
                                G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET | G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,

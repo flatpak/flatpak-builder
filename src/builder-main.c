@@ -422,14 +422,6 @@ main (int    argc,
   else
     g_unsetenv ("GIO_USE_VFS");
 
-  /* Work around libsoup/glib race condition, as per:
-     https://bugzilla.gnome.org/show_bug.cgi?id=796031 and
-     https://bugzilla.gnome.org/show_bug.cgi?id=674885#c87 */
-  g_type_ensure (G_TYPE_SOCKET_FAMILY);
-  g_type_ensure (G_TYPE_SOCKET_TYPE);
-  g_type_ensure (G_TYPE_SOCKET_PROTOCOL);
-  g_type_ensure (G_TYPE_SOCKET_ADDRESS);
-
   orig_argv = g_memdup (argv, sizeof (char *) * argc);
   orig_argc = argc;
 
@@ -553,7 +545,7 @@ main (int    argc,
   if (opt_sources_urls)
     {
       g_autoptr(GPtrArray) sources_urls = NULL;
-      sources_urls = g_ptr_array_new_with_free_func ((GDestroyNotify)soup_uri_free);
+      sources_urls = g_ptr_array_new_with_free_func ((GDestroyNotify) g_uri_unref);
       for (i = 0; opt_sources_urls[i] != NULL; i++)
         {
           if (!g_str_has_suffix (opt_sources_urls[i], "/"))
@@ -562,10 +554,10 @@ main (int    argc,
               opt_sources_urls[i] = g_strdup_printf ("%s/", tmp);
             }
 
-          SoupURI *uri = soup_uri_new (opt_sources_urls[i]);
+          GUri *uri = g_uri_parse (opt_sources_urls[i], CONTEXT_HTTP_URI_FLAGS, &error);
           if (uri == NULL)
             {
-              g_printerr ("Invalid URL '%s'", opt_sources_urls[i]);
+              g_printerr ("Invalid URL '%s'", error->message);
               return 1;
             }
           g_ptr_array_add (sources_urls, uri);

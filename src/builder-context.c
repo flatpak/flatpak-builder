@@ -37,6 +37,7 @@
 #include "builder-cache.h"
 #include "builder-utils.h"
 
+
 struct BuilderContext
 {
   GObject         parent;
@@ -45,7 +46,6 @@ struct BuilderContext
   GFile          *run_dir; /* directory flatpak-builder was started from */
   GFile          *base_dir; /* directory with json manifest, origin for source files */
   char           *state_subdir;
-  SoupSession    *soup_session;
   CURL           *curl_session;
   char           *arch;
   char           *default_branch;
@@ -116,7 +116,6 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->app_dir);
   g_clear_object (&self->run_dir);
   g_clear_object (&self->base_dir);
-  g_clear_object (&self->soup_session);
   g_clear_object (&self->options);
   g_clear_object (&self->sdk_config);
   g_free (self->arch);
@@ -383,24 +382,32 @@ builder_context_download_uri (BuilderContext *self,
                               GError        **error)
 {
   int i;
-  g_autoptr(SoupURI) original_uri = soup_uri_new (url);
   g_autoptr(GError) first_error = NULL;
+  g_autoptr(GUri) original_uri = g_uri_parse (url, CONTEXT_HTTP_URI_FLAGS, &first_error);
 
   if (original_uri == NULL)
-    return flatpak_fail (error, _("Could not parse URI “%s”"), url);
+    {
+      g_propagate_error (error, g_steal_pointer (&first_error));
+      return FALSE;
+    }
 
   g_print ("Downloading %s\n", url);
 
   if (self->sources_urls != NULL)
     {
-      g_autofree char *base_name = g_path_get_basename (soup_uri_get_path (original_uri));
+      g_autofree char *base_name = g_path_get_basename (g_uri_get_path (original_uri));
       g_autofree char *rel = g_build_filename ("downloads", checksums[0], base_name, NULL);
 
       for (i = 0; i < self->sources_urls->len; i++)
         {
-          SoupURI *base_uri = g_ptr_array_index (self->sources_urls, i);
-          g_autoptr(SoupURI) mirror_uri = soup_uri_new_with_base (base_uri, rel);
-          g_autofree char *mirror_uri_str = soup_uri_to_string (mirror_uri, FALSE);
+          GUri *base_uri = g_ptr_array_index (self->sources_urls, i);
+          g_autoptr(GUri) mirror_uri = g_uri_parse_relative (base_uri, rel, CONTEXT_HTTP_URI_FLAGS, &first_error);
+          if (mirror_uri == NULL)
+            {
+              g_propagate_error (error, g_steal_pointer (&first_error));
+              return FALSE;
+            }
+          g_autofree char *mirror_uri_str = g_uri_to_string (mirror_uri);
           g_print ("Trying mirror %s\n", mirror_uri_str);
           g_autoptr(GError) my_error = NULL;
 
@@ -430,7 +437,13 @@ builder_context_download_uri (BuilderContext *self,
           for (i = 0; mirrors[i] != NULL; i++)
             {
               g_autoptr(GError) mirror_error = NULL;
-              g_autoptr(SoupURI) mirror_uri = soup_uri_new (mirrors[i]);
+              g_autoptr(GUri) mirror_uri = g_uri_parse (mirrors[i], CONTEXT_HTTP_URI_FLAGS, &mirror_error);
+              if (!mirror_uri)
+                {
+                  g_propagate_error (error, g_steal_pointer (&mirror_error));
+                  return FALSE;
+                }
+
               g_print ("Trying mirror %s\n", mirrors[i]);
               if (!builder_download_uri (mirror_uri,
                                          dest,
@@ -542,15 +555,6 @@ GFile *
 builder_context_get_ccache_dir (BuilderContext *self)
 {
   return self->ccache_dir;
-}
-
-SoupSession *
-builder_context_get_soup_session (BuilderContext *self)
-{
-  if (self->soup_session == NULL)
-    self->soup_session = flatpak_create_soup_session ("flatpak-builder " PACKAGE_VERSION);
-
-  return self->soup_session;
 }
 
 CURL *

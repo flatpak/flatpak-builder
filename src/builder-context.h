@@ -22,13 +22,21 @@
 #define __BUILDER_CONTEXT_H__
 
 #include <gio/gio.h>
-#include <libsoup/soup.h>
 #include <curl/curl.h>
 #include "builder-options.h"
 #include "builder-utils.h"
 #include "builder-sdk-config.h"
 
 G_BEGIN_DECLS
+
+/* Same as SOUP_HTTP_URI_FLAGS, means all possible flags for http uris */
+
+#if GLIB_CHECK_VERSION (2, 68, 0)
+#define CONTEXT_HTTP_URI_FLAGS (G_URI_FLAGS_HAS_PASSWORD | G_URI_FLAGS_ENCODED_PATH | G_URI_FLAGS_ENCODED_QUERY | G_URI_FLAGS_ENCODED_FRAGMENT | G_URI_FLAGS_SCHEME_NORMALIZE)
+#else
+/* GLib 2.66 didn't support scheme-based normalization */
+#define CONTEXT_HTTP_URI_FLAGS (G_URI_FLAGS_HAS_PASSWORD | G_URI_FLAGS_ENCODED_PATH | G_URI_FLAGS_ENCODED_QUERY | G_URI_FLAGS_ENCODED_FRAGMENT)
+#endif
 
 /* BuilderContext defined in builder-cache.h to fix include loop */
 
@@ -69,7 +77,6 @@ gboolean        builder_context_download_uri (BuilderContext *self,
                                               const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
                                               GError        **error);
-SoupSession *   builder_context_get_soup_session (BuilderContext *self);
 CURL *          builder_context_get_curl_session (BuilderContext *self);
 const char *    builder_context_get_arch (BuilderContext *self);
 void            builder_context_set_arch (BuilderContext *self,
