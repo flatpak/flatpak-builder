@@ -26,7 +26,6 @@
 #include "libglnx/libglnx.h"
 #include <gio/gio.h>
 #include <gio/gunixfdlist.h>
-#include <libsoup/soup.h>
 #include <ostree.h>
 #include <json-glib/json-glib.h>
 #include <curl/curl.h>
@@ -283,14 +282,6 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (OstreeRepoCommitModifier, ostree_repo_commit_modi
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (OstreeRepoDevInoCache, ostree_repo_devino_cache_unref)
 #endif
 
-#if !defined(SOUP_AUTOCLEANUPS_H) && !defined(__SOUP_AUTOCLEANUPS_H__)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (SoupSession, g_object_unref)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (SoupMessage, g_object_unref)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (SoupRequest, g_object_unref)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (SoupRequestHTTP, g_object_unref)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC (SoupURI, soup_uri_free)
-#endif
-
 #if !JSON_CHECK_VERSION(1,1,2)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonArray, json_array_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonBuilder, g_object_unref)
@@ -317,7 +308,6 @@ gboolean flatpak_allocate_tmpdir (int           tmpdir_dfd,
                                   GError      **error);
 
 
-SoupSession * flatpak_create_soup_session (const char *user_agent);
 CURL * flatpak_create_curl_session (const char *user_agent);
 
 typedef struct FlatpakContext FlatpakContext;

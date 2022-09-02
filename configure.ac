@@ -12,7 +12,7 @@ AC_INIT([flatpak-builder],
         [flatpak-builder],
         [http://flatpak.org/])
 
-GLIB_REQS=2.44
+GLIB_REQS=2.66
 OSTREE_REQS=2017.14
 FLATPAK_REQS=0.99.1
 SYSTEM_DEBUGEDIT_REQS=5.0
@@ -83,7 +83,7 @@ PKG_PROG_PKG_CONFIG([0.24])
 # For libglnx
 AC_CHECK_HEADER([sys/xattr.h], [], [AC_MSG_ERROR([You must have sys/xattr.h from glibc])])
 
-PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 libsoup-2.4 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl])
+PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl])
 
 dnl ************************
 dnl *** check for libelf ***
