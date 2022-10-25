@@ -103,4 +103,3 @@ system-helper/org.freedesktop.Flatpak.policy
 system-helper/org.freedesktop.Flatpak.rules
 flatpak-bwrap
 py-compile
-/subprojects/libglnx/
