@@ -13,7 +13,7 @@ env:
   TESTS_TIMEOUT: 10 # in minutes
 
 jobs:
-  check:
+  check-autotools:
     name: Build with gcc and test
     runs-on: ubuntu-22.04
     steps:
@@ -67,3 +67,87 @@ jobs:
         CFLAGS: -Werror=unused-variable
     - name: Build flatpak
       run: make -j $(getconf _NPROCESSORS_ONLN)
+
+  check-meson:
+    name: Ubuntu 22.04 meson build
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        compiler: ['gcc', 'clang']
+
+    env:
+      UBUNTU_VERSION: '22.04'
+      CC: ${{ matrix.compiler }}
+      BASE_CFLAGS: -Wp,-D_FORTIFY_SOURCE=2
+      BUILDDIR: builddir
+
+    steps:
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get upgrade -y
+        sudo apt-get install -y \
+          ${{ matrix.compiler }} \
+          attr \
+          automake \
+          autopoint \
+          bison \
+          debugedit \
+          dbus \
+          desktop-file-utils \
+          elfutils \
+          flatpak \
+          gettext \
+          git \
+          gobject-introspection \
+          gtk-doc-tools \
+          libappstream-glib-dev \
+          libarchive-dev \
+          libattr1-dev \
+          libcap-dev \
+          libcurl4-gnutls-dev \
+          libdconf-dev \
+          libdw-dev \
+          libelf-dev \
+          libflatpak-dev \
+          libfuse-dev \
+          libgirepository1.0-dev \
+          libglib2.0-dev \
+          libgpgme11-dev \
+          libjson-glib-dev \
+          libostree-dev \
+          libpolkit-agent-1-dev \
+          libpolkit-gobject-1-dev \
+          libseccomp-dev \
+          libsoup2.4-dev \
+          libsystemd-dev \
+          libxml2-utils \
+          libyaml-dev \
+          meson \
+          ostree \
+          patch \
+          shared-mime-info \
+          socat \
+          unzip
+
+    - name: Check out flatpak-builder
+      uses: actions/checkout@v2
+
+    - name: Configure flatpak-builder
+      # TODO: Enable gtk-doc builds
+      run: meson . ${BUILDDIR}
+
+    - name: Build flatpak-builder with Meson
+      run: meson compile -C ${BUILDDIR}
+
+    - name: Run tests with Meson
+      run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose
+
+    - name: Upload test logs
+      uses: actions/upload-artifact@v2
+      if: failure() || cancelled()
+      with:
+        name: test logs
+        path: |
+          builddir/meson-logs/testlog.txt
+          installed-test-logs/
