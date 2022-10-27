@@ -8,6 +8,10 @@ on:
     branches:
     - main
 
+env:
+  DEBIAN_FRONTEND: noninteractive
+  TESTS_TIMEOUT: 10 # in minutes
+
 jobs:
   check:
     name: Build with gcc and test
