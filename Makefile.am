@@ -80,7 +80,14 @@ flatpak_builder_debugedit_CFLAGS =		\
 
 endif # !WITH_SYSTEM_DEBUGEDIT
 
-EXTRA_DIST += README.md
+EXTRA_DIST += 			\
+	README.md		\
+	meson.build		\
+	meson_options.txt	\
+	data/meson.build	\
+	doc/meson.build		\
+	src/meson.build		\
+	$(NULL)
 
 AM_DISTCHECK_CONFIGURE_FLAGS =		\
 	--enable-documentation		\
