@@ -814,7 +814,7 @@ git_extract_submodule (const char     *repo_location,
             return FALSE;
 
           if (!git (checkout_dir, NULL, 0, error,
-                    "submodule", "update", "--init", path, NULL))
+                    "-c", "protocol.file.allow=always", "submodule", "update", "--init", path, NULL))
             return FALSE;
 
           child_dir = g_file_resolve_relative_path (checkout_dir, path);
