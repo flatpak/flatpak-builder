@@ -578,6 +578,16 @@ builder_git_mirror_repo (const char     *repo_location,
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
+          g_print ("Fetching LFS assets\n");
+          if (!git (mirror_dir, NULL, 0, error,
+                    "lfs", "fetch", "--all", NULL))
+            {
+              git (mirror_dir, NULL, 0, error,
+                   "lfs", "logs", "last", NULL);
+              return FALSE;
+            }
+
+
 	  /* It turns out that older versions of git (at least 2.7.4)
 	   * cannot check out a commit unless a real tag/branch points
 	   * to it, which is not the case for e.g. gitbug pull requests.
@@ -606,6 +616,15 @@ builder_git_mirror_repo (const char     *repo_location,
                     was_shallow ? "--unshallow" : NULL,
                     NULL))
             return FALSE;
+
+          g_print ("Fetching LFS assets\n");
+          if (!git (mirror_dir, NULL, 0, error,
+                    "lfs", "fetch", "--all", NULL))
+            {
+              git (mirror_dir, NULL, 0, error,
+                   "lfs", "logs", "last", NULL);
+              return FALSE;
+            }
         }
 
       if (alternates)
@@ -707,6 +726,14 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
   if (!git (mirror_dir, NULL, 0, error,
             "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
     return FALSE;
+
+  if (!git (mirror_dir, NULL, 0, error,
+            "lfs", "fetch", "origin", full_ref, NULL))
+    {
+      git (mirror_dir, NULL, 0, error,
+           "lfs", "logs", "last", NULL);
+      return FALSE;
+    }
 
   /* Always mirror submodules */
   current_commit = git_get_current_commit (mirror_dir, ref, FALSE, context, error);
@@ -859,8 +886,17 @@ builder_git_checkout (const char     *repo_location,
     return FALSE;
 
   if (!git (dest, NULL, 0, error,
+           "lfs", "install", NULL))
+    return FALSE;
+
+  if (!git (dest, NULL, 0, error,
             "checkout", branch, NULL))
     return FALSE;
+
+  if (!git (dest, NULL, 0, error,
+           "lfs", "checkout", NULL))
+    return FALSE;
+
 
   if (mirror_flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
     if (!git_extract_submodule (repo_location, dest, branch, context, error))
