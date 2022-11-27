@@ -1,3 +1,9 @@
+Changes in 1.2.3
+================
+
+This is a minor bug-fix release that fixes cloning `file://` URIs with
+git 2.38.1 or newer.
+
 Changes in 1.2.2
 ================
 
