@@ -599,6 +599,11 @@ main (int    argc,
 
       int mirror_flags = FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
 
+      if (opt_no_shallow_clone)
+        {
+          mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW;
+        }
+
       if (opt_disable_updates)
         {
           mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
