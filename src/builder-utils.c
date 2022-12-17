@@ -528,10 +528,18 @@ builder_gobject_from_data (GType       gtype,
                            GError    **error)
 {
   g_autoptr(JsonNode) json = builder_json_node_from_data (relpath, contents, error);
-  if (json != NULL)
-    return json_gobject_deserialize (gtype, json);
-  else
+
+  if (json == NULL)
     return NULL;
+
+  if (JSON_NODE_TYPE (json) != JSON_NODE_OBJECT)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Unexpected identifier '%s'", json_to_string (json, FALSE));
+      return NULL;
+    }
+
+  return json_gobject_deserialize (gtype, json);
 }
 
 char **
