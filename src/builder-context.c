@@ -895,7 +895,7 @@ builder_context_enable_rofiles (BuilderContext *self,
       if (child == 0)
         {
           /* In child */
-          struct sigaction new_action;
+          struct sigaction new_action, ignore_action;
 
           prctl (PR_SET_PDEATHSIG, SIGHUP);
 
@@ -904,9 +904,12 @@ builder_context_enable_rofiles (BuilderContext *self,
           new_action.sa_flags = 0;
           sigaction (SIGHUP, &new_action, NULL);
 
-          sigset (SIGINT, SIG_IGN);
-          sigset (SIGPIPE, SIG_IGN);
-          sigset (SIGSTOP, SIG_IGN);
+          ignore_action.sa_handler = SIG_IGN;
+          sigemptyset(&ignore_action.sa_mask);
+          ignore_action.sa_flags = 0;
+          sigaction(SIGINT, &ignore_action, NULL);
+          sigaction(SIGPIPE, &ignore_action, NULL);
+          sigaction(SIGSTOP, &ignore_action, NULL);
 
           while (TRUE)
             pause ();
