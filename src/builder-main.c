@@ -406,6 +406,7 @@ main (int    argc,
   int argnr;
   char *p;
   struct stat statbuf;
+  gsize manifest_length;
 
   setlocale (LC_ALL, "");
 
@@ -641,10 +642,15 @@ main (int    argc,
     }
 
   builder_context_set_base_dir (build_context, base_dir);
-
-  if (!g_file_get_contents (flatpak_file_get_path_cached (manifest_file), &manifest_contents, NULL, &error))
+  if (!g_file_get_contents (flatpak_file_get_path_cached (manifest_file), &manifest_contents, &manifest_length, &error))
     {
       g_printerr ("Can't load '%s': %s\n", manifest_rel_path, error->message);
+      return 1;
+    }
+
+  if (manifest_length == 0)
+    {
+      g_printerr ("Empty manifest file: '%s'\n", manifest_rel_path);
       return 1;
     }
 
