@@ -785,7 +785,7 @@ main (int    argc,
               g_print ("Emptying app dir '%s'\n", app_dir_path);
               if (!flatpak_rm_rf (app_dir, NULL, &error))
                 {
-                  g_printerr ("Couldn't empty app dir '%s': %s",
+                  g_printerr ("Couldn't empty app dir '%s': %s\n",
                               app_dir_path, error->message);
                   return 1;
                 }
