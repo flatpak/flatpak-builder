@@ -423,7 +423,7 @@ main (int    argc,
   else
     g_unsetenv ("GIO_USE_VFS");
 
-  orig_argv = g_memdup (argv, sizeof (char *) * argc);
+  orig_argv = g_memdup2 (argv, sizeof (char *) * argc);
   orig_argc = argc;
 
   first_non_arg = 1;
