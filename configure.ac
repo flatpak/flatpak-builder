@@ -12,6 +12,9 @@ AC_INIT([flatpak-builder],
         [flatpak-builder],
         [http://flatpak.org/])
 
+AC_DEFINE([GLIB_VERSION_MIN_REQUIRED], [GLIB_VERSION_2_66], [Glib min version])
+AC_DEFINE([GLIB_VERSION_MAX_ALLOWED], [GLIB_VERSION_2_68], [Glib max version])
+
 GLIB_REQS=2.66
 OSTREE_REQS=2017.14
 FLATPAK_REQS=0.99.1
