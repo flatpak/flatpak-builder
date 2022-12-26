@@ -225,8 +225,9 @@ expand_modules (BuilderContext *context, GList *modules,
                 GList **expanded, GHashTable *names, GError **error)
 {
   GList *l;
+  gsize i = 1;
 
-  for (l = modules; l; l = l->next)
+  for (l = modules; l; l = l->next, i++)
     {
       BuilderModule *m = l->data;
       GList *submodules = NULL;
@@ -246,11 +247,8 @@ expand_modules (BuilderContext *context, GList *modules,
       name = builder_module_get_name (m);
       if (name == NULL)
         {
-          /* FIXME: We'd like to report *something* for the user
-                    to locate the errornous module definition.
-           */
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "Module has no 'name' attribute set");
+                       "The %lu. Module has no 'name' attribute set", i);
           return FALSE;
         }
       orig_name = name;
