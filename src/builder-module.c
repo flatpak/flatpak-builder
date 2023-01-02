@@ -1892,6 +1892,13 @@ builder_module_build_helper (BuilderModule   *self,
         }
     }
 
+  if (run_shell)
+    {
+      if (!shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error))
+        return FALSE;
+      return TRUE;
+    }
+
   if (configure_file)
     has_configure = g_file_query_exists (configure_file, NULL);
 
@@ -2123,13 +2130,6 @@ builder_module_build_helper (BuilderModule   *self,
     {
       /* ninja defaults to a parallel make, disable it if requested */
       make_j = g_strdup ("-j1");
-    }
-
-  if (run_shell)
-    {
-      if (!shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error))
-        return FALSE;
-      return TRUE;
     }
 
   /* Build and install */
