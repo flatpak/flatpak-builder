@@ -395,11 +395,9 @@ git_mirror_submodules (const char     *repo_location,
             return FALSE;
 
           lines = g_strsplit (g_strstrip (ls_tree), "\n", 0);
+          /* There can be path in the .gitmodules file that are not submodules. */
           if (g_strv_length (lines) != 1)
-            {
-              g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Not a gitlink tree: %s", path);
-              return FALSE;
-            }
+            continue;
 
           words = g_strsplit_set (lines[0], " \t", 4);
 
@@ -794,11 +792,9 @@ git_extract_submodule (const char     *repo_location,
             return FALSE;
 
           lines = g_strsplit (g_strstrip (ls_tree), "\n", 0);
+          /* There can be path in the .gitmodules file that are not submodules. */
           if (g_strv_length (lines) != 1)
-            {
-              g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Not a gitlink tree: %s", path);
-              return FALSE;
-            }
+            continue;
 
           words = g_strsplit_set (lines[0], " \t", 4);
 
