@@ -44,7 +44,9 @@ dist_installed_test_data = \
 	tests/org.test.Deprecated.MD5.file.json \
 	tests/org.test.Deprecated.MD5.file.yaml \
 	tests/org.test.Deprecated.SHA1.archive.json \
+	tests/org.test.Deprecated.SHA1.archive.yaml \
 	tests/org.test.Deprecated.SHA1.file.json \
+	tests/org.test.Deprecated.SHA1.file.yaml \
 	tests/hello.sh \
 	tests/hello.tar.xz \
 	$(NULL)
