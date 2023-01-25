@@ -9,7 +9,6 @@ AM_TESTS_ENVIRONMENT += FLATPAK_BUILDER_DEBUGEDIT=$$(cd $(top_builddir) && pwd)/
 endif
 
 dist_installed_test_extra_scripts += \
-	buildutil/tap-driver.sh \
 	tests/empty-configure \
 	tests/test-configure \
 	tests/make-test-app.sh \
