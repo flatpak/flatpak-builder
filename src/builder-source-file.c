@@ -44,6 +44,7 @@ struct BuilderSourceFile
   char         *sha256;
   char         *sha512;
   char         *dest_filename;
+  char         *http_referer;
 };
 
 typedef struct
@@ -63,6 +64,7 @@ enum {
   PROP_SHA512,
   PROP_DEST_FILENAME,
   PROP_MIRROR_URLS,
+  PROP_HTTP_REFERER,
   LAST_PROP
 };
 
@@ -78,6 +80,7 @@ builder_source_file_finalize (GObject *object)
   g_free (self->sha256);
   g_free (self->sha512);
   g_free (self->dest_filename);
+  g_free (self->http_referer);
   g_strfreev (self->mirror_urls);
 
   G_OBJECT_CLASS (builder_source_file_parent_class)->finalize (object);
@@ -123,6 +126,10 @@ builder_source_file_get_property (GObject    *object,
 
     case PROP_MIRROR_URLS:
       g_value_set_boxed (value, self->mirror_urls);
+      break;
+
+    case PROP_HTTP_REFERER:
+      g_value_set_string (value, self->http_referer);
       break;
 
     default:
@@ -192,6 +199,11 @@ builder_source_file_set_property (GObject      *object,
       tmp = self->mirror_urls;
       self->mirror_urls = g_strdupv (g_value_get_boxed (value));
       g_strfreev (tmp);
+      break;
+
+    case PROP_HTTP_REFERER:
+      g_free (self->http_referer);
+      self->http_referer = g_value_dup_string (value);
       break;
 
     default:
@@ -343,7 +355,7 @@ download_data_uri (const char     *url,
   session = builder_context_get_curl_session (context);
   out = g_memory_output_stream_new_resizable ();
 
-  if (!builder_download_uri_buffer (parsed, session, out, NULL, 0, error))
+  if (!builder_download_uri_buffer (parsed, NULL, session, out, NULL, 0, error))
     {
       g_propagate_error (error, g_steal_pointer (&first_error));
       return NULL;
@@ -423,6 +435,7 @@ builder_source_file_download (BuilderSource  *source,
   if (!builder_context_download_uri (context,
                                      self->url,
                                      (const char **)self->mirror_urls,
+                                     self->http_referer,
                                      file,
                                      checksums,
                                      checksums_type,
@@ -686,6 +699,14 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
                                                        "",
                                                        G_TYPE_STRV,
                                                        G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_HTTP_REFERER,
+                                   g_param_spec_string ("referer",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
 }
 
 static void

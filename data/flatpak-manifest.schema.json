@@ -684,6 +684,10 @@
             "type": "string"
           }
         },
+        "referer": {
+          "description": "Sets the HTTP \"Referer\" header when downloading the archive.",
+          "type": "string"
+        },
         "archive-type": {
           "description": "The type of archive if it cannot be guessed from the path.",
           "type": "string",
@@ -935,6 +939,10 @@
         },
         "url": {
           "description": "The URL of a remote file that will be downloaded and copied into the source dir. This overrides path if both are specified.",
+          "type": "string"
+        },
+        "referer": {
+          "description": "Sets the HTTP \"Referer\" header when downloading the file.",
           "type": "string"
         },
         "mirror-urls": {
