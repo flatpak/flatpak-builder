@@ -90,6 +90,7 @@ gboolean builder_maybe_host_spawnv (GFile                *dir,
                                     const gchar * const  *unresolved_argv);
 
 gboolean builder_download_uri (GUri           *uri,
+                               const char     *http_referer,
                                GFile          *dest,
                                const char     *checksums[BUILDER_CHECKSUMS_LEN],
                                GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
@@ -97,6 +98,7 @@ gboolean builder_download_uri (GUri           *uri,
                                GError        **error);
 
 gboolean builder_download_uri_buffer (GUri           *uri,
+                                      const char     *http_referer,
                                       CURL           *session,
                                       GOutputStream  *out,
                                       GChecksum     **checksums,

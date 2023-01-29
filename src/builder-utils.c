@@ -1093,6 +1093,7 @@ builder_curl_write_cb (gpointer *buffer,
 
 gboolean
 builder_download_uri_buffer (GUri           *uri,
+                             const char     *http_referer,
                              CURL           *session,
                              GOutputStream  *out,
                              GChecksum     **checksums,
@@ -1105,6 +1106,7 @@ builder_download_uri_buffer (GUri           *uri,
   g_autofree gchar *url = g_uri_to_string (uri);
 
   curl_easy_setopt (session, CURLOPT_URL, url);
+  curl_easy_setopt (session, CURLOPT_REFERER, http_referer);
   curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
   curl_easy_setopt (session, CURLOPT_WRITEDATA, &write_data);
   curl_easy_setopt (session, CURLOPT_ERRORBUFFER, error_buffer);
@@ -1129,6 +1131,7 @@ builder_download_uri_buffer (GUri           *uri,
 
 gboolean
 builder_download_uri (GUri           *uri,
+                      const char     *http_referer,
                       GFile          *dest,
                       const char     *checksums[BUILDER_CHECKSUMS_LEN],
                       GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
@@ -1160,6 +1163,7 @@ builder_download_uri (GUri           *uri,
     return FALSE;
 
   if (!builder_download_uri_buffer (uri,
+                                    http_referer,
                                     curl_session,
                                     G_OUTPUT_STREAM (out),
                                     (GChecksum **)checksum_array->pdata,

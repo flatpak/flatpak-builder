@@ -376,6 +376,7 @@ gboolean
 builder_context_download_uri (BuilderContext *self,
                               const char     *url,
                               const char    **mirrors,
+                              const char     *http_referer,
                               GFile          *dest,
                               const char     *checksums[BUILDER_CHECKSUMS_LEN],
                               GChecksumType   checksums_type[BUILDER_CHECKSUMS_LEN],
@@ -412,6 +413,7 @@ builder_context_download_uri (BuilderContext *self,
           g_autoptr(GError) my_error = NULL;
 
           if (builder_download_uri (mirror_uri,
+                                    http_referer,
                                     dest,
                                     checksums, checksums_type,
                                     builder_context_get_curl_session (self),
@@ -424,6 +426,7 @@ builder_context_download_uri (BuilderContext *self,
     }
 
   if (!builder_download_uri (original_uri,
+                             http_referer,
                              dest,
                              checksums, checksums_type,
                              builder_context_get_curl_session (self),
@@ -446,6 +449,7 @@ builder_context_download_uri (BuilderContext *self,
 
               g_print ("Trying mirror %s\n", mirrors[i]);
               if (!builder_download_uri (mirror_uri,
+                                         http_referer,
                                          dest,
                                          checksums, checksums_type,
                                          builder_context_get_curl_session (self),
