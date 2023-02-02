@@ -1255,7 +1255,8 @@ builder_serializable_find_property (JsonSerializable *serializable,
 
   if (pspec == NULL &&
       !g_str_has_prefix (name, "__") &&
-      !g_str_has_prefix (name, "//"))
+      !g_str_has_prefix (name, "//") &&
+      g_strcmp0 (name, "$schema"))
     g_warning ("Unknown property %s for type %s", name, g_type_name_from_instance ((GTypeInstance *)serializable));
 
   return pspec;

@@ -8,6 +8,9 @@
       },
       "comment": {
         "description": "Comment property (ignored by flatpak-builder)"
+      },
+      "schema": {
+        "description": "JSON schema (ignored by flatpak-builder)"
       }
     },
     "build-options": {
@@ -1438,7 +1441,8 @@
   },
   "patternProperties": {
     "^x-.*": { "$ref": "#/$defs/ignored-prop/custom" },
-    "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
+    "^//.*": { "$ref": "#/$defs/ignored-prop/comment" },
+    "^\\$schema$": { "$ref": "#/$defs/ignored-prop/schema" }
   },
   "allOf": [
     {
