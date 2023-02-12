@@ -266,11 +266,12 @@ do_export (BuilderContext *build_context,
 static gboolean
 do_install (BuilderContext *build_context,
             const gchar    *repodir,
-            const gchar    *id,
+            GPtrArray      *manifest_ids,
             const gchar    *branch,
             GError        **error)
 {
   g_autofree char *ref = NULL;
+  int i;
 
   g_autoptr(GPtrArray) args = NULL;
 
@@ -290,11 +291,15 @@ do_install (BuilderContext *build_context,
     g_ptr_array_add (args, g_strdup ("--noninteractive"));
   g_ptr_array_add (args, g_strdup ("--reinstall"));
 
-  ref = flatpak_build_untyped_ref (id, branch,
-                                   builder_context_get_arch (build_context));
-
   g_ptr_array_add (args, g_strdup (repodir));
-  g_ptr_array_add (args, g_strdup (ref));
+
+  for (i = 0; i < manifest_ids->len; i++)
+    {
+      const gchar *id = g_ptr_array_index(manifest_ids, i);
+      ref = flatpak_build_untyped_ref (id, branch,
+                                       builder_context_get_arch (build_context));
+      g_ptr_array_add (args, g_strdup (ref));
+    }
 
   g_ptr_array_add (args, NULL);
 
@@ -1143,13 +1148,26 @@ main (int    argc,
          passed and there were no changes, do nothing in that case */
       if (export_repo == NULL)
         g_printerr ("NOTE: No export due to --require-changes, ignoring --install\n");
-      else if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
-                            builder_manifest_get_id (manifest),
-                            builder_manifest_get_branch (manifest, build_context),
-                            &error))
+      else
         {
-          g_printerr ("Install failed: %s\n", error->message);
-          return 1;
+          g_autoptr(GPtrArray) manifest_ids = g_ptr_array_new_with_free_func (g_free);
+          g_ptr_array_add (manifest_ids, g_strdup (builder_manifest_get_id (manifest)));
+
+          // TODO: Check if debug/locale extensions exist
+          if (FALSE)
+            {
+              g_ptr_array_add(manifest_ids, builder_manifest_get_debug_id (manifest));
+              g_ptr_array_add(manifest_ids, builder_manifest_get_locale_id (manifest));
+            }
+
+          if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
+                           manifest_ids,
+                           builder_manifest_get_branch (manifest, build_context),
+                           &error))
+            {
+              g_printerr ("Install failed: %s\n", error->message);
+              return 1;
+            }
         }
     }
 
