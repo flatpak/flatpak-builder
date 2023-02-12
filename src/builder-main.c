@@ -60,6 +60,7 @@ static gboolean opt_sandboxed;
 static gboolean opt_rebuild_on_sdk_change;
 static gboolean opt_skip_if_unchanged;
 static gboolean opt_install;
+static gboolean opt_install_debug;
 static char *opt_state_dir;
 static char *opt_from_git;
 static char *opt_from_git_branch;
@@ -134,6 +135,7 @@ static GOptionEntry entries[] = {
   { "from-git-branch", 0, 0, G_OPTION_ARG_STRING, &opt_from_git_branch, "Branch to use in --from-git", "BRANCH"},
   { "mirror-screenshots-url", 0, 0, G_OPTION_ARG_STRING, &opt_mirror_screenshots_url, "Download and rewrite screenshots to match this url", "URL"},
   { "install", 0, 0, G_OPTION_ARG_NONE, &opt_install, "Install if build succeeds", NULL},
+  { "install-debug", 0, 0, G_OPTION_ARG_NONE, &opt_install_debug, "Install debug extensions if build succeeds", NULL},
   { "install-deps-from", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_install_deps_from, "Install build dependencies from this remote", "REMOTE"},
   { "install-deps-only", 0, 0, G_OPTION_ARG_NONE, &opt_install_deps_only, "Stop after installing dependencies"},
   { "user", 0, 0, G_OPTION_ARG_NONE, &opt_user, "Install dependencies in user installations", NULL },
@@ -1001,7 +1003,7 @@ main (int    argc,
     }
 
   if (!opt_build_only &&
-      (opt_repo || opt_install) &&
+      (opt_repo || opt_install || opt_install_debug) &&
       (opt_export_only || builder_cache_has_checkout (cache)))
     {
       g_autoptr(GFile) debuginfo_metadata = NULL;
@@ -1011,7 +1013,7 @@ main (int    argc,
 
       if (opt_repo)
         export_repo = g_file_new_for_path (opt_repo);
-      else if (opt_install)
+      else if (opt_install || opt_install_debug)
         export_repo = g_object_ref (builder_context_get_cache_dir (build_context));
 
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
@@ -1209,6 +1211,19 @@ main (int    argc,
         g_printerr ("NOTE: No export due to --require-changes, ignoring --install\n");
       else if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
                             builder_manifest_get_id (manifest),
+                            builder_manifest_get_branch (manifest, build_context),
+                            &error))
+        {
+          g_printerr ("Install failed: %s\n", error->message);
+          return 1;
+        }
+    }
+  if (opt_install_debug)
+    {
+      if (export_repo == NULL)
+        g_printerr ("NOTE: No export due to --require-changes, ignoring --install-debug\n");
+      else if (!do_install (build_context, flatpak_file_get_path_cached (export_repo),
+                            builder_manifest_get_debug_id (manifest),
                             builder_manifest_get_branch (manifest, build_context),
                             &error))
         {
