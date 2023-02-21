@@ -127,7 +127,7 @@ builder_extension_get_property (GObject    *object,
       break;
 
     case PROP_NO_AUTODOWNLOAD:
-      g_value_set_boolean (value, self->autodelete);
+      g_value_set_boolean (value, self->no_autodownload);
       break;
 
     case PROP_LOCALE_SUBSET:
