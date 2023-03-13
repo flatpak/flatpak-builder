@@ -389,7 +389,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>config-opts</option> (array of strings)</term>
-                    <listitem><para>This is an array containing extra options to pass to configure or cmake.</para></listitem>
+                    <listitem><para>This is an array containing extra options passed to the build system during configuration.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>secret-opts</option> (array of strings)</term>
