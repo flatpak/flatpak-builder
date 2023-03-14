@@ -61,15 +61,14 @@
                 <varlistentry>
                     <term><option>branch</option> (string)</term>
                     <listitem><para>The branch to use when exporting
-                    the application. If this is unset the defaults
-                    come from the default-branch option.</para>
+                    the application. If this is unset the default
+                    comes from the default-branch option.</para>
                     <para>This key overrides both the default-branch
                     key, and the --default-branch commandline
                     option. Unless you need a very specific branchname
                     (like for a runtime or an extension) it is
-                    recommended to use the default-branch key instead, because
-                    you can then override the default using --default-branch when
-                    building for instance a test build.</para></listitem>
+                    recommended to use the default-branch key instead, as
+                    that can be overridden by the --default-branch option.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>default-branch</option> (string)</term>
@@ -84,7 +83,7 @@
                     <listitem><para>The collection ID of the repository,
                     defaults to being unset. Setting a globally
                     unique collection ID allows the apps in the repository to be shared over
-                    peer to peer systems without needing further configuration.
+                    peer-to-peer systems without needing further configuration.
                     If building in an existing repository, the collection ID
                     must match the existing configured collection ID for that
                     repository.</para></listitem>
@@ -134,7 +133,7 @@
                     <term><option>command</option> (string)</term>
                     <listitem><para>
                         The filename or path to the main binary of the application. Note that this
-                        is really just a single file, not a commandline. If you want to pass arguments,
+                        must be a single executable, not a commandline or an absolute path. If you want to pass arguments,
                         install a shell script wrapper and use that as the command.
                     </para><para>
                         Also note that the command is used when the application is run via
@@ -387,7 +386,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>secret-env</option> (array of strings)</term>
-                    <listitem><para>This is a array defining which host environment variables is transfered to build-commands or post-install environment.</para></listitem>
+                    <listitem><para>This is an array defining which host environment variables are transfered to the build-commands or post-install environment.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>build-args</option> (array of strings)</term>
@@ -404,8 +403,8 @@
                 <varlistentry>
                     <term><option>secret-opts</option> (array of strings)</term>
                     <listitem><para>This is an array of options that will be passed to
-                    configure, meant to be used to pass secrets through host environment variables. Put
-                    the option with an environment variables and will be resolved beforehand. '-DSECRET_ID=$CI_SECRET'</para></listitem>
+                    configure. This is meant to be used to pass secrets through host environment variables.
+                    Environment variables in the options will be expanded. '-DSECRET_ID=$CI_SECRET'</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>make-args</option> (array of strings)</term>
@@ -421,24 +420,24 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>no-debuginfo</option> (boolean)</term>
-                    <listitem><para>By default (if strip is not true) flatpak-builder extracts all debug info in ELF files to a separate files
-                    and puts this in an extension. If you want to disable this, set no-debuginfo to true.</para></listitem>
+                    <listitem><para>By default (if strip is not true) flatpak-builder extracts all debug info in ELF files to separate files
+                    and puts them into an extension. If you want to disable this, set no-debuginfo to true.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>no-debuginfo-compression</option> (boolean)</term>
-                    <listitem><para>By default when extracting debuginfo we compress the debug sections. If you want to disable this, set no-debuginfo-compression to true.</para></listitem>
+                    <listitem><para>By default when extracting debuginfo the debug sections are compressed. If you want to disable this, set no-debuginfo-compression to true.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>arch</option> (object)</term>
-                    <listitem><para>This is a dictionary defining for each arch a separate build options object that override the main one.</para></listitem>
+                    <listitem><para>This is a dictionary defining a separate build options object for each arch, to override the main build options.</para></listitem>
                 </varlistentry>
             </variablelist>
         </refsect2>
         <refsect2>
             <title>Extension</title>
             <para>
-              Extension define extension points in the app/runtime that can be implemented by extensions, supplying extra files
-              which are available during runtime..
+              Defines extension points in the app or runtime that can be implemented by extensions,
+              supplying extra files which are available during runtime.
             </para>
             <para>
                 These are the properties that are accepted:
@@ -462,7 +461,7 @@
                 <varlistentry>
                     <term><option>remove-after-build</option> (boolean)</term>
                     <listitem><para>If this is true, the extension is
-                    removed during when finishing. This is only
+                    removed when finishing. This is only
                     interesting for extensions in the
                     add-build-extensions property.</para></listitem>
                 </varlistentry>
