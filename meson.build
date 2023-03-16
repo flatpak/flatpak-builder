@@ -41,9 +41,7 @@ endforeach
 debugedit = find_program('debugedit')
 
 subdir('src')
-if get_option('docs')
-  subdir('doc')
-endif
+subdir('doc')
 if get_option('tests')
   subdir('tests')
 endif
