@@ -467,16 +467,14 @@ tar (GFile   *dir,
 }
 
 static gboolean
-unzip (GFile   *dir,
-       GError **error,
-       ...)
+unzip (GFile       *dir,
+       const char  *zip_path,
+       GError     **error)
 {
   gboolean res;
-  va_list ap;
+  const char *argv[] = { "unzip", "-q", zip_path, NULL };
 
-  va_start (ap, error);
-  res = flatpak_spawn (dir, NULL, 0, error, "unzip", ap);
-  va_end (ap);
+  res = flatpak_spawnv (dir, NULL, 0, error, argv, NULL);
 
   return res;
 }
@@ -754,7 +752,7 @@ builder_source_archive_extract (BuilderSource  *source,
       if (zip_dest == NULL)
         return FALSE;
 
-      if (!unzip (zip_dest, error, archive_path, NULL))
+      if (!unzip (zip_dest, archive_path, error))
         return FALSE;
 
       if (self->strip_components > 0)
