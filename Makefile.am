@@ -84,9 +84,11 @@ EXTRA_DIST += 			\
 	README.md		\
 	meson.build		\
 	meson_options.txt	\
-	data/meson.build	\
 	doc/meson.build		\
 	src/meson.build		\
+	tests/meson.build \
+	subprojects/libglnx.wrap \
+	subprojects/libyaml.wrap \
 	$(NULL)
 
 AM_DISTCHECK_CONFIGURE_FLAGS =		\
