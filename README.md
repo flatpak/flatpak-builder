@@ -18,7 +18,7 @@ For information on the command-line tool see `man flatpak-builder` or the [onlin
 
 # Installation
 
-Flatpak-builder uses a the Meson build system. To build just do:
+Flatpak-builder uses the [Meson build system](https://mesonbuild.com/). To build just do:
 ```sh
  meson setup _build
  meson install -C _build
