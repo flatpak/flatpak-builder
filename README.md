@@ -2,39 +2,48 @@
   <img src="https://raw.githubusercontent.com/flatpak/flatpak/main/flatpak.png" alt="Flatpak icon"/>
 </p>
 
-Flatpak-builder is a tool for building flatpaks from sources.
+`flatpak-builder` is a tool for building [flatpaks](https://flatpak.org) from sources.
 
-See http://flatpak.org/ for more information.
+It reads a JSON or YAML based manifest to automatically download, build, and install projects which eventually get exported into a flatpak.
 
-Read documentation for the flatpak-builder [commandline tools](http://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html).
+For information on the manifest format either see `man flatapk-manifest`. A JSON Schema for this format is [available here](https://github.com/flatpak/flatpak-builder/blob/main/data/flatpak-manifest.schema.json).
+
+To use the JSON schema, in [an editor with support](https://code.visualstudio.com/docs/languages/json) for schemas, you can include this line in your manifest: 
+
+```json
+  "$schema": "https://raw.githubusercontent.com/flatpak/flatpak-builder/main/data/flatpak-manifest.schema.json"
+```
+
+For information on the command-line tool see `man flatpak-builder` or the [online documentation](https://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html).
 
 # Installation
 
 Flatpak-builder uses a the Meson build system. To build just do:
-```
- ./meson . _build [args]
- ninja -C _build
- ninja -C _build install
+```sh
+ meson setup _build
+ meson install -C _build
 ```
 
 Configure arguments are documented in `meson_options.txt`.
 
-Flatpak-builder depends on the following executables being present in the
-host system:
+## Runtime dependencies
 
- * tar
- * unzip
+The `flatpak-builder` tool requires `flatpak` being available on the host to
+function. Depending on the manifest used it also requires some commands be available on
+the host.
+
+Very commonly used:
+
  * sh
  * patch
+ * tar
  * cp
-
-Optionally, flatpak-builder may try to execute the following programs if the
-manifest file requires:
-
- * bzr
  * git
+ * 7z
+ * unzip
+
+Rarely used:
+
  * rpm2cpio & cpio
  * svn
- * 7z
-
-Flatpak-builder relies on flatpak, so it must be installed first.
+ * bzr
