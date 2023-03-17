@@ -38,7 +38,7 @@ foreach arg : project_c_args
 endforeach
 
 # The debugedit program is a hard dependency
-debugedit = find_program('debugedit')
+debugedit = find_program('debugedit', version: '>= 5.0')
 
 subdir('src')
 subdir('doc')
