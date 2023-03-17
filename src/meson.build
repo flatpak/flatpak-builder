@@ -53,7 +53,6 @@ flatpak_builder_deps = [
   dependency('libcurl'),
   dependency('libelf', version: '>= 0.8.12'),
   dependency('libglnx', default_options: ['tests=false']),
-  dependency('libsoup-2.4'),
   dependency('libxml-2.0', version: '>= 2.4'),
   dependency('ostree-1', version: '>= 2017.14'),
   dependency('yaml-0.1', required: get_option('yaml')),
