@@ -6,7 +6,7 @@
 
 It reads a JSON or YAML based manifest to automatically download, build, and install projects which eventually get exported into a flatpak.
 
-For information on the manifest format see `man flatapk-manifest`. A JSON Schema for this format is [available here](https://github.com/flatpak/flatpak-builder/blob/main/data/flatpak-manifest.schema.json).
+For information on the manifest format see `man flatpak-manifest`. A JSON Schema for this format is [available here](https://github.com/flatpak/flatpak-builder/blob/main/data/flatpak-manifest.schema.json).
 
 To use the JSON schema, in [an editor with support](https://code.visualstudio.com/docs/languages/json) for schemas, you can include this line in your manifest: 
 
