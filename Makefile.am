@@ -88,6 +88,9 @@ EXTRA_DIST += 			\
 	src/meson.build		\
 	tests/meson.build \
 	subprojects/libglnx.wrap \
+	subprojects/libglnx/meson.build \
+	subprojects/libglnx/meson_options.txt \
+	subprojects/libglnx/tests/meson.build \
 	subprojects/libyaml.wrap \
 	$(NULL)
 
