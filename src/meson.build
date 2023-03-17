@@ -31,12 +31,14 @@ config_data.set_quoted('DEBUGEDIT', debugedit.full_path())
 config_data.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 config_data.set_quoted('PACKAGE_VERSION', meson.project_version())
 config_data.set_quoted('PACKAGE_STRING', '@0@-@1@'.format(meson.project_name(), meson.project_version()))
+config_data.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_68')
+config_data.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_66')
 config_h = configure_file(
   configuration: config_data,
   output: 'config.h',
 )
 
-glib_req = '>= 2.44'
+glib_req = '>= 2.66'
 flatpak_builder_deps = [
   dependency('glib-2.0', version: glib_req),
   dependency('gio-2.0', version: glib_req),
