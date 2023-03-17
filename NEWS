@@ -1,3 +1,15 @@
+Changes in 1.3.2
+================
+
+This is a development release that will eventually become 1.4.x.
+
+* Add meson buildsystem; The autotools build system will be removed in a future release
+* Add `referer` property to file/archive sources to set the HTTP `Referer` header
+* Fix `no-autodownload` in extensions incorrectly setting `autodelete`
+* Reduce verbosity of unzip usage
+* Ignore `$schema` properties in manifests so editors can use our JSON schema
+* Change git usage to be more forgiving about submodules in `.gitmodules`
+
 Changes in 1.3.1
 ================
 
