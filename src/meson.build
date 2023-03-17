@@ -33,6 +33,12 @@ config_data.set_quoted('PACKAGE_VERSION', meson.project_version())
 config_data.set_quoted('PACKAGE_STRING', '@0@-@1@'.format(meson.project_name(), meson.project_version()))
 config_data.set('GLIB_VERSION_MAX_ALLOWED', 'GLIB_VERSION_2_68')
 config_data.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_66')
+
+# We support targeting specific fuse versions to optimize performance.
+# Currently only fuse2 has optimizations but this allows for future fuse3
+# optimizations.
+config_data.set('ASSUME_FUSE_2', get_option('fuse') == '2')
+
 config_h = configure_file(
   configuration: config_data,
   output: 'config.h',

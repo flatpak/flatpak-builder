@@ -1,4 +1,10 @@
 option('yaml', type: 'feature', value: 'enabled', description: 'Whether to support YAML manifests')
 option('docs', type: 'feature', value: 'auto', description: 'Whether to build the DocBook documentation and man pages')
 option('tests', type: 'boolean', value: true, description: 'Whether to build and run unit tests')
-
+option(
+  'fuse',
+  type: 'combo',
+  choices: ['2', '3', 'compatible'],
+  value: 'compatible',
+  description: 'Target a specific version of FUSE for best performance or support multiple versions'
+)
