@@ -21,7 +21,6 @@ foreach test_name : test_names
     test_name,
     tap_test,
     args: [files(filename)],
-    is_parallel: false, # FIXME
     env: test_env,
     depends: flatpak_builder,
     workdir: meson.current_build_dir(),
