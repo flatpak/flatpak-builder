@@ -11,6 +11,12 @@ option(
   description: 'Whether to build the DocBook documentation and man pages'
 )
 option(
+  'installed_tests',
+  type : 'boolean',
+  description : 'install automated tests',
+  value : false,
+)
+option(
   'tests',
   type: 'boolean',
   value: true,
