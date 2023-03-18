@@ -10,12 +10,17 @@ test_names = [
   'test-builder-python',
 ]
 
+tap_test = find_program(
+  files(meson.project_source_root() / 'buildutil/tap-test'),
+)
+
 foreach test_name : test_names
-  test_script = find_program(test_name + '.sh')
+  filename = test_name + '.sh'
 
   test(
     test_name,
-    test_script,
+    tap_test,
+    args: [files(filename)],
     is_parallel: false, # FIXME
     env: test_env,
     depends: flatpak_builder,
