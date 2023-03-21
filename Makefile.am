@@ -107,7 +107,7 @@ distcheck-hook-meson:
 	set -e; if command -v meson > /dev/null; then \
 		cd $(distdir); \
 		pwd; \
-		meson setup _build/meson; \
+		meson setup -Dinstalled_tests=true _build/meson; \
 		meson compile -C _build/meson -v; \
 		meson test -C _build/meson -v; \
 		rm -fr _build/meson; \
