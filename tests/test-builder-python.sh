@@ -42,7 +42,7 @@ cp -a $(dirname $0)/testpython.py .
 cp $(dirname $0)/importme.py .
 cp $(dirname $0)/importme2.py .
 chmod u+w *.py
-flatpak-builder --force-clean appdir org.test.Python.json
+flatpak-builder --force-clean appdir org.test.Python.json >&2
 
 assert_has_file appdir/files/bin/importme.pyc
 
@@ -52,7 +52,7 @@ assert_file_has_content testpython.out ^modified$
 
 echo "ok handled pyc rewriting multiple times"
 
-flatpak-builder --force-clean appdir org.test.Python2.json
+flatpak-builder --force-clean appdir org.test.Python2.json >&2
 
 assert_not_has_file appdir/files/bin/importme.py
 assert_has_file appdir/files/bin/importme.pyc

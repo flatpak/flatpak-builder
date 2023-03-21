@@ -52,8 +52,8 @@ cp $(dirname $0)/module2.yaml include1/include2/
 cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
-${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.json
-${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.yaml
+${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.json >&2
+${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.yaml >&2
 
 assert_file_has_content appdir/files/share/app-data version1
 assert_file_has_content appdir/metadata shared=network;
@@ -78,7 +78,7 @@ assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
 
 echo "ok build"
 
-${FLATPAK} ${U} install -y test-repo org.test.Hello2 master
+${FLATPAK} ${U} install -y test-repo org.test.Hello2 master >&2
 run org.test.Hello2 > hello_out3
 assert_file_has_content hello_out3 '^Hello world2, from a sandbox$'
 
@@ -88,12 +88,12 @@ assert_file_has_content app_data_1 version1
 echo "ok install+run"
 
 echo "version2" > app-data
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.json
+${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.json >&2
 assert_file_has_content appdir/files/share/app-data version2
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.yaml
+${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.yaml >&2
 assert_file_has_content appdir/files/share/app-data version2
 
-${FLATPAK} ${U} update -y org.test.Hello2 master
+${FLATPAK} ${U} update -y org.test.Hello2 master >&2
 
 run --command=cat org.test.Hello2 /app/share/app-data > app_data_2
 assert_file_has_content app_data_2 version2
@@ -103,6 +103,6 @@ echo "ok update"
 # The build-args of --help should prevent the faulty cleanup and
 # platform-cleanup commands from executing
 ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
-    test-runtime.json
+    test-runtime.json >&2
 
 echo "ok runtime build cleanup with build-args"

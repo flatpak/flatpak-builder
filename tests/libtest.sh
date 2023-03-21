@@ -214,7 +214,7 @@ setup_repo () {
         collection_args=
     fi
 
-    flatpak remote-add ${U} ${collection_args} ${import_args} ${REPONAME}-repo repos/$REPONAME
+    flatpak remote-add ${U} ${collection_args} ${import_args} ${REPONAME}-repo repos/$REPONAME >&2
 }
 
 update_repo () {
@@ -227,7 +227,7 @@ update_repo () {
         collection_args=
     fi
 
-    ${FLATPAK} build-update-repo ${collection_args} ${GPGARGS:-${FL_GPGARGS}} ${UPDATE_REPO_ARGS-} repos/${REPONAME}
+    ${FLATPAK} build-update-repo ${collection_args} ${GPGARGS:-${FL_GPGARGS}} ${UPDATE_REPO_ARGS-} repos/${REPONAME} >&2
 }
 
 make_updated_app () {
@@ -269,19 +269,19 @@ setup_python2_repo () {
 
 install_repo () {
     REPONAME=${1:-test}
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Platform master
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Hello master
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Platform master >&2
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Hello master >&2
 }
 
 install_sdk_repo () {
     REPONAME=${1:-test}
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Sdk master
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Sdk master >&2
 }
 
 install_python2_repo () {
     REPONAME=${1:-test}
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.PythonPlatform master
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.PythonSdk master
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.PythonPlatform master >&2
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.PythonSdk master >&2
 }
 
 run () {
@@ -310,7 +310,7 @@ skip_without_python2 () {
 }
 
 cleanup () {
-    gpg-connect-agent --homedir "${FL_GPG_HOMEDIR}" killagent /bye || true
+    gpg-connect-agent --homedir "${FL_GPG_HOMEDIR}" killagent /bye >&2 || true
     if test -n "${TEST_SKIP_CLEANUP:-}"; then
         echo "Skipping cleanup of ${TEST_DATA_DIR}"
     else
