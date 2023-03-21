@@ -87,6 +87,7 @@ EXTRA_DIST += 			\
 	doc/meson.build		\
 	src/meson.build		\
 	tests/meson.build \
+	tests/tap.test.in \
 	tests/test-keyring/meson.build \
 	tests/test-keyring2/meson.build \
 	subprojects/libglnx.wrap \
