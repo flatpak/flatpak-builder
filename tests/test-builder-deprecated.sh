@@ -42,49 +42,49 @@ cp "$srcdir"/org.test.Deprecated.SHA1.file.yaml .
 cp "$srcdir"/hello.sh .
 cp "$srcdir"/hello.tar.xz .
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.archive.json 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.archive.json >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated MD5 hash for archive in JSON"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.archive.yaml 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.archive.yaml >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated MD5 hash for archive in YAML"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.file.json 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.file.json >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated MD5 hash for file in JSON"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.file.yaml 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.MD5.file.yaml >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated MD5 hash for file in YAML"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.archive.json 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.archive.json >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated SHA1 hash for archive in JSON"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.archive.yaml 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.archive.yaml >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated SHA1 hash for archive in YAML"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.file.json 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.file.json >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
 echo "ok deprecated SHA1 hash for file in JSON"
 
-${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.file.yaml 2> build-error-log
+${FLATPAK_BUILDER} --force-clean appdir org.test.Deprecated.SHA1.file.yaml >&2 2> build-error-log
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
