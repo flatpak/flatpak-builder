@@ -26,6 +26,7 @@ foreach test_name : test_names
     args: [files(filename)],
     env: test_env,
     depends: flatpak_builder,
+    protocol: 'tap',
     workdir: meson.current_build_dir(),
   )
 
