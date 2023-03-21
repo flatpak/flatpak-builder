@@ -25,8 +25,10 @@ flatpak_builder_sources = files(
   'builder-utils.c',
 )
 
+yaml_dep = dependency('yaml-0.1', required: get_option('yaml'))
+
 config_data = configuration_data()
-config_data.set10('FLATPAK_BUILDER_ENABLE_YAML', true)
+config_data.set('FLATPAK_BUILDER_ENABLE_YAML', yaml_dep.found())
 config_data.set_quoted('DEBUGEDIT', debugedit.full_path())
 config_data.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 config_data.set_quoted('PACKAGE_VERSION', meson.project_version())
@@ -55,7 +57,7 @@ flatpak_builder_deps = [
   dependency('libglnx', default_options: ['tests=false']),
   dependency('libxml-2.0', version: '>= 2.4'),
   dependency('ostree-1', version: '>= 2017.14'),
-  dependency('yaml-0.1', required: get_option('yaml')),
+  yaml_dep,
 ]
 
 flatpak_builder = executable(
