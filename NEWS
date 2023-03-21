@@ -1,3 +1,12 @@
+Changes in 1.3.3
+================
+
+This is a development release that will eventually become 1.4.x.
+
+* Add `installed_tests` option to meson project
+* Fix libglnx meson subproject when built from autotools dist
+* Fix tests not running in parallel under meson
+
 Changes in 1.3.2
 ================
 
