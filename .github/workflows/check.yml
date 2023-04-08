@@ -27,7 +27,7 @@ jobs:
         libgirepository1.0-dev libappstream-glib-dev libdconf-dev clang socat flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
       with:
         submodules: true
     - name: configure
@@ -56,7 +56,7 @@ jobs:
         libgirepository1.0-dev libappstream-glib-dev libdconf-dev clang flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
       with:
         submodules: true
     - name: configure
@@ -130,7 +130,7 @@ jobs:
           unzip
 
     - name: Check out flatpak-builder
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Configure flatpak-builder
       # TODO: Enable gtk-doc builds
@@ -143,7 +143,7 @@ jobs:
       run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose
 
     - name: Upload test logs
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       if: failure() || cancelled()
       with:
         name: test logs
