@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema",
   "$comment": "https://docs.flatpak.org/en/latest/flatpak-builder-command-reference.html#flatpak-manifest",
-  "title": "Flatpak",
+  "title": "flatpak-builder manifest",
   "$defs": {
     "ignored-prop": {
       "custom": {
