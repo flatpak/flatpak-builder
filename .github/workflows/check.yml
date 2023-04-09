@@ -29,7 +29,7 @@ jobs:
     - name: Check out flatpak
       uses: actions/checkout@v3
       with:
-        submodules: true
+        submodules: recursive
     - name: configure
       # TODO: Enable gtk-doc builds
       run: ./autogen.sh
@@ -58,7 +58,7 @@ jobs:
     - name: Check out flatpak
       uses: actions/checkout@v3
       with:
-        submodules: true
+        submodules: recursive
     - name: configure
       # We disable introspection because it fails with clang: https://bugzilla.redhat.com/show_bug.cgi?id=1543295
       run: ./autogen.sh --disable-introspection
