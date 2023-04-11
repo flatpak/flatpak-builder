@@ -256,6 +256,7 @@ patch (GFile      *dir,
     g_ptr_array_add (args, "git");
     g_ptr_array_add (args, "am");
     g_ptr_array_add (args, "--keep-cr");
+    g_ptr_array_add (args, "--no-gpg-sign");
   } else {
     g_ptr_array_add (args, "patch");
   }
