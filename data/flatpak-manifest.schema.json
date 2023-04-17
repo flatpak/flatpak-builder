@@ -93,6 +93,14 @@
           },
           "additionalProperties": false
         },
+        "secret-env": {
+          "description": "This is a array defining which host environment variables is transfered to build-commands or post-install environment.",
+          "type": "array",
+          "items": {
+            "description": "Host environment variable to transfer.",
+            "type": "string"
+          }
+        },
         "build-args": {
           "description": "This is an array containing extra options to pass to flatpak build.",
           "type": "array",
@@ -111,6 +119,14 @@
         },
         "config-opts": {
           "description": "This is an array containing extra options to pass to configure.",
+          "type": "array",
+          "items": {
+            "description": "Extra option to pass to configure.",
+            "type": "string"
+          }
+        },
+        "secret-opts": {
+          "description": "This is an array of options that will be passed to configure, meant to be used to pass secrets through host environment variables. Put the option with an environment variables and will be resolved beforehand. '-DSECRET_ID=$CI_SECRET'",
           "type": "array",
           "items": {
             "description": "Extra option to pass to configure.",
