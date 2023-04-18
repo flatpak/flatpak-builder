@@ -322,6 +322,14 @@
             "type": "string"
           }
         },
+        "secret-opts": {
+          "description": "An array of options that will be passed to configure, meant to be used to pass secrets through host environment variables. Put the option with an environment variables and will be resolved beforehand. '-DSECRET_ID=$CI_SECRET'",
+          "type": "array",
+          "items": {
+            "description": "Extra option to pass to configure.",
+            "type": "string"
+          }
+        },
         "make-args": {
           "description": "An array of arguments that will be passed to make.",
           "type": "array",
