@@ -1947,7 +1947,7 @@ builder_module_build_helper (BuilderModule  *self,
       if (make_cmd && test_arg && *test_arg != 0)
         {
           if (!build (app_dir, self->name, context, source_dir, build_dir_relative, test_args, env, error,
-                      make_cmd, test_arg, NULL))
+                      make_cmd, test_arg, make_j ? make_j : skip_arg, NULL))
             {
               g_prefix_error (error, "Running %s %s failed: ", make_cmd, test_arg);
               return FALSE;
