@@ -560,9 +560,19 @@ builder_context_allocate_build_subdir (BuilderContext *self,
 {
   g_autoptr(GError) my_error = NULL;
   int count;
+  g_autoptr (GFile) cachedir_tag = g_file_get_child (self->state_dir, "CACHEDIR.TAG");
 
   if (!flatpak_mkdir_p (self->build_dir,
                         NULL, error))
+    return NULL;
+
+  const char *cachedir_tag_content = "Signature: 8a477f597d28d172789f06886806bc55\n"
+    "# This file is a cache directory tag created by flatpak-builder.\n"
+    "# For information about cache directory tags see https://bford.info/cachedir/";
+  if (!g_file_replace_contents (cachedir_tag, cachedir_tag_content,
+                                strlen (cachedir_tag_content), NULL, FALSE,
+                                G_FILE_CREATE_REPLACE_DESTINATION,
+                                NULL, NULL, error))
     return NULL;
 
   for (count = 1; count < 1000; count++)
