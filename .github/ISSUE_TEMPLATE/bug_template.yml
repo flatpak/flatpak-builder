@@ -1,7 +1,5 @@
 name: Bug report
 description: Report a bug in flatpak-builder
-title: "[Bug]: "
-labels: "bug"
 body:
 - type: checkboxes
   attributes:
