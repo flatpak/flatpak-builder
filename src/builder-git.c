@@ -383,6 +383,8 @@ git_mirror_submodules (const char     *repo_location,
           path = g_key_file_get_string (key_file, submodule, "path", error);
           if (path == NULL)
             return FALSE;
+          /* Remove any trailing whitespace */
+          g_strchomp (path);
 
           relative_url = g_key_file_get_string (key_file, submodule, "url", error);
           /* Remove any trailing whitespace */
@@ -782,6 +784,8 @@ git_extract_submodule (const char     *repo_location,
           path = g_key_file_get_string (key_file, submodule, "path", error);
           if (path == NULL)
             return FALSE;
+          /* Remove any trailing whitespace */
+          g_strchomp (path);
 
           relative_url = g_key_file_get_string (key_file, submodule, "url", error);
           absolute_url = make_absolute (repo_location, relative_url, error);
