@@ -528,6 +528,8 @@ main (int    argc,
   builder_context_set_jobs (build_context, opt_jobs);
   builder_context_set_rebuild_on_sdk_change (build_context, opt_rebuild_on_sdk_change);
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
+  builder_context_set_opt_export_only (build_context, opt_export_only);
+  builder_context_set_opt_mirror_screenshots_url (build_context, opt_mirror_screenshots_url);
 
   git_init_email ();
 
@@ -933,60 +935,6 @@ main (int    argc,
 
   if (!opt_require_changes && !opt_export_only)
     builder_cache_ensure_checkout (cache);
-
-  if (opt_mirror_screenshots_url && !opt_export_only)
-    {
-      g_autofree char *screenshot_subdir = g_strdup_printf ("%s-%s", builder_manifest_get_id (manifest),
-                                                            builder_manifest_get_branch (manifest, build_context));
-      g_autofree char *url = g_build_filename (opt_mirror_screenshots_url, screenshot_subdir, NULL);
-      g_autofree char *xml_relpath = g_strdup_printf ("files/share/app-info/xmls/%s.xml.gz", builder_manifest_get_id (manifest));
-      g_autoptr(GFile) xml = g_file_resolve_relative_path (app_dir, xml_relpath);
-      g_autoptr(GFile) cache = flatpak_build_file (builder_context_get_state_dir (build_context), "screenshots-cache", NULL);
-      g_autoptr(GFile) screenshots = flatpak_build_file (app_dir, "screenshots", NULL);
-      g_autoptr(GFile) screenshots_sub = flatpak_build_file (screenshots, screenshot_subdir, NULL);
-      const char *argv[] = {
-        "appstreamcli", "compose",
-        "--media-baseurl", url,
-        "--media-dir", flatpak_file_get_path_cached (screenshots_sub),
-        flatpak_file_get_path_cached (xml),
-        NULL
-      };
-
-      g_print ("Mirroring screenshots from appdata\n");
-      builder_set_term_title (_("Mirroring screenshots"));
-
-      if (!flatpak_mkdir_p (screenshots, NULL, &error))
-        {
-          g_printerr ("Error creating screenshot dir: %s\n", error->message);
-          return 1;
-        }
-
-      if (g_file_query_exists (xml, NULL))
-        {
-          if (!flatpak_mkdir_p (cache, NULL, &error))
-            {
-              g_printerr ("Error creating screenshot cache dir: %s\n", error->message);
-              return 1;
-            }
-          if (!flatpak_break_hardlink (xml, &error))
-            {
-              g_printerr ("Error mirroring screenshots: %s\n", error->message);
-              return 1;
-            }
-          if (!flatpak_spawnv (NULL,
-                               NULL,
-                               0,
-                               &error,
-                               argv,
-                               NULL))
-            {
-              g_printerr ("Error mirroring screenshots: %s\n", error->message);
-              return 1;
-            }
-        }
-
-      g_print ("Saved screenshots in %s\n", flatpak_file_get_path_cached (screenshots));
-    }
 
   if (!opt_build_only &&
       (opt_repo || opt_install) &&

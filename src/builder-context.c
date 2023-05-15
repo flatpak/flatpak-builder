@@ -81,6 +81,8 @@ struct BuilderContext
   gboolean        have_rofiles;
   gboolean        run_tests;
   gboolean        no_shallow_clone;
+  gboolean        opt_export_only;
+  char           *opt_mirror_screenshots_url;
 
   BuilderSdkConfig *sdk_config;
 };
@@ -342,6 +344,32 @@ builder_context_find_in_sources_dirs_va (BuilderContext *self,
     }
 
   return NULL;
+}
+
+void
+builder_context_set_opt_export_only (BuilderContext *self,
+                                     gboolean       opt_export_only)
+{
+  self->opt_export_only = opt_export_only;
+}
+
+gboolean
+builder_context_get_opt_export_only (BuilderContext *self)
+{
+  return self->opt_export_only;
+}
+
+void
+builder_context_set_opt_mirror_screenshots_url (BuilderContext *self,
+                                                const char     *opt_mirror_screenshots_url)
+{
+  self->opt_mirror_screenshots_url = g_strdup(opt_mirror_screenshots_url);
+}
+
+const char *
+builder_context_get_opt_mirror_screenshots_url (BuilderContext *self)
+{
+  return self->opt_mirror_screenshots_url;
 }
 
 GFile *
