@@ -2775,6 +2775,7 @@ builder_manifest_cleanup (BuilderManifest *self,
           g_autofree char *result_root_arg = g_strdup_printf ("--result-root=%s", app_root_path);
           g_autoptr(GFile) xml_dir = flatpak_build_file (app_root, "share/app-info/xmls", NULL);
           g_autoptr(GFile) icon_out = flatpak_build_file (app_root, "share/app-info/icons/flatpak", NULL);
+          g_autoptr(GFile) media_dir = flatpak_build_file (app_root, "share/app-info/media", NULL);
           g_autofree char *data_dir = g_strdup_printf ("--data-dir=%s",
                                                        flatpak_file_get_path_cached (xml_dir));
           g_autofree char *icon_dir = g_strdup_printf ("--icons-dir=%s",
@@ -2791,7 +2792,7 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_autoptr(GFile) screenshots = flatpak_build_file (app_root, "screenshots", NULL);
               g_autofree char *arg_base_url = g_strdup_printf ("--media-baseurl=%s", url);
               g_autofree char *arg_media_dir =  g_strdup_printf ("--media-dir=%s",
-                                                                 flatpak_file_get_path_cached (screenshots));
+                                                                 flatpak_file_get_path_cached (media_dir));
 
               g_print ("Running appstreamcli compose\n");
               g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (screenshots));
