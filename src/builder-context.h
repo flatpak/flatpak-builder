@@ -169,6 +169,16 @@ gboolean        builder_context_load_sdk_config (BuilderContext       *self,
                                                  const char           *sdk_path,
                                                  GError              **error);
 
+void            builder_context_set_opt_export_only (BuilderContext *self,
+                                                     gboolean opt_export_only);
+
+gboolean        builder_context_get_opt_export_only (BuilderContext *self);
+
+void            builder_context_set_opt_mirror_screenshots_url (BuilderContext *self,
+                                                                const char *opt_mirror_screenshots_url);
+
+const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *self);
+
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderContext, g_object_unref)
