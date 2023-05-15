@@ -2785,17 +2785,13 @@ builder_manifest_cleanup (BuilderManifest *self,
 
           if (opt_mirror_screenshots_url && !opt_export_only)
             {
-              g_autofree char *screenshot_subdir = g_strdup_printf ("%s-%s",
-                                                                    builder_manifest_get_id (self),
-                                                                    builder_manifest_get_branch (self, context));
-              g_autofree char *url = g_build_filename (opt_mirror_screenshots_url, screenshot_subdir, NULL);
-              g_autoptr(GFile) screenshots = flatpak_build_file (app_root, "screenshots", NULL);
+              g_autofree char *url = g_build_filename (opt_mirror_screenshots_url, NULL);
               g_autofree char *arg_base_url = g_strdup_printf ("--media-baseurl=%s", url);
               g_autofree char *arg_media_dir =  g_strdup_printf ("--media-dir=%s",
                                                                  flatpak_file_get_path_cached (media_dir));
 
               g_print ("Running appstreamcli compose\n");
-              g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (screenshots));
+              g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (media_dir));
               if (!appstreamcli_compose (error,
                                          "--prefix=/",
                                          origin,
