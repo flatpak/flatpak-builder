@@ -168,7 +168,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>appstream-compose</option> (boolean)</term>
-                    <listitem><para>Run <command>appstreamcli-compose</command> during cleanup phase. Defaults to true.</para></listitem>
+                    <listitem><para>Run <command>appstreamcli compose</command> during cleanup phase. Defaults to true.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>sdk-extensions</option> (array of strings)</term>
