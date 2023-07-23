@@ -1106,6 +1106,7 @@ builder_download_uri_buffer (GUri           *uri,
   g_autofree gchar *url = g_uri_to_string (uri);
 
   curl_easy_setopt (session, CURLOPT_URL, url);
+  curl_easy_setopt (session, CURLOPT_ACCEPT_ENCODING, "");
   curl_easy_setopt (session, CURLOPT_REFERER, http_referer);
   curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
   curl_easy_setopt (session, CURLOPT_WRITEDATA, &write_data);
