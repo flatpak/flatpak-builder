@@ -1775,6 +1775,12 @@ builder_module_build_helper (BuilderModule  *self,
       prefix = builder_options_get_prefix (self->build_options, context);
       libdir = builder_options_get_libdir (self->build_options, context);
 
+      if (meson)
+	{
+	  /* Meson's setup command is now meson setup */
+          g_ptr_array_add (configure_args_arr, g_strdup ("setup"));
+	}
+
       if (cmake || cmake_ninja)
         {
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'", prefix));
