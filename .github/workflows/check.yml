@@ -27,7 +27,7 @@ jobs:
         libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
         submodules: true
     - name: configure
@@ -56,7 +56,7 @@ jobs:
         libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch unzip
     - name: Check out flatpak
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
       with:
         submodules: true
     - name: configure
@@ -131,7 +131,7 @@ jobs:
           unzip
 
     - name: Check out flatpak-builder
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Configure flatpak-builder
       # TODO: Enable gtk-doc builds
