@@ -2769,8 +2769,8 @@ builder_manifest_cleanup (BuilderManifest *self,
         {
           g_autofree char *origin = g_strdup_printf ("--origin=%s",
                                                      builder_manifest_get_id (self));
-          g_autofree char *components_arg = g_strdup_printf ("--components=%s",
-                                                             self->id);
+          g_autofree char *components_arg = g_strdup_printf ("--components=%s,%s.desktop",
+                                                             self->id, self->id);
           const char *app_root_path = flatpak_file_get_path_cached (app_root);
           g_autofree char *result_root_arg = g_strdup_printf ("--result-root=%s", app_root_path);
           g_autoptr(GFile) xml_dir = flatpak_build_file (app_root, "share/app-info/xmls", NULL);
