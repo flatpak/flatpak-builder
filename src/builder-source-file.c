@@ -341,25 +341,19 @@ download_data_uri (const char     *url,
                    GError        **error)
 {
   CURL *session;
-  g_autoptr(GError) first_error = NULL;  
   g_autoptr(GInputStream) input = NULL;
   g_autoptr(GOutputStream) out = NULL;
   g_autoptr(GUri) parsed = NULL;
 
   parsed = g_uri_parse(url, CONTEXT_HTTP_URI_FLAGS, error);
   if (!parsed)
-    {
-      return FALSE;
-    }
+    return NULL;
 
   session = builder_context_get_curl_session (context);
   out = g_memory_output_stream_new_resizable ();
 
   if (!builder_download_uri_buffer (parsed, NULL, session, out, NULL, 0, error))
-    {
-      g_propagate_error (error, g_steal_pointer (&first_error));
       return NULL;
-    }
 
   if (!g_output_stream_splice (out,
                                input,
