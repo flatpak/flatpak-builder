@@ -335,34 +335,62 @@ get_source_file (BuilderSourceFile *self,
   return NULL;
 }
 
+#define BASE64_INDICATOR ";base64"
+#define BASE64_INDICATOR_LEN (strlen (BASE64_INDICATOR))
+
 static GBytes *
 download_data_uri (const char     *url,
-                   BuilderContext *context,
                    GError        **error)
 {
-  CURL *session;
-  g_autoptr(GInputStream) input = NULL;
-  g_autoptr(GOutputStream) out = NULL;
-  g_autoptr(GUri) parsed = NULL;
+  gboolean is_base64 = FALSE;
+  const char *comma, *start;
+  g_autoptr(GBytes) bytes = NULL;
 
-  parsed = g_uri_parse(url, CONTEXT_HTTP_URI_FLAGS, error);
-  if (!parsed)
-    return NULL;
+  /* This is a simplified version of soup_uri_decode_data_uri()
+   * SPDX-License-Identifier: LGPL-2.0-or-later
+   */
 
-  session = builder_context_get_curl_session (context);
-  out = g_memory_output_stream_new_resizable ();
+  start = url + strlen ("data:");
+  comma = strchr (start, ',');
 
-  if (!builder_download_uri_buffer (parsed, NULL, session, out, NULL, 0, error))
-      return NULL;
+  /* Check params to see if it is base64. */
+  if (comma && comma != start)
+  {
+    if (comma >= start + BASE64_INDICATOR_LEN && !g_ascii_strncasecmp (comma - BASE64_INDICATOR_LEN,
+                                                                        BASE64_INDICATOR, BASE64_INDICATOR_LEN))
+      is_base64 = TRUE;
+  }
 
-  if (!g_output_stream_splice (out,
-                               input,
-                               G_OUTPUT_STREAM_SPLICE_CLOSE_TARGET | G_OUTPUT_STREAM_SPLICE_CLOSE_SOURCE,
-                               NULL,
-                               error))
-    return NULL;
+  if (comma)
+    start = comma + 1;
 
-  return g_memory_output_stream_steal_as_bytes (G_MEMORY_OUTPUT_STREAM (out));
+  if (*start)
+    {
+      bytes = g_uri_unescape_bytes (start, -1, NULL, error);
+      if (!bytes)
+        return NULL;
+
+      if (is_base64)
+        {
+          GByteArray *unescaped_array;
+          gsize content_length;
+
+          if (g_bytes_get_size (bytes) <= 1)
+            {
+              g_set_error_literal (error, G_IO_ERROR, G_IO_ERROR_FAILED, "data URI contains invalid base64 data");
+              return NULL;
+            }
+
+          unescaped_array = g_bytes_unref_to_array (bytes);
+          g_base64_decode_inplace ((char*)unescaped_array->data, &content_length);
+          unescaped_array->len = content_length;
+          bytes = g_byte_array_free_to_bytes (unescaped_array);
+        }
+    }
+  else
+    bytes = g_bytes_new_static (NULL, 0); /* Empty data */
+
+  return g_steal_pointer (&bytes);
 }
 
 static gboolean
@@ -487,7 +515,6 @@ builder_source_file_extract (BuilderSource  *source,
       g_autoptr(GBytes) content = NULL;
 
       content = download_data_uri (self->url,
-                                   context,
                                    error);
       if (content == NULL)
         return FALSE;
