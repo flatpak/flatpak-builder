@@ -347,9 +347,7 @@ download_data_uri (const char     *url,
 
   parsed = g_uri_parse(url, CONTEXT_HTTP_URI_FLAGS, error);
   if (!parsed)
-    {
-      return FALSE;
-    }
+    return NULL;
 
   session = builder_context_get_curl_session (context);
   out = g_memory_output_stream_new_resizable ();
