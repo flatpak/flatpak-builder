@@ -1515,8 +1515,10 @@ builder_module_build_helper (BuilderModule  *self,
   const char *make_cmd = NULL;
   const char *test_arg = NULL;
 
-  gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE;
+  gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE, cargo = FALSE;
   g_autoptr(GFile) configure_file = NULL;
+  g_autoptr(GFile) cargo_file = NULL;
+  g_autoptr(GFile) cargo_lock_file = NULL;
   g_autoptr(GFile) build_dir = NULL;
   g_autofree char *build_dir_relative = NULL;
   gboolean has_configure = FALSE;
@@ -1585,6 +1587,8 @@ builder_module_build_helper (BuilderModule  *self,
     simple = TRUE;
   else if (!strcmp (self->buildsystem, "qmake"))
     qmake = TRUE;
+  else if (!strcmp (self->buildsystem, "cargo"))
+    cargo = TRUE;
   else
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Invalid buildsystem: \"%s\"",
@@ -1631,6 +1635,22 @@ builder_module_build_helper (BuilderModule  *self,
       if (configure_file == NULL)
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find *.pro file", self->name);
+          return FALSE;
+        }
+    }
+  else if (cargo)
+    {
+      cargo_file = find_file_with_extension (source_subdir, "Cargo.toml");
+      if (cargo_file == NULL)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find Cargo.toml", self->name);
+          return FALSE;
+        }
+
+      cargo_lock_file = find_file_with_extension (source_subdir, "Cargo.lock");
+      if (cargo_lock_file == NULL)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find Cargo.lock", self->name);
           return FALSE;
         }
     }
@@ -1740,6 +1760,10 @@ builder_module_build_helper (BuilderModule  *self,
             {
               configure_cmd = "meson";
               configure_final_arg = g_strdup ("..");
+            }
+          else if (cargo)
+            {
+              // nothing to do - Cargo does not have a configure step
             }
           else
             {
