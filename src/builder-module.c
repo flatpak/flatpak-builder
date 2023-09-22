@@ -1896,6 +1896,11 @@ builder_module_build_helper (BuilderModule  *self,
     }
   else if (simple)
     make_cmd = NULL;
+  else if (cargo)
+    {
+      make_cmd = "cargo";
+      test_arg = "check";
+    }
   else
     {
       make_cmd = "make";
