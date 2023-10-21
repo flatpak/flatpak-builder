@@ -8,6 +8,8 @@
     "finish-args": [
         "--share=network"
     ],
+    "rename-icon": "Hello",
+    "rename-desktop-file": "Hello.desktop",
     "build-options" : {
         "cflags": "-O2 -g",
         "cxxflags": "-O2 -g",
@@ -29,9 +31,9 @@
                     "post-install": [
                         "touch /app/bin/file.cleanup",
                         "mkdir -p /app/share/icons/hicolor/64x64/apps/",
-                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/$FLATPAK_ID.png",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/Hello.png",
                         "mkdir -p /app/share/applications",
-                        "cp org.test.Hello.desktop /app/share/applications/$FLATPAK_ID.desktop"
+                        "cp org.test.Hello.desktop /app/share/applications/Hello.desktop"
                     ],
                     "make-args": ["BAR=2" ],
                     "make-install-args": ["BAR=3" ],
@@ -48,13 +50,13 @@
                             "path": "app-data"
                         },
                         {
+                            "type": "file",
+                            "path": "org.test.Hello.desktop"
+                        },
+                        {
                             "type": "script",
                             "dest-filename": "hello2.sh",
                             "commands": [ "echo \"Hello world2, from a sandbox\"" ]
-                        },
-                        {
-                            "type": "file",
-                            "path": "org.test.Hello.desktop"
                         },
                         {
                             "type": "shell",
