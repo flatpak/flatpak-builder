@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..4"
+echo "1..5"
 
 setup_repo
 install_repo
@@ -52,31 +52,34 @@ cp $(dirname $0)/module2.yaml include1/include2/
 cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
-${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.json >&2
-${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir test.yaml >&2
 
-assert_file_has_content appdir/files/share/app-data version1
-assert_file_has_content appdir/metadata shared=network;
-assert_file_has_content appdir/metadata tags=test;
-assert_file_has_content appdir/files/ran_module1 module1
-assert_file_has_content appdir/files/ran_module2 module2
+for MANIFEST in test.json test.yaml ; do
+    echo "building manifest $MANIFEST" >&2
+    ${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir $MANIFEST >&2
 
-assert_not_has_file appdir/files/cleanup/a_filee
-assert_not_has_file appdir/files/bin/file.cleanup
+    assert_file_has_content appdir/files/share/app-data version1
+    assert_file_has_content appdir/metadata shared=network;
+    assert_file_has_content appdir/metadata tags=test;
+    assert_file_has_content appdir/files/ran_module1 module1
+    assert_file_has_content appdir/files/ran_module2 module2
 
-assert_has_file appdir/files/cleaned_up > out
-assert_has_file appdir/files/share/icons/org.test.Hello.png
+    assert_not_has_file appdir/files/cleanup/a_filee
+    assert_not_has_file appdir/files/bin/file.cleanup
 
-assert_file_has_content appdir/files/out '^foo$'
-assert_file_has_content appdir/files/out2 '^foo2$'
+    assert_has_file appdir/files/cleaned_up > out
+    assert_has_file appdir/files/share/icons/org.test.Hello2.png
 
-assert_file_has_content appdir/files/source1 'Hello, from source 1'
-assert_file_has_content appdir/files/source2 'Hello, from source 2'
+    assert_file_has_content appdir/files/out '^foo$'
+    assert_file_has_content appdir/files/out2 '^foo2$'
 
-${FLATPAK} build appdir /app/bin/hello2.sh > hello_out2
-assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
+    assert_file_has_content appdir/files/source1 'Hello, from source 1'
+    assert_file_has_content appdir/files/source2 'Hello, from source 2'
 
-echo "ok build"
+    ${FLATPAK} build appdir /app/bin/hello2.sh > hello_out2
+    assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
+
+    echo "ok build"
+done
 
 ${FLATPAK} ${U} install -y test-repo org.test.Hello2 master >&2
 run org.test.Hello2 > hello_out3
