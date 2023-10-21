@@ -22,8 +22,10 @@ modules:
         config-opts: [--some-arg]
         post-install:
           - touch /app/bin/file.cleanup
-          - mkdir -p /app/share/icons/
-          - cp org.test.Hello.png /app/share/icons/$FLATPAK_ID.png
+          - mkdir -p /app/share/icons/hicolor/64x64/apps/
+          - cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/$FLATPAK_ID.png
+          - mkdir -p /app/share/applications
+          - cp org.test.Hello.desktop /app/share/applications/$FLATPAK_ID.desktop
         make-args: [BAR=2]
         make-install-args: [BAR=3]
         build-commands: ['echo foo > /app/out']
@@ -37,6 +39,8 @@ modules:
           - type: script
             dest-filename: hello2.sh
             commands: ['echo "Hello world2, from a sandbox"']
+          - type: file
+            path: org.test.Hello.desktop
           - type: shell
             commands:
               - mkdir /app/cleanup/
