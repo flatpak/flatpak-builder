@@ -10,6 +10,11 @@
     ],
     "rename-icon": "Hello",
     "rename-desktop-file": "Hello.desktop",
+    "rename-mime-file": "Hello.xml",
+    "rename-mime-icons": [
+        "application-x-hello",
+        "application-x-goodbye"
+    ],
     "build-options" : {
         "cflags": "-O2 -g",
         "cxxflags": "-O2 -g",
@@ -31,9 +36,14 @@
                     "post-install": [
                         "touch /app/bin/file.cleanup",
                         "mkdir -p /app/share/icons/hicolor/64x64/apps/",
+                        "mkdir -p /app/share/icons/hicolor/64x64/mimetypes/",
                         "cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/Hello.png",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/application-x-hello.png",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/application-x-goodbye.png",
                         "mkdir -p /app/share/applications",
-                        "cp org.test.Hello.desktop /app/share/applications/Hello.desktop"
+                        "cp Hello.desktop /app/share/applications/",
+                        "mkdir -p /app/share/mime/packages",
+                        "cp Hello.xml /app/share/mime/packages/"
                     ],
                     "make-args": ["BAR=2" ],
                     "make-install-args": ["BAR=3" ],
@@ -51,7 +61,11 @@
                         },
                         {
                             "type": "file",
-                            "path": "org.test.Hello.desktop"
+                            "path": "Hello.desktop"
+                        },
+                        {
+                            "type": "file",
+                            "path": "Hello.xml"
                         },
                         {
                             "type": "script",

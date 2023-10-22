@@ -1,6 +1,7 @@
 /* builder-manifest.c
  *
  * Copyright (C) 2015 Red Hat, Inc
+ * Copyright © 2023 GNOME Foundation Inc.
  *
  * This file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
@@ -17,6 +18,7 @@
  *
  * Authors:
  *       Alexander Larsson <alexl@redhat.com>
+ *       Hubert Figuière <hub@figuiere.net>
  */
 
 #include "config.h"
@@ -90,8 +92,10 @@ struct BuilderManifest
   char          **tags;
   char           *rename_desktop_file;
   char           *rename_appdata_file;
+  char           *rename_mime_file;
   char           *appdata_license;
   char           *rename_icon;
+  char          **rename_mime_icons;
   gboolean        copy_icon;
   char           *desktop_file_name_prefix;
   char           *desktop_file_name_suffix;
@@ -160,8 +164,10 @@ enum {
   PROP_TAGS,
   PROP_RENAME_DESKTOP_FILE,
   PROP_RENAME_APPDATA_FILE,
+  PROP_RENAME_MIME_FILE,
   PROP_APPDATA_LICENSE,
   PROP_RENAME_ICON,
+  PROP_RENAME_MIME_ICONS,
   PROP_COPY_ICON,
   PROP_DESKTOP_FILE_NAME_PREFIX,
   PROP_DESKTOP_FILE_NAME_SUFFIX,
@@ -212,8 +218,10 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->tags);
   g_free (self->rename_desktop_file);
   g_free (self->rename_appdata_file);
+  g_free (self->rename_mime_file);
   g_free (self->appdata_license);
   g_free (self->rename_icon);
+  g_free (self->rename_mime_icons);
   g_free (self->desktop_file_name_prefix);
   g_free (self->desktop_file_name_suffix);
 
@@ -450,12 +458,20 @@ builder_manifest_get_property (GObject    *object,
       g_value_set_string (value, self->rename_appdata_file);
       break;
 
+    case PROP_RENAME_MIME_FILE:
+      g_value_set_string (value, self->rename_mime_file);
+      break;
+
     case PROP_APPDATA_LICENSE:
       g_value_set_string (value, self->appdata_license);
       break;
 
     case PROP_RENAME_ICON:
       g_value_set_string (value, self->rename_icon);
+      break;
+
+    case PROP_RENAME_MIME_ICONS:
+      g_value_set_boxed (value, self->rename_mime_icons);
       break;
 
     case PROP_DESKTOP_FILE_NAME_PREFIX:
@@ -711,6 +727,11 @@ builder_manifest_set_property (GObject      *object,
       self->rename_appdata_file = g_value_dup_string (value);
       break;
 
+    case PROP_RENAME_MIME_FILE:
+      g_free (self->rename_mime_file);
+      self->rename_mime_file = g_value_dup_string (value);
+      break;
+
     case PROP_APPDATA_LICENSE:
       g_free (self->appdata_license);
       self->appdata_license = g_value_dup_string (value);
@@ -719,6 +740,12 @@ builder_manifest_set_property (GObject      *object,
     case PROP_RENAME_ICON:
       g_free (self->rename_icon);
       self->rename_icon = g_value_dup_string (value);
+      break;
+
+    case PROP_RENAME_MIME_ICONS:
+      tmp = self->rename_mime_icons;
+      self->rename_mime_icons = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
       break;
 
     case PROP_DESKTOP_FILE_NAME_PREFIX:
@@ -1041,6 +1068,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
                                                         NULL,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
+                                   PROP_RENAME_MIME_FILE,
+                                   g_param_spec_string ("rename-mime-file",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
                                    PROP_APPDATA_LICENSE,
                                    g_param_spec_string ("appdata-license",
                                                         "",
@@ -1053,6 +1087,13 @@ builder_manifest_class_init (BuilderManifestClass *klass)
                                                         "",
                                                         "",
                                                         NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_RENAME_MIME_ICONS,
+                                   g_param_spec_boxed ("rename-mime-icons",
+                                                        "",
+                                                        "",
+                                                        G_TYPE_STRV,
                                                         G_PARAM_READWRITE));
   g_object_class_install_property (object_class,
                                    PROP_COPY_ICON,
@@ -1865,8 +1906,10 @@ builder_manifest_checksum_for_cleanup (BuilderManifest *self,
   builder_cache_checksum_strv (cache, self->cleanup_commands);
   builder_cache_checksum_str (cache, self->rename_desktop_file);
   builder_cache_checksum_str (cache, self->rename_appdata_file);
+  builder_cache_checksum_str (cache, self->rename_mime_file);
   builder_cache_checksum_str (cache, self->appdata_license);
   builder_cache_checksum_str (cache, self->rename_icon);
+  builder_cache_checksum_strv (cache, self->rename_mime_icons);
   builder_cache_checksum_boolean (cache, self->copy_icon);
   builder_cache_checksum_str (cache, self->desktop_file_name_prefix);
   builder_cache_checksum_str (cache, self->desktop_file_name_suffix);
@@ -2169,7 +2212,13 @@ command (GFile      *app_dir,
   return builder_maybe_host_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL);
 }
 
-typedef gboolean (*ForeachFileFunc) (BuilderManifest *self,
+typedef struct {
+  const char *rename_icon;
+  gboolean    copy_icon;
+  const char *id;
+} ForeachFile;
+
+typedef gboolean (*ForeachFileFunc) (ForeachFile     *self,
                                      int              source_parent_fd,
                                      const char      *source_name,
                                      const char      *full_dir,
@@ -2180,7 +2229,7 @@ typedef gboolean (*ForeachFileFunc) (BuilderManifest *self,
                                      GError         **error);
 
 static gboolean
-foreach_file_helper (BuilderManifest *self,
+foreach_file_helper (ForeachFile     *self,
                      ForeachFileFunc  func,
                      int              source_parent_fd,
                      const char      *source_name,
@@ -2242,7 +2291,7 @@ foreach_file_helper (BuilderManifest *self,
 }
 
 static gboolean
-foreach_file (BuilderManifest *self,
+foreach_file (ForeachFile     *self,
               ForeachFileFunc  func,
               gboolean        *found,
               GFile           *root,
@@ -2257,15 +2306,16 @@ foreach_file (BuilderManifest *self,
 }
 
 static gboolean
-rename_icon_cb (BuilderManifest *self,
-                int              source_parent_fd,
-                const char      *source_name,
-                const char      *full_dir,
-                const char      *rel_dir,
-                struct stat     *stbuf,
-                gboolean        *found,
-                int              depth,
-                GError         **error)
+_rename_icon (ForeachFile     *self,
+              int              source_parent_fd,
+              const char      *source_name,
+              const char      *full_dir,
+              const char      *rel_dir,
+              gboolean         prefix,
+              struct stat     *stbuf,
+              gboolean        *found,
+              int              depth,
+              GError         **error)
 {
   if (g_str_has_prefix (source_name, self->rename_icon))
     {
@@ -2275,8 +2325,12 @@ rename_icon_cb (BuilderManifest *self,
            g_str_has_prefix (source_name + strlen (self->rename_icon), "-symbolic.")))
         {
           const char *extension = source_name + strlen (self->rename_icon);
-          g_autofree char *new_name = g_strconcat (self->id, extension, NULL);
+          g_autofree char *new_name;
           int res;
+          if (!prefix)
+            new_name = g_strconcat (self->id, extension, NULL);
+          else
+            new_name = g_strconcat (self->id, ".", source_name, NULL);
 
           *found = TRUE;
 
@@ -2305,6 +2359,40 @@ rename_icon_cb (BuilderManifest *self,
     }
 
   return TRUE;
+}
+
+static gboolean
+rename_icon_cb (ForeachFile     *self,
+                int              source_parent_fd,
+                const char      *source_name,
+                const char      *full_dir,
+                const char      *rel_dir,
+                struct stat     *stbuf,
+                gboolean        *found,
+                int              depth,
+                GError         **error)
+{
+  return _rename_icon (self,
+                       source_parent_fd, source_name,
+                       full_dir, rel_dir, FALSE,
+                       stbuf, found, depth, error);
+}
+
+static gboolean
+rename_mime_icon_cb (ForeachFile     *self,
+                     int              source_parent_fd,
+                     const char      *source_name,
+                     const char      *full_dir,
+                     const char      *rel_dir,
+                     struct stat     *stbuf,
+                     gboolean        *found,
+                     int              depth,
+                     GError         **error)
+{
+  return _rename_icon (self,
+                       source_parent_fd, source_name,
+                       full_dir, rel_dir, TRUE,
+                       stbuf, found, depth, error);
 }
 
 static int
@@ -2457,6 +2545,147 @@ builder_manifest_find_appdata_file (BuilderManifest *self,
         }
     }
   return NULL;
+}
+
+/* Perform `rename-mime-file` */
+static gboolean
+_cleanup_rename_mime_file (BuilderManifest *self, GFile *app_root,
+                           GError **error)
+{
+  g_autoptr(GFile) applications_dir = g_file_resolve_relative_path (app_root, "share/mime/packages");
+  g_autoptr(GFile) src = g_file_get_child (applications_dir, self->rename_mime_file);
+  g_autofree char *mime_basename = g_strdup_printf ("%s.xml", self->id);
+  g_autoptr(GFile) dest = g_file_get_child (applications_dir, mime_basename);
+
+  g_print ("Renaming %s to %s\n", self->rename_mime_file, mime_basename);
+  if (!g_file_move (src, dest, 0, NULL, NULL, NULL, error))
+    return FALSE;
+
+  return TRUE;
+}
+
+static gboolean
+_rename_mime_icon (BuilderManifest *self, const char *rename_icon,
+                   GFile *icons_dir,
+                   GError **error)
+{
+  gboolean found_icon = FALSE;
+
+  ForeachFile renamer;
+  renamer.rename_icon = rename_icon;
+  renamer.copy_icon = self->copy_icon;
+  renamer.id = self->id;
+  if (!foreach_file (&renamer, rename_mime_icon_cb, &found_icon, icons_dir, error))
+    return FALSE;
+
+  if (!found_icon)
+    {
+      g_autofree char *icon_path = g_file_get_path (icons_dir);
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "icon %s not found below %s",
+                   rename_icon, icon_path);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+/* Rename the icons inside the mime_file.
+ *
+ * The problem is that they may not be in the file as there is an
+ * automatic mapping of mimetypes with icon name, so we have to add
+ * them to he mime file in that case.
+ */
+static gboolean
+_cleanup_mime_file_rename_icons (char **rename_mime_icons,
+                                 GFile *mime_file,
+                                 const char *id, GError **error)
+{
+  FlatpakXml *n_root;
+  g_autoptr(FlatpakXml) xml_root = NULL;
+  g_autoptr(GInputStream) in = NULL;
+  g_autoptr(GString) new_contents = NULL;
+
+  in = (GInputStream *) g_file_read (mime_file, NULL, error);
+  if (!in)
+    return FALSE;
+  xml_root = flatpak_xml_parse (in, FALSE, NULL, error);
+  if (!xml_root)
+    return FALSE;
+
+  n_root = flatpak_xml_find (xml_root, "mime-info", NULL);
+
+  for (char **current = rename_mime_icons; *current; current++)
+    {
+      FlatpakXml *n_type = NULL;
+      while ((n_type = flatpak_xml_find_next (n_root, "mime-type", n_type, NULL)))
+        {
+          FlatpakXml *n_icon = flatpak_xml_find (n_type, "icon", NULL);
+          if (!n_icon)
+            n_icon = flatpak_xml_find (n_type, "generic-icon", NULL);
+          if (n_icon)
+            {
+              const gchar *icon_name = flatpak_xml_attribute (n_icon, "name");
+              if (g_strcmp0 (*current, icon_name) == 0)
+                {
+                  g_autofree gchar *renamed_icon = g_strdup_printf ("%s.%s", id, icon_name);
+                  flatpak_xml_set_attribute (n_icon, "name", renamed_icon);
+                }
+            }
+          else
+            {
+              g_autofree char* mimetype = g_strdup(flatpak_xml_attribute (n_type, "type"));
+              /* Convert the mime type to an icon name. */
+              for (char *p = mimetype; *p; p++)
+                if (*p == '/')
+                  *p = '-';
+
+              if (g_strcmp0(mimetype, *current) == 0)
+                {
+                  g_autofree gchar *renamed_icon = g_strdup_printf ("%s.%s", id, *current);
+                  const gchar *attrs[] = { "name", NULL };
+                  const gchar *vals[] = { renamed_icon, NULL };
+                  n_icon = flatpak_xml_new_with_attributes ("icon", attrs, vals);
+                  flatpak_xml_add (n_type, g_steal_pointer (&n_icon));
+                }
+            }
+        }
+    }
+
+  new_contents = g_string_new ("");
+  flatpak_xml_to_string (xml_root, new_contents);
+  if (!g_file_set_contents (flatpak_file_get_path_cached (mime_file),
+                            new_contents->str,
+                            new_contents->len,
+                            error))
+    return FALSE;
+
+  return TRUE;
+}
+
+/* Perform `rename-mime-icons` */
+static gboolean
+_cleanup_rename_mime_icons (BuilderManifest *self, GFile *app_root,
+                            GError **error)
+{
+  g_autoptr(GFile) icons_dir = g_file_resolve_relative_path (app_root, "share/icons");
+  g_autoptr(GFile) mime_dir;
+  g_autofree char *mime_basename;
+  g_autoptr(GFile) mime_file;
+
+  for (char **current = self->rename_mime_icons; *current; current++)
+    if (!_rename_mime_icon (self, *current, icons_dir, error))
+      return FALSE;
+
+  mime_dir = g_file_resolve_relative_path (app_root, "share/mime/packages");
+  mime_basename = g_strdup_printf ("%s.xml", self->id);
+  mime_file = g_file_get_child (mime_dir, mime_basename);
+
+  if (!_cleanup_mime_file_rename_icons (self->rename_mime_icons, mime_file,
+                                        self->id, error))
+    return FALSE;
+
+  return TRUE;
 }
 
 gboolean
@@ -2625,12 +2854,19 @@ builder_manifest_cleanup (BuilderManifest *self,
             }
         }
 
+      if (self->rename_mime_file != NULL)
+        if (!_cleanup_rename_mime_file (self, app_root, error))
+          return FALSE;
+
       if (self->rename_icon)
         {
           gboolean found_icon = FALSE;
           g_autoptr(GFile) icons_dir = g_file_resolve_relative_path (app_root, "share/icons");
-
-          if (!foreach_file (self, rename_icon_cb, &found_icon, icons_dir, error))
+          ForeachFile renamer;
+          renamer.rename_icon = self->rename_icon;
+          renamer.copy_icon = self->copy_icon;
+          renamer.id = self->id;
+          if (!foreach_file (&renamer, rename_icon_cb, &found_icon, icons_dir, error))
             return FALSE;
 
           if (!found_icon)
@@ -2642,6 +2878,10 @@ builder_manifest_cleanup (BuilderManifest *self,
               return FALSE;
             }
         }
+
+      if (self->rename_mime_icons)
+        if (!_cleanup_rename_mime_icons (self, app_root, error))
+          return FALSE;
 
       if (self->rename_icon ||
           self->desktop_file_name_prefix ||

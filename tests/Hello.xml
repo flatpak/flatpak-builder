@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-hello">
+    <comment>Hello Document</comment>
+    <magic>
+      <match type="string" value="&lt;?xml" offset="0">
+        <match type="string" value="&lt;hello" offset="0:128"/>
+      </match>
+    </magic>
+    <glob pattern="*.hello"/>
+  </mime-type>
+  <mime-type type="application/x-goodbye">
+    <comment>Goodbye Document</comment>
+    <glob pattern="*.goodbye"/>
+    <icon name="application-x-goodbye" />
+  </mime-type>
+</mime-info>

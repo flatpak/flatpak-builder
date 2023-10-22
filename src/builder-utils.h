@@ -1,5 +1,6 @@
 /*
  * Copyright © 2015 Red Hat, Inc
+ * Copyright © 2023 GNOME Foundation Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,6 +17,7 @@
  *
  * Authors:
  *       Alexander Larsson <alexl@redhat.com>
+ *       Hubert Figuière <hub@figuiere.net>
  */
 
 #ifndef __BUILDER_UTILS_H__
@@ -169,6 +171,9 @@ struct FlatpakXml
 };
 
 FlatpakXml *flatpak_xml_new (const gchar *element_name);
+FlatpakXml *flatpak_xml_new_with_attributes (const gchar *element_name,
+                                             const gchar **attribute_names,
+                                             const gchar **attribute_values);
 FlatpakXml *flatpak_xml_new_text (const gchar *text);
 void       flatpak_xml_add (FlatpakXml *parent,
                             FlatpakXml *node);
@@ -177,13 +182,26 @@ FlatpakXml *flatpak_xml_parse (GInputStream *in,
                                gboolean      compressed,
                                GCancellable *cancellable,
                                GError      **error);
+const gchar *flatpak_xml_attribute (FlatpakXml  *node,
+                                    const gchar *name);
+gboolean flatpak_xml_set_attribute (FlatpakXml  *node,
+                                    const gchar *name,
+                                    const gchar *value);
 void       flatpak_xml_to_string (FlatpakXml *node,
                                   GString    *res);
 FlatpakXml *flatpak_xml_unlink (FlatpakXml *node,
                                 FlatpakXml *prev_sibling);
+/** Find the first child of `type`. */
 FlatpakXml *flatpak_xml_find (FlatpakXml  *node,
                               const char  *type,
                               FlatpakXml **prev_child_out);
+/** Find the next child from sibling. If `sibling` is NULL, it's
+ *  equivalant to calling `flatpak_xml_find()`.
+ */
+FlatpakXml *flatpak_xml_find_next (FlatpakXml  *node,
+                                   const char  *type,
+                                   FlatpakXml  *sibling,
+                                   FlatpakXml **prev_child_out);
 
 GBytes *   flatpak_read_stream (GInputStream *in,
                                 gboolean      null_terminate,

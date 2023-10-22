@@ -41,7 +41,10 @@ cp $(dirname $0)/test.json .
 cp $(dirname $0)/test.yaml .
 cp $(dirname $0)/test-runtime.json .
 cp $(dirname $0)/0001-Add-test-logo.patch .
+cp $(dirname $0)/Hello.desktop .
+cp $(dirname $0)/Hello.xml .
 cp $(dirname $0)/org.test.Hello.desktop .
+cp $(dirname $0)/org.test.Hello.xml .
 mkdir include1
 cp $(dirname $0)/module1.json include1/
 cp $(dirname $0)/module1.yaml include1/
@@ -70,7 +73,12 @@ for MANIFEST in test.json test.yaml test-rename.json ; do
 
     assert_has_file appdir/files/cleaned_up > out
     assert_has_file appdir/files/share/icons/hicolor/64x64/apps/org.test.Hello2.png
+    assert_has_file appdir/files/share/icons/hicolor/64x64/mimetypes/org.test.Hello2.application-x-hello.png
+    assert_has_file appdir/files/share/icons/hicolor/64x64/mimetypes/org.test.Hello2.application-x-goodbye.png
     assert_has_file appdir/files/share/applications/org.test.Hello2.desktop
+
+    assert_has_file appdir/files/share/mime/packages/org.test.Hello2.xml
+    xmllint appdir/files/share/mime/packages/org.test.Hello2.xml >&2
 
     assert_file_has_content appdir/files/out '^foo$'
     assert_file_has_content appdir/files/out2 '^foo2$'

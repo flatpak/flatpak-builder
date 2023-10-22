@@ -1451,9 +1451,21 @@
       "description": "Any appdata (metainfo) file with this name will be renamed to a name based on id during the cleanup phase.",
       "type": "string"
     },
+    "rename-mime-file": {
+      "description": "Any mimetypes file with this name will me renamed to a name based on id during the cleanup phase.",
+      "type": "string"
+    },
     "rename-icon": {
       "description": "Any icon with this name will be renamed to a name based on id during the cleanup phase. Note that this is the icon name, not the full filenames, so it should not include a filename extension.",
       "type": "string"
+    },
+    "rename-mime-icons": {
+      "type": "array",
+      "description": "Any mime icons with any of these names will be renamed to a name prefixed with id during the cleanup phase. Note that this is the icon name, not the full filenames, so it should not include a filename extension.",
+      "items": {
+        "description": "Icon name to rename.",
+        "type": "string"
+      }
     },
     "appdata-license": {
       "description": "Replace the appdata (metainfo) project_license field with this string. This is useful as the upstream license is typically only about the application itself, whereas the bundled app can contain other licenses too.",

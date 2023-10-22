@@ -1,6 +1,7 @@
 /* builder-utils.c
  *
  * Copyright (C) 2015 Red Hat, Inc
+ * Copyright © 2023 GNOME Foundation Inc.
  *
  * This file is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as
@@ -17,6 +18,7 @@
  *
  * Authors:
  *       Alexander Larsson <alexl@redhat.com>
+ *       Hubert Figuière <hub@figuiere.net>
  */
 
 #include "config.h"
@@ -1410,6 +1412,20 @@ flatpak_xml_new (const gchar *element_name)
 }
 
 FlatpakXml *
+flatpak_xml_new_with_attributes (const gchar *element_name,
+                                 const gchar **attribute_names,
+                                 const gchar **attribute_values)
+{
+  FlatpakXml *node = g_new0 (FlatpakXml, 1);
+
+  node->element_name = g_strdup (element_name);
+  node->attribute_names = g_strdupv ((char **) attribute_names);
+  node->attribute_values = g_strdupv ((char **) attribute_values);
+
+  return node;
+}
+
+FlatpakXml *
 flatpak_xml_new_text (const gchar *text)
 {
   FlatpakXml *node = g_new0 (FlatpakXml, 1);
@@ -1441,9 +1457,9 @@ xml_start_element (GMarkupParseContext *context,
   XmlData *data = user_data;
   FlatpakXml *node;
 
-  node = flatpak_xml_new (element_name);
-  node->attribute_names = g_strdupv ((char **) attribute_names);
-  node->attribute_values = g_strdupv ((char **) attribute_values);
+  node = flatpak_xml_new_with_attributes (element_name,
+                                          attribute_names,
+                                          attribute_values);
 
   flatpak_xml_add (data->current, node);
   data->current = node;
@@ -1515,6 +1531,31 @@ flatpak_xml_free (FlatpakXml *node)
   g_free (node);
 }
 
+const gchar *
+flatpak_xml_attribute (FlatpakXml *node, const gchar* name)
+{
+  if (node->attribute_names)
+    for (int i = 0; node->attribute_names[i] != NULL; i++)
+      if (g_strcmp0(node->attribute_names[i], name) == 0)
+        return node->attribute_values[i];
+
+  return NULL;
+}
+
+gboolean
+flatpak_xml_set_attribute (FlatpakXml *node, const gchar* name, const gchar* value)
+{
+  if (node->attribute_names)
+    for (int i = 0; node->attribute_names[i] != NULL; i++)
+      if (g_strcmp0(node->attribute_names[i], name) == 0)
+        {
+          g_free (node->attribute_values[i]);
+          node->attribute_values[i] = g_strdup (value);
+          return TRUE;
+        }
+
+  return FALSE;
+}
 
 void
 flatpak_xml_to_string (FlatpakXml *node, GString *res)
@@ -1535,9 +1576,11 @@ flatpak_xml_to_string (FlatpakXml *node, GString *res)
             {
               for (i = 0; node->attribute_names[i] != NULL; i++)
                 {
-                  g_string_append_printf (res, " %s=\"%s\"",
-                                          node->attribute_names[i],
-                                          node->attribute_values[i]);
+                  g_autofree char* attr =
+                    g_markup_printf_escaped (" %s=\"%s\"",
+                                             node->attribute_names[i],
+                                             node->attribute_values[i]);
+                  g_string_append (res, attr);
                 }
             }
           if (node->first_child == NULL)
@@ -1595,11 +1638,28 @@ flatpak_xml_find (FlatpakXml  *node,
                   const char  *type,
                   FlatpakXml **prev_child_out)
 {
+  return flatpak_xml_find_next (node, type, NULL, prev_child_out);
+}
+
+FlatpakXml *
+flatpak_xml_find_next (FlatpakXml  *node,
+                       const char  *type,
+                       FlatpakXml  *sibling,
+                       FlatpakXml **prev_child_out)
+{
   FlatpakXml *child = NULL;
   FlatpakXml *prev_child = NULL;
 
-  child = node->first_child;
-  prev_child = NULL;
+  if (!sibling)
+    {
+      child = node->first_child;
+      prev_child = NULL;
+    }
+  else
+    {
+      child = sibling->next_sibling;
+      prev_child = sibling;
+    }
   while (child != NULL)
     {
       FlatpakXml *next = child->next_sibling;
