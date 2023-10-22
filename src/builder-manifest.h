@@ -1,5 +1,6 @@
 /*
  * Copyright © 2015 Red Hat, Inc
+ * Copyright © 2023 GNOME Foundation Inc.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -16,6 +17,7 @@
  *
  * Authors:
  *       Alexander Larsson <alexl@redhat.com>
+ *       Hubert Figuière <hub@figuiere.net>
  */
 
 #ifndef __BUILDER_MANIFEST_H__

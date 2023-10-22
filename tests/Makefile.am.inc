@@ -21,6 +21,9 @@ dist_installed_test_data = \
 	tests/libtest.sh \
 	tests/org.test.Hello.png \
 	tests/org.test.Hello.desktop \
+	tests/Hello.desktop \
+	tests/org.test.Hello.xml \
+	tests/Hello.xml \
 	tests/source1.json \
 	tests/source2.json \
 	tests/test.json \

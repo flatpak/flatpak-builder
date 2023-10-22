@@ -23,9 +23,14 @@ modules:
         post-install:
           - touch /app/bin/file.cleanup
           - mkdir -p /app/share/icons/hicolor/64x64/apps/
+          - mkdir -p /app/share/icons/hicolor/64x64/mimetypes/
           - cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/$FLATPAK_ID.png
+          - cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/$FLATPAK_ID.application-x-hello.png
+          - cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/$FLATPAK_ID.application-x-goodbye.png
           - mkdir -p /app/share/applications
           - cp org.test.Hello.desktop /app/share/applications/$FLATPAK_ID.desktop
+          - mkdir -p /app/share/mime/packages
+          - cp org.test.Hello.xml /app/share/mime/packages/$FLATPAK_ID.xml
         make-args: [BAR=2]
         make-install-args: [BAR=3]
         build-commands: ['echo foo > /app/out']
@@ -41,6 +46,8 @@ modules:
             commands: ['echo "Hello world2, from a sandbox"']
           - type: file
             path: org.test.Hello.desktop
+          - type: file
+            path: org.test.Hello.xml
           - type: shell
             commands:
               - mkdir /app/cleanup/

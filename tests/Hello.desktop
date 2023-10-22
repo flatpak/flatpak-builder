@@ -3,5 +3,5 @@ Version=1.0
 Type=Application
 Name=Hello
 Exec=hello2.sh
-Icon=org.test.Hello2
+Icon=Hello
 MimeType=x-test/Hello;
