@@ -1,3 +1,28 @@
+Changes in 1.3.5
+================
+
+This is a development release that will eventually become 1.4.x.
+
+* Add `rename-mime-file` and `rename-mime-icons` properties
+* Re-implement support for `data:` URIs
+* Set download speed timeout for HTTP downloads
+* Enabled compressed HTTP downloads
+* Use `meson setup` with `meson` buildsystem to avoid warning
+* Fix libappstream not handling ID's ending with `.desktop`
+* Fix ostree deployment on 64-bit inode filesystems
+
+
+Changes in 1.3.4
+================
+
+This is a development release that will eventually become 1.4.x.
+
+* Replace appstream-glib with libappstream
+* Run tests in parallel respecting number of jobs set
+* Add missing `secret-env` and `secret-opts` keys to the JSON schema
+* Improve parsing of git submodules
+* Meson build fixes
+
 Changes in 1.3.3
 ================
 
