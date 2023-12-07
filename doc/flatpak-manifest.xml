@@ -54,7 +54,9 @@
         <variablelist>
                 <varlistentry>
                     <term><option>id</option> or <option>app-id</option> (string)</term>
-                    <listitem><para>A string defining the application id.</para></listitem>
+                    <listitem><para>A string defining the application id.</para>
+                    <para>Note, "app-id" is deprecated and preserved only for
+                    backwards compatibility.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>branch</option> (string)</term>
