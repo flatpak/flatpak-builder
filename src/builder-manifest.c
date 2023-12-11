@@ -2669,9 +2669,9 @@ _cleanup_rename_mime_icons (BuilderManifest *self, GFile *app_root,
                             GError **error)
 {
   g_autoptr(GFile) icons_dir = g_file_resolve_relative_path (app_root, "share/icons");
-  g_autoptr(GFile) mime_dir;
-  g_autofree char *mime_basename;
-  g_autoptr(GFile) mime_file;
+  g_autoptr(GFile) mime_dir = NULL;
+  g_autofree char *mime_basename = NULL;
+  g_autoptr(GFile) mime_file = NULL;
 
   for (char **current = self->rename_mime_icons; *current; current++)
     if (!_rename_mime_icon (self, *current, icons_dir, error))
