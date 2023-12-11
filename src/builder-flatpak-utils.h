@@ -123,24 +123,6 @@ char * flatpak_build_app_ref (const char *app,
                               const char *branch,
                               const char *arch);
 
-#if !GLIB_CHECK_VERSION (2, 40, 0)
-static inline gboolean
-g_key_file_save_to_file (GKeyFile    *key_file,
-                         const gchar *filename,
-                         GError     **error)
-{
-  gchar *contents;
-  gboolean success;
-  gsize length;
-
-  contents = g_key_file_to_data (key_file, &length, NULL);
-  success = g_file_set_contents (filename, contents, length, error);
-  g_free (contents);
-
-  return success;
-}
-#endif
-
 /* Returns the first string in subset that is not in strv */
 static inline const gchar *
 g_strv_subset (const gchar * const *strv,
@@ -291,10 +273,6 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonObject, json_object_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonParser, g_object_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonPath, g_object_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (JsonReader, g_object_unref)
-#endif
-
-#if !GLIB_CHECK_VERSION(2, 43, 4)
-G_DEFINE_AUTOPTR_CLEANUP_FUNC(GUnixFDList, g_object_unref)
 #endif
 
 gboolean flatpak_allocate_tmpdir (int           tmpdir_dfd,
