@@ -517,6 +517,8 @@ builder_manifest_set_property (GObject      *object,
     case PROP_APP_ID:
       g_free (self->id);
       self->id = g_value_dup_string (value);
+      if (self->id)
+        g_printerr ("Note, app-id is deprecated, use id instead.\n");
       break;
 
     case PROP_ID:
