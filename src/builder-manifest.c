@@ -3053,6 +3053,7 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_print ("Running appstreamcli compose\n");
               g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (media_dir));
               if (!appstreamcli_compose (error,
+                                         "--no-partial-urls",
                                          "--prefix=/",
                                          origin,
                                          arg_base_url,
