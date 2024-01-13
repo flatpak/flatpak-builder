@@ -471,7 +471,7 @@
               Additionally the standard flatpak extension properties
               are supported, and put directly into the metadata file:
               autodelete, no-autodownload, subdirectories,
-              add-ld-path, download-if, enable-if, merge-dirs,
+              add-ld-path, download-if, enable-if, autoprune-unless, merge-dirs,
               subdirectory-suffix, locale-subset, version, versions.
               See the flatpak metadata documentation for more information on these.
             </para>
