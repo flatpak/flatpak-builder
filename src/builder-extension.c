@@ -49,6 +49,7 @@ struct BuilderExtension
   char           *add_ld_path;
   char           *download_if;
   char           *enable_if;
+  char           *autoprune_unless;
   char           *merge_dirs;
   char           *subdirectory_suffix;
   char           *version;
@@ -71,6 +72,7 @@ enum {
   PROP_ADD_LD_PATH,
   PROP_DOWNLOAD_IF,
   PROP_ENABLE_IF,
+  PROP_AUTOPRUNE_UNLESS,
   PROP_MERGE_DIRS,
   PROP_NO_AUTODOWNLOAD,
   PROP_LOCALE_SUBSET,
@@ -92,6 +94,7 @@ builder_extension_finalize (GObject *object)
   g_free (self->add_ld_path);
   g_free (self->download_if);
   g_free (self->enable_if);
+  g_free (self->autoprune_unless);
   g_free (self->merge_dirs);
   g_free (self->subdirectory_suffix);
   g_free (self->version);
@@ -148,6 +151,10 @@ builder_extension_get_property (GObject    *object,
 
     case PROP_ENABLE_IF:
       g_value_set_string (value, self->enable_if);
+      break;
+
+    case PROP_AUTOPRUNE_UNLESS:
+      g_value_set_string (value, self->autoprune_unless);
       break;
 
     case PROP_MERGE_DIRS:
@@ -223,6 +230,11 @@ builder_extension_set_property (GObject      *object,
     case PROP_ENABLE_IF:
       g_clear_pointer (&self->enable_if, g_free);
       self->enable_if = g_value_dup_string (value);
+      break;
+
+  case PROP_AUTOPRUNE_UNLESS:
+      g_clear_pointer (&self->autoprune_unless, g_free);
+      self->autoprune_unless = g_value_dup_string (value);
       break;
 
     case PROP_MERGE_DIRS:
@@ -325,6 +337,13 @@ builder_extension_class_init (BuilderExtensionClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_ENABLE_IF,
                                    g_param_spec_string ("enable-if",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_AUTOPRUNE_UNLESS,
+                                   g_param_spec_string ("autoprune-unless",
                                                         "",
                                                         "",
                                                         NULL,
@@ -445,6 +464,7 @@ builder_extension_add_finish_args (BuilderExtension  *self,
   add_arg (self, args, FLATPAK_METADATA_KEY_ADD_LD_PATH, self->add_ld_path);
   add_arg (self, args, FLATPAK_METADATA_KEY_DOWNLOAD_IF, self->download_if);
   add_arg (self, args, FLATPAK_METADATA_KEY_ENABLE_IF, self->enable_if);
+  add_arg (self, args, FLATPAK_METADATA_KEY_AUTOPRUNE_UNLESS, self->autoprune_unless);
   add_arg (self, args, FLATPAK_METADATA_KEY_MERGE_DIRS, self->merge_dirs);
   add_arg (self, args, FLATPAK_METADATA_KEY_SUBDIRECTORY_SUFFIX, self->subdirectory_suffix);
   add_arg (self, args, FLATPAK_METADATA_KEY_VERSION, self->version);
@@ -467,6 +487,7 @@ builder_extension_checksum (BuilderExtension  *self,
   builder_cache_checksum_str (cache, self->add_ld_path);
   builder_cache_checksum_str (cache, self->download_if);
   builder_cache_checksum_str (cache, self->enable_if);
+  builder_cache_checksum_str (cache, self->autoprune_unless);
   builder_cache_checksum_str (cache, self->merge_dirs);
   builder_cache_checksum_str (cache, self->subdirectory_suffix);
   builder_cache_checksum_str (cache, self->version);
