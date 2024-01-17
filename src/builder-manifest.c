@@ -2353,6 +2353,8 @@ _rename_icon (ForeachFile     *self,
             g_debug ("%s/%s matches 'rename-icon', but not a regular file", full_dir, source_name);
           else if (depth != 3)
             g_debug ("%s/%s matches 'rename-icon', but not at depth 3", full_dir, source_name);
+          else if (g_str_has_suffix (self->rename_icon, ".png") || g_str_has_suffix (self->rename_icon, ".svg"))
+            g_debug ("%s/%s matches 'rename-icon', but 'rename-icon' incorrectly includes a file extension.", full_dir, source_name);
           else
             g_debug ("%s/%s matches 'rename-icon', but name does not continue with '.' or '-symbolic.'", full_dir, source_name);
         }
