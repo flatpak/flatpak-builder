@@ -31,6 +31,8 @@ modules:
           - cp org.test.Hello.desktop /app/share/applications/$FLATPAK_ID.desktop
           - mkdir -p /app/share/mime/packages
           - cp org.test.Hello.xml /app/share/mime/packages/$FLATPAK_ID.xml
+          - mkdir -p /app/share/appdata
+          - cp org.test.Hello.appdata.xml /app/share/appdata/$FLATPAK_ID.appdata.xml
         make-args: [BAR=2]
         make-install-args: [BAR=3]
         build-commands: ['echo foo > /app/out']
@@ -46,6 +48,8 @@ modules:
             commands: ['echo "Hello world2, from a sandbox"']
           - type: file
             path: org.test.Hello.desktop
+          - type: file
+            path: org.test.Hello.appdata.xml
           - type: file
             path: org.test.Hello.xml
           - type: shell
