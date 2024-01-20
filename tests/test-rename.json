@@ -9,6 +9,7 @@
         "--share=network"
     ],
     "rename-icon": "Hello",
+    "rename-appdata-file": "Hello.appdata.xml",
     "rename-desktop-file": "Hello.desktop",
     "rename-mime-file": "Hello.xml",
     "rename-mime-icons": [
@@ -43,7 +44,9 @@
                         "mkdir -p /app/share/applications",
                         "cp Hello.desktop /app/share/applications/",
                         "mkdir -p /app/share/mime/packages",
-                        "cp Hello.xml /app/share/mime/packages/"
+                        "cp Hello.xml /app/share/mime/packages/",
+                        "mkdir -p /app/share/appdata",
+                        "cp Hello.appdata.xml /app/share/appdata"
                     ],
                     "make-args": ["BAR=2" ],
                     "make-install-args": ["BAR=3" ],
@@ -62,6 +65,10 @@
                         {
                             "type": "file",
                             "path": "Hello.desktop"
+                        },
+                        {
+                            "type": "file",
+                            "path": "Hello.appdata.xml"
                         },
                         {
                             "type": "file",

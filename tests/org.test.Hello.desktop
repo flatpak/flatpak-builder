@@ -5,3 +5,4 @@ Name=Hello
 Exec=hello2.sh
 Icon=org.test.Hello2
 MimeType=x-test/Hello;
+Categories=Utility;
