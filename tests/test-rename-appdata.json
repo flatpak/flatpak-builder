@@ -1,0 +1,117 @@
+{
+    "app-id": "org.test.Hello2",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "command": "hello2.sh",
+    "tags": ["test"],
+    "token-type": 0,
+    "finish-args": [
+        "--share=network"
+    ],
+    "rename-icon": "Hello",
+    "rename-appdata-file": "Hello.appdata.xml",
+    "rename-mime-file": "Hello.xml",
+    "rename-mime-icons": [
+        "application-x-hello",
+        "application-x-goodbye"
+    ],
+    "build-options" : {
+        "cflags": "-O2 -g",
+        "cxxflags": "-O2 -g",
+        "env": {
+            "FOO": "bar",
+            "V": "1"
+        }
+    },
+    "cleanup": ["/cleanup", "*.cleanup"],
+    "cleanup-commands": [ "touch /app/cleaned_up" ],
+    "modules": [
+        "include1/module1.json",
+        {
+            "name": "root",
+            "modules": [
+                {
+                    "name": "test",
+                    "config-opts": ["--some-arg"],
+                    "post-install": [
+                        "touch /app/bin/file.cleanup",
+                        "mkdir -p /app/share/icons/hicolor/64x64/apps/",
+                        "mkdir -p /app/share/icons/hicolor/64x64/mimetypes/",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/apps/Hello.png",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/application-x-hello.png",
+                        "cp org.test.Hello.png /app/share/icons/hicolor/64x64/mimetypes/application-x-goodbye.png",
+                        "mkdir -p /app/share/applications",
+                        "cp org.test.Hello.desktop /app/share/applications/${FLATPAK_ID}.desktop",
+                        "mkdir -p /app/share/mime/packages",
+                        "cp Hello.xml /app/share/mime/packages/",
+                        "mkdir -p /app/share/appdata",
+                        "cp Hello-desktop.appdata.xml /app/share/appdata/Hello.appdata.xml"
+                    ],
+                    "make-args": ["BAR=2" ],
+                    "make-install-args": ["BAR=3" ],
+                    "build-commands": [ "echo foo > /app/out" ],
+                    "sources": [
+                        {
+                            "type": "file",
+                            "path": "test-configure",
+                            "dest-filename": "configure",
+                            "sha256": "675a1ac2feec4d4f54e581b4b01bc3cfd2c1cf31aa5963574d31228c8a11b7e7"
+                        },
+                        {
+                            "type": "file",
+                            "path": "app-data"
+                        },
+                        {
+                            "type": "file",
+                            "path": "org.test.Hello.desktop"
+                        },
+                        {
+                            "type": "file",
+                            "path": "Hello-desktop.appdata.xml"
+                        },
+                        {
+                            "type": "file",
+                            "path": "Hello.xml"
+                        },
+                        {
+                            "type": "script",
+                            "dest-filename": "hello2.sh",
+                            "commands": [ "echo \"Hello world2, from a sandbox\"" ]
+                        },
+                        {
+                            "type": "shell",
+                            "commands": [
+                                "mkdir /app/cleanup/",
+                                "touch /app/cleanup/a_file"
+                            ]
+                        },
+                        {
+                            "type": "patch",
+                            "path": "0001-Add-test-logo.patch",
+                            "use-git": true
+                        }
+                    ]
+                },
+                {
+                    "name": "test2",
+                    "build-commands": [
+                        "echo foo2 > /app/out2",
+                        "cp source[12] /app"
+                    ],
+                    "buildsystem": "simple",
+                    "sources": [
+                        {
+                            "type": "file",
+                            "path": "app-data"
+                        },
+                        "include1/source1.json",
+                        "include1/include2/source2.json"
+                    ]
+                },
+                {
+                    "name": "empty"
+                }
+            ]
+        }
+    ]
+}

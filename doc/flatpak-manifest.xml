@@ -257,11 +257,11 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-desktop-file</option> (string)</term>
-                    <listitem><para>Any desktop file with this name will be renamed to a name based on id during the cleanup phase.</para></listitem>
+                    <listitem><para>Any desktop file with this name will be renamed to a name based on id during the cleanup phase. The appdata file launchable will be updated if needed.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-appdata-file</option> (string)</term>
-                    <listitem><para>Any appdata (metainfo) file with this name will be renamed to a name based on id during the cleanup phase.</para></listitem>
+                    <listitem><para>Any appdata (metainfo) file with this name will be renamed to a name based on id during the cleanup phase. The id in the file will be updated as needed and the subsequent provides. (since 1.4.1)</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-mime-file</option> (string)</term>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>Hello.desktop</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>CC0-1.0</project_license>
+  <content_rating type="oars-1.1" />
+  <name>Hello</name>
+  <summary>Hello test app</summary>
+  <description>
+    <p>Just a test app</p>
+  </description>
+  <launchable type="desktop-id">org.test.Hello2.desktop</launchable>
+  <releases>
+    <release version="2024.01.20" date="2024-01-20" />
+  </releases>
+</component>

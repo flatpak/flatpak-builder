@@ -2787,22 +2787,29 @@ builder_manifest_cleanup (BuilderManifest *self,
             }
         }
 
-      if (self->rename_desktop_file != NULL)
+      if (self->rename_desktop_file != NULL || self->rename_appdata_file != NULL)
         {
-          g_autoptr(GFile) applications_dir = g_file_resolve_relative_path (app_root, "share/applications");
-          g_autoptr(GFile) src = g_file_get_child (applications_dir, self->rename_desktop_file);
           g_autofree char *desktop_basename = g_strdup_printf ("%s.desktop", self->id);
-          g_autoptr(GFile) dest = g_file_get_child (applications_dir, desktop_basename);
+          if (self->rename_desktop_file != NULL)
+            {
+              g_autoptr(GFile) applications_dir = g_file_resolve_relative_path (app_root, "share/applications");
+              g_autoptr(GFile) src = g_file_get_child (applications_dir, self->rename_desktop_file);
+              g_autoptr(GFile) dest = g_file_get_child (applications_dir, desktop_basename);
 
-          g_print ("Renaming %s to %s\n", self->rename_desktop_file, desktop_basename);
-          if (!g_file_move (src, dest, 0, NULL, NULL, NULL, error))
-            return FALSE;
+              g_print ("Renaming %s to %s\n", self->rename_desktop_file, desktop_basename);
+              if (!g_file_move (src, dest, 0, NULL, NULL, NULL, error))
+                return FALSE;
+            }
 
           if (appdata_file != NULL)
             {
               FlatpakXml *n_id;
               FlatpakXml *n_root;
               FlatpakXml *n_text;
+              FlatpakXml *n_provides = NULL;
+              FlatpakXml *n_provides_id = NULL;
+              FlatpakXml *id_text = NULL;
+              g_autofree char *old_id = NULL;
               g_autoptr(FlatpakXml) xml_root = NULL;
               g_autoptr(GInputStream) in = NULL;
               g_autoptr(GString) new_contents = NULL;
@@ -2827,12 +2834,23 @@ builder_manifest_cleanup (BuilderManifest *self,
               if (n_id)
                 {
                   n_text = n_id->first_child;
-                  if (n_text && g_strcmp0 (n_text->text, self->rename_desktop_file) == 0)
+                  if (n_text && g_strcmp0 (n_text->text, self->id) != 0)
                     {
-                      g_free (n_text->text);
+                      old_id = g_steal_pointer (&n_text->text);
                       n_text->text = g_strdup (self->id);
                     }
                 }
+
+              n_provides = flatpak_xml_find (n_root, "provides", NULL);
+              if (!n_provides)
+                {
+                  n_provides = flatpak_xml_new ("provides");
+                  flatpak_xml_add (n_root, n_provides);
+                }
+              n_provides_id = flatpak_xml_new ("id");
+              id_text = flatpak_xml_new_text (g_steal_pointer (&old_id));
+              flatpak_xml_add (n_provides_id, id_text);
+              flatpak_xml_add (n_provides, n_provides_id);
 
               /* replace any optional launchable */
               n_id = flatpak_xml_find (n_root, "launchable", NULL);
