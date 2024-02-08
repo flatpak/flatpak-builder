@@ -1,3 +1,10 @@
+Changes in 1.4.1
+================
+
+* Add support for `autoprune-unless` in extensions
+* Add `disable-http-decompression` option to archive/file sources
+* Change `rename-desktop-file` and `rename-appdata-file` to also set the launchable or provide the old id if needed
+
 Changes in 1.4.0
 ================
 
