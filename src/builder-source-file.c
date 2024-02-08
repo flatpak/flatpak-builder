@@ -45,6 +45,7 @@ struct BuilderSourceFile
   char         *sha512;
   char         *dest_filename;
   char         *http_referer;
+  gboolean      disable_http_decompression;
 };
 
 typedef struct
@@ -65,6 +66,7 @@ enum {
   PROP_DEST_FILENAME,
   PROP_MIRROR_URLS,
   PROP_HTTP_REFERER,
+  PROP_DISABLE_HTTP_DECOMPRESSION,
   LAST_PROP
 };
 
@@ -130,6 +132,10 @@ builder_source_file_get_property (GObject    *object,
 
     case PROP_HTTP_REFERER:
       g_value_set_string (value, self->http_referer);
+      break;
+
+    case PROP_DISABLE_HTTP_DECOMPRESSION:
+      g_value_set_boolean (value, self->disable_http_decompression);
       break;
 
     default:
@@ -204,6 +210,10 @@ builder_source_file_set_property (GObject      *object,
     case PROP_HTTP_REFERER:
       g_free (self->http_referer);
       self->http_referer = g_value_dup_string (value);
+      break;
+
+    case PROP_DISABLE_HTTP_DECOMPRESSION:
+      self->disable_http_decompression = g_value_get_boolean (value);
       break;
 
     default:
@@ -458,6 +468,7 @@ builder_source_file_download (BuilderSource  *source,
                                      self->url,
                                      (const char **)self->mirror_urls,
                                      self->http_referer,
+                                     self->disable_http_decompression,
                                      file,
                                      checksums,
                                      checksums_type,
@@ -727,6 +738,14 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
                                                         "",
                                                         "",
                                                         NULL,
+                                                        G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DISABLE_HTTP_DECOMPRESSION,
+                                   g_param_spec_boolean ("disable-http-decompression",
+                                                        "",
+                                                        "",
+                                                        FALSE,
                                                         G_PARAM_READWRITE));
 }
 
