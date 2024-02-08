@@ -682,6 +682,10 @@
                         <listitem><para>Sets the HTTP "Referer" header when downloading the archive.</para></listitem>
                     </varlistentry>
                     <varlistentry>
+                        <term><option>disable-http-decompression</option> (boolean)</term>
+                        <listitem><para>Disables decompression of downloads over HTTP for misconfigured servers.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
                         <term><option>git-init</option> (boolean)</term>
                         <listitem><para>Whether to initialise the repository as a git repository.</para></listitem>
                     </varlistentry>
@@ -837,6 +841,10 @@
                     <varlistentry>
                         <term><option>referer</option> (string)</term>
                         <listitem><para>Sets the HTTP "Referer" header when downloading the file.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>disable-http-decompression</option> (boolean)</term>
+                        <listitem><para>Disables decompression of downloads over HTTP for misconfigured servers.</para></listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>md5</option> (string)</term>

@@ -713,6 +713,10 @@
           "description": "Sets the HTTP \"Referer\" header when downloading the archive.",
           "type": "string"
         },
+        "disable-http-decompression": {
+          "description": "Disables decompression of downloads over HTTP for misconfigured servers.",
+          "type": "boolean"
+        },
         "archive-type": {
           "description": "The type of archive if it cannot be guessed from the path.",
           "type": "string",
@@ -969,6 +973,10 @@
         "referer": {
           "description": "Sets the HTTP \"Referer\" header when downloading the file.",
           "type": "string"
+        },
+        "disable-http-decompression": {
+          "description": "Disables decompression of downloads over HTTP for misconfigured servers.",
+          "type": "boolean"
         },
         "mirror-urls": {
           "description": "A list of alternative urls that are used if the main url fails.",
