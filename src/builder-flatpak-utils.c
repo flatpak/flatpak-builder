@@ -980,6 +980,16 @@ flatpak_rm_rf (GFile         *dir,
                                cancellable, error);
 }
 
+gboolean
+flatpak_rm_rf_children (GFile         *dir,
+                        GCancellable  *cancellable,
+                        GError       **error)
+{
+	return glnx_shutil_rm_rf_children_at (AT_FDCWD,
+					      flatpak_file_get_path_cached (dir),
+	                                      cancellable, error);
+}
+
 gboolean flatpak_file_rename (GFile *from,
                               GFile *to,
                               GCancellable  *cancellable,

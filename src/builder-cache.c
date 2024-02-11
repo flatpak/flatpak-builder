@@ -309,7 +309,7 @@ builder_cache_checkout (BuilderCache *self, const char *commit, gboolean delete_
 
   if (delete_dir)
     {
-      if (!g_file_delete (self->app_dir, NULL, &my_error) &&
+      if (!flatpak_rm_rf_children (self->app_dir, NULL, &my_error) &&
           !g_error_matches (my_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
         {
           g_propagate_error (error, g_steal_pointer (&my_error));

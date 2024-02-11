@@ -220,6 +220,10 @@ gboolean flatpak_rm_rf (GFile         *dir,
                         GCancellable  *cancellable,
                         GError       **error);
 
+gboolean flatpak_rm_rf_children (GFile         *dir,
+                                 GCancellable  *cancellable,
+                                 GError       **error);
+
 static inline void
 flatpak_temp_dir_destroy (void *p)
 {
