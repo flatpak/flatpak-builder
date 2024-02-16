@@ -858,7 +858,7 @@ get_all_options (BuilderOptions *self, BuilderContext *context)
   return options;
 }
 
-static const char *
+static char *
 builder_options_get_flags (BuilderOptions *self,
                            BuilderContext *context,
                            size_t          field_offset,
@@ -913,7 +913,7 @@ get_sdk_flags (BuilderOptions *self, BuilderContext *context, const char *(*meth
   return NULL;
 }
 
-const char *
+char *
 builder_options_get_cflags (BuilderOptions *self, BuilderContext *context)
 {
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cflags),
@@ -921,7 +921,7 @@ builder_options_get_cflags (BuilderOptions *self, BuilderContext *context)
                                     get_sdk_flags (self, context, builder_sdk_config_get_cflags));
 }
 
-const char *
+char *
 builder_options_get_cxxflags (BuilderOptions *self, BuilderContext *context)
 {
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cxxflags),
@@ -929,7 +929,7 @@ builder_options_get_cxxflags (BuilderOptions *self, BuilderContext *context)
                                     get_sdk_flags (self, context, builder_sdk_config_get_cxxflags));
 }
 
-const char *
+char *
 builder_options_get_cppflags (BuilderOptions *self, BuilderContext *context)
 {
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, cppflags),
@@ -937,7 +937,7 @@ builder_options_get_cppflags (BuilderOptions *self, BuilderContext *context)
                                     get_sdk_flags (self, context, builder_sdk_config_get_cppflags));
 }
 
-const char *
+char *
 builder_options_get_ldflags (BuilderOptions *self, BuilderContext *context)
 {
   return builder_options_get_flags (self, context, G_STRUCT_OFFSET (BuilderOptions, ldflags),
@@ -1134,7 +1134,10 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   GList *l;
   int i;
   char **envp = NULL;
-  const char *cflags, *cppflags, *cxxflags, *ldflags;
+  g_autofree char *cflags = NULL;
+  g_autofree char *cppflags = NULL;
+  g_autofree char *cxxflags = NULL;
+  g_autofree char *ldflags = NULL;
 
   envp = builder_context_extend_env_pre (context, envp);
 

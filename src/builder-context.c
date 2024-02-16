@@ -115,6 +115,7 @@ builder_context_finalize (GObject *object)
   g_clear_object (&self->checksums_dir);
   g_clear_object (&self->rofiles_dir);
   g_clear_object (&self->ccache_dir);
+  g_clear_object (&self->rofiles_allocated_dir);
   g_clear_object (&self->app_dir);
   g_clear_object (&self->run_dir);
   g_clear_object (&self->base_dir);
@@ -1087,7 +1088,7 @@ builder_context_set_enable_ccache (BuilderContext *self,
 
       for (i = 0; i < G_N_ELEMENTS (compilers); i++)
         {
-          const char *symlink_path = g_build_filename (ccache_bin_path, compilers[i], NULL);
+          g_autofree char *symlink_path = g_build_filename (ccache_bin_path, compilers[i], NULL);
           if (symlink ("/usr/bin/ccache", symlink_path) && errno != EEXIST)
             {
               glnx_set_error_from_errno (error);

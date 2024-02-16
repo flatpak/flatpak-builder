@@ -1260,7 +1260,8 @@ setup_build_args (GFile          *app_dir,
 
   g_ptr_array_add (args, g_file_get_path (app_dir));
 
-  *cwd_file = g_file_new_for_path (source_dir_path_canonical);
+  if (cwd_file)
+    *cwd_file = g_file_new_for_path (source_dir_path_canonical);
 
   return g_steal_pointer (&args);
 }
@@ -1350,7 +1351,7 @@ build (GFile          *app_dir,
   va_end (ap);
 
   args =
-    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env, &cwd_file);
+    setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, env, NULL);
   unresolved_args =
     setup_build_args (app_dir, module_name, context, source_dir, cwd_subdir, flatpak_opts, unresolved_env, &cwd_file);
 
