@@ -2806,9 +2806,6 @@ builder_manifest_cleanup (BuilderManifest *self,
               FlatpakXml *n_id;
               FlatpakXml *n_root;
               FlatpakXml *n_text;
-              FlatpakXml *n_provides = NULL;
-              FlatpakXml *n_provides_id = NULL;
-              FlatpakXml *id_text = NULL;
               g_autofree char *old_id = NULL;
               g_autoptr(FlatpakXml) xml_root = NULL;
               g_autoptr(GInputStream) in = NULL;
@@ -2841,16 +2838,23 @@ builder_manifest_cleanup (BuilderManifest *self,
                     }
                 }
 
-              n_provides = flatpak_xml_find (n_root, "provides", NULL);
-              if (!n_provides)
+              if (old_id)
                 {
-                  n_provides = flatpak_xml_new ("provides");
-                  flatpak_xml_add (n_root, n_provides);
+                  FlatpakXml *n_provides = NULL;
+                  FlatpakXml *n_provides_id = NULL;
+                  FlatpakXml *id_text = NULL;
+
+                  n_provides = flatpak_xml_find (n_root, "provides", NULL);
+                  if (!n_provides)
+                    {
+                      n_provides = flatpak_xml_new ("provides");
+                      flatpak_xml_add (n_root, n_provides);
+                    }
+                  n_provides_id = flatpak_xml_new ("id");
+                  id_text = flatpak_xml_new_text (g_steal_pointer (&old_id));
+                  flatpak_xml_add (n_provides_id, id_text);
+                  flatpak_xml_add (n_provides, n_provides_id);
                 }
-              n_provides_id = flatpak_xml_new ("id");
-              id_text = flatpak_xml_new_text (g_steal_pointer (&old_id));
-              flatpak_xml_add (n_provides_id, id_text);
-              flatpak_xml_add (n_provides, n_provides_id);
 
               /* replace any optional launchable */
               n_id = flatpak_xml_find (n_root, "launchable", NULL);
