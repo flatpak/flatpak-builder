@@ -37,14 +37,14 @@ typedef struct BuilderOptions BuilderOptions;
 
 GType builder_options_get_type (void);
 
-const char *builder_options_get_cflags (BuilderOptions *self,
-                                        BuilderContext *context);
-const char *builder_options_get_cxxflags (BuilderOptions *self,
-                                          BuilderContext *context);
-const char *builder_options_get_cppflags (BuilderOptions *self,
-                                          BuilderContext *context);
-const char *builder_options_get_ldflags (BuilderOptions *self,
-                                         BuilderContext *context);
+char *builder_options_get_cflags (BuilderOptions *self,
+                                  BuilderContext *context);
+char *builder_options_get_cxxflags (BuilderOptions *self,
+                                    BuilderContext *context);
+char *builder_options_get_cppflags (BuilderOptions *self,
+                                    BuilderContext *context);
+char *builder_options_get_ldflags (BuilderOptions *self,
+                                   BuilderContext *context);
 const char *builder_options_get_prefix (BuilderOptions *self,
                                         BuilderContext *context);
 const char *builder_options_get_libdir (BuilderOptions *self,

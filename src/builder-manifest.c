@@ -2544,6 +2544,8 @@ builder_manifest_find_appdata_file (BuilderManifest *self,
           source = g_file_get_child (appdata_dir, basename);
           if (g_file_query_exists (source, NULL))
             return g_steal_pointer (&source);
+
+          g_clear_object (&source);
         }
     }
   return NULL;
@@ -2941,7 +2943,7 @@ builder_manifest_cleanup (BuilderManifest *self,
                                                                       G_KEY_FILE_DESKTOP_GROUP,
                                                                       "X-Flatpak-RenamedFrom",
                                                                       NULL, NULL);
-              const char **new_renames = NULL;
+              g_autofree const char **new_renames = NULL;
               int old_rename_len = 0;
               int new_rename_len = 0;
 
