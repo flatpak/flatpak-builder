@@ -22,13 +22,17 @@ dist_installed_test_data = \
 	tests/org.test.Hello.png \
 	tests/org.test.Hello.desktop \
 	tests/Hello.desktop \
+	tests/org.test.Hello.appdata.xml \
 	tests/org.test.Hello.xml \
 	tests/Hello.xml \
+	tests/Hello.appdata.xml \
+	tests/Hello-desktop.appdata.xml \
 	tests/source1.json \
 	tests/source2.json \
 	tests/test.json \
 	tests/test.yaml \
 	tests/test-rename.json \
+	tests/test-rename-appdata.json \
 	tests/test-runtime.json \
 	tests/module1.json \
 	tests/module1.yaml \
