@@ -41,6 +41,10 @@ jobs:
       run: make check
       env:
         ASAN_OPTIONS: detect_leaks=0 # Right now we're not fully clean, but this gets us use-after-free etc
+    - name: Check distribution
+      run: make distcheck
+      env:
+        ASAN_OPTIONS: detect_leaks=0
 
   clang:
     name: Build with clang
