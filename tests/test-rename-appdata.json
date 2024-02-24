@@ -55,7 +55,7 @@
                             "type": "file",
                             "path": "test-configure",
                             "dest-filename": "configure",
-                            "sha256": "675a1ac2feec4d4f54e581b4b01bc3cfd2c1cf31aa5963574d31228c8a11b7e7"
+                            "sha256": "2c661bff6567f0e26e3a4bc5548f5a81ff86e052ccaa3791b847201be84f932f"
                         },
                         {
                             "type": "file",

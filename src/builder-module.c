@@ -1787,6 +1787,8 @@ builder_module_build_helper (BuilderModule  *self,
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_PREFIX:PATH='%s'", prefix));
           if (libdir)
             g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_LIBDIR:PATH='%s'", libdir));
+          else
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("-DCMAKE_INSTALL_LIBDIR:PATH='%s/lib'", prefix));
           g_ptr_array_add (configure_args_arr, g_strdup ("-G"));
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("%s", cmake_generator));
         }
@@ -1800,6 +1802,8 @@ builder_module_build_helper (BuilderModule  *self,
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s", prefix));
           if (libdir)
             g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s", libdir));
+          else
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s/lib", prefix));
         }
 
       g_ptr_array_add (configure_args_arr, configure_final_arg);

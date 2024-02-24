@@ -1,6 +1,7 @@
 #!/bin/sh
 
-if [ x$2 != 'x--some-arg' ] ; then
+if [ x$3 != 'x--some-arg' ] ; then
+        echo $*
 	exit 2
 fi
 
