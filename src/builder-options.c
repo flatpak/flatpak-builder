@@ -1075,6 +1075,8 @@ builder_options_get_libdir (BuilderOptions *self, BuilderContext *context)
 
   if (builder_context_get_build_runtime (context))
     return get_sdk_flags (self, context, builder_sdk_config_get_libdir);
+  if (!builder_context_get_build_extension (context))
+    return "/app/lib";
 
   return NULL;
 }
