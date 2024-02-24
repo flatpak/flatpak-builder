@@ -1,3 +1,10 @@
+Changes in 1.4.2
+================
+
+* Fix missing test files in the generated tarballs
+* Fix possible empty id in provides when renaming
+* Fix minor memory leaks
+
 Changes in 1.4.1
 ================
 
