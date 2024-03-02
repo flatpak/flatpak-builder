@@ -2178,22 +2178,6 @@ builder_module_build_helper (BuilderModule   *self,
         return FALSE;
     }
 
-  if (builder_context_get_separate_locales (context))
-    {
-      g_autoptr(GFile) root_dir = NULL;
-
-      if (builder_context_get_build_runtime (context))
-        root_dir = g_file_get_child (app_dir, "usr");
-      else
-        root_dir = g_file_get_child (app_dir, "files");
-
-      if (!builder_migrate_locale_dirs (root_dir, error))
-        {
-          g_prefix_error (error, "module %s: ", self->name);
-          return FALSE;
-        }
-    }
-
   if (!builder_module_install_licenses (self, id, source_dir, app_dir, error))
     return FALSE;
 
