@@ -265,15 +265,15 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-mime-file</option> (string)</term>
-                    <listitem><para>Any mimetypes file with this name will me renamed to a name based on id during the cleanup phase. (since 1.4.0)</para></listitem>
+                    <listitem><para>Any mimetypes file with this name will be renamed to a name based on id during the cleanup phase. (since 1.4.0)</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-icon</option> (string)</term>
-                    <listitem><para>Any icon with this name will be renamed to a name based on id during the cleanup phase. Note that this is the icon name, not the full filenames, so it should not include a filename extension. </para></listitem>
+                    <listitem><para>Any icon with this name will be renamed to a name based on id during the cleanup phase. Note that this is the icon name, not the full filename, so it should not include a filename extension. </para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>rename-mime-icons</option> (array of string)</term>
-                    <listitem><para>Any mime icons with any of these names will be renamed to a name prefixed with id during the cleanup phase. Note that this is the icon name, not the full filenames, so it should not include a filename extension. (since 1.4.0)</para></listitem>
+                    <listitem><para>Any mime icons with any of these names will be renamed to a name prefixed with id during the cleanup phase. Note that these are the icon names, not the full filenames, so they should not include a filename extension. (since 1.4.0)</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>appdata-license</option> (string)</term>
