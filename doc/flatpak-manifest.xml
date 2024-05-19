@@ -576,6 +576,8 @@
                     <listitem><para>An array of commands to run during build (between make and make install if those are used).
                     This is primarily useful when using the "simple" buildsystem.
                     Each command is run in <literal>/bin/sh -c</literal>, so it can use standard POSIX shell syntax such as piping output.
+                    If any individual entry in the array fails, then the whole build process will fail,
+                    similar to commands in a <citerefentry><refentrytitle>make</refentrytitle><manvolnum>1</manvolnum></citerefentry> recipe.
                     </para></listitem>
                 </varlistentry>
                 <varlistentry>
