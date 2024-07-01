@@ -1797,13 +1797,19 @@ builder_module_build_helper (BuilderModule  *self,
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'", prefix));
           /* TODO: What parameter for qmake? */
         }
-      else /* autotools and meson */
+      else if (meson)
         {
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s", prefix));
           if (libdir)
             g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s", libdir));
           else
             g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s/lib", prefix));
+        }
+      else /* autotools */
+        {
+          g_ptr_array_add (configure_args_arr, g_strdup_printf ("--prefix=%s", prefix));
+          if (libdir)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("--libdir=%s", libdir));
         }
 
       g_ptr_array_add (configure_args_arr, configure_final_arg);
