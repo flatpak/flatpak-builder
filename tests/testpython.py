@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 import importme
-print importme.foo
+print(importme.foo)
