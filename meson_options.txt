@@ -23,9 +23,8 @@ option(
   description: 'Whether to build and run unit tests'
 )
 option(
-  'fuse',
-  type: 'combo',
-  choices: ['2', '3', 'compatible'],
-  value: 'compatible',
-  description: 'Target a specific version of FUSE for best performance or support multiple versions'
+  'system_fusermount',
+  type: 'string',
+  description: 'system fusermount executable, or empty string to try multiple names (fusermount3, fusermount) automatically',
+  value: '',
 )
