@@ -230,6 +230,8 @@ GLIB_TESTS
 FLATPAK_BUILDER_VERSION=flatpak_builder_version
 AC_SUBST(FLATPAK_BUILDER_VERSION)
 
+AC_DEFINE([FUSERMOUNT], ["fusermount"], [Path to fusermount binary])
+
 AC_CONFIG_FILES([
 Makefile
 data/Makefile
