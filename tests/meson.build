@@ -6,6 +6,7 @@ test_env.set('FLATPAK_TESTS_DEBUG', '1')
 test_env.set('G_TEST_SRCDIR', meson.current_source_dir())
 test_env.set('G_TEST_BUILDDIR', meson.current_build_dir())
 test_env.prepend('PATH', meson.current_build_dir() / '..' / 'src', separator: ':')
+test_env.set('FUSERMOUNT', fusermount_program.full_path())
 
 test_names = [
   'test-builder',
@@ -16,6 +17,17 @@ test_names = [
 tap_test = find_program(
   files(meson.project_source_root() / 'buildutil/tap-test'),
 )
+
+if get_option('installed_tests')
+  configure_file(
+    input : 'installed-tests.sh.in',
+    output : 'installed-tests.sh',
+    configuration : {
+      'FUSERMOUNT' : fusermount_program.full_path(),
+    },
+    install_dir : installed_testdir,
+  )
+endif
 
 foreach test_name : test_names
   filename = test_name + '.sh'
