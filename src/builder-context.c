@@ -854,8 +854,7 @@ static char *rofiles_unmount_path = NULL;
 static void
 rofiles_umount_handler (int signum)
 {
-  char *argv[] = { "fusermount", "-uz", NULL,
-                     NULL };
+  char *argv[] = { FUSERMOUNT, "-uz", NULL, NULL };
 
   argv[2] = rofiles_unmount_path;
   g_debug ("Unmounting read-only fs: %s %s %s", argv[0], argv[1], argv[2]);
@@ -994,8 +993,7 @@ gboolean
 builder_context_disable_rofiles (BuilderContext *self,
                                  GError        **error)
 {
-  char *argv[] = { "fusermount", "-u", NULL,
-                     NULL };
+  char *argv[] = { FUSERMOUNT, "-u", NULL, NULL };
 
   if (!self->use_rofiles)
     return TRUE;

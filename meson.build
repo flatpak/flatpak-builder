@@ -2,7 +2,7 @@ project(
   'flatpak-builder',
   'c',
   license: 'LGPL-2.1-or-later',
-  meson_version: '>= 0.56.2',
+  meson_version: '>= 0.62.0',
   version: '1.5.0',
   default_options: 'c_std=gnu99',
 )
@@ -43,6 +43,13 @@ debugedit = find_program('debugedit', version: '>= 5.0')
 # Require appstream with compose plugin installed
 appstreamcli = find_program('appstreamcli', version: '>= 0.15.0')
 appstreamcli_compose = run_command(appstreamcli, ['compose', '--help'], check: true)
+
+fusermount = get_option('system_fusermount')
+if fusermount == ''
+  fusermount_program = find_program(['fusermount3', 'fusermount'], required: true)
+else
+  fusermount_program = find_program(fusermount, required: true)
+endif
 
 subdir('src')
 subdir('doc')

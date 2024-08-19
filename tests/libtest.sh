@@ -30,6 +30,14 @@ else
   test_builddir=$(dirname $0)
 fi
 
+if [ -e "$test_srcdir/installed-tests.sh" ]; then
+    . "$test_srcdir/installed-tests.sh"
+fi
+
+if [ -z "${FUSERMOUNT}" ]; then
+  FUSERMOUNT=fusermount
+fi
+
 assert_not_reached () {
     echo $@ 1>&2; exit 1
 }
@@ -296,7 +304,7 @@ run_sh () {
 # fuse support is needed (and the kernel module needs to be loaded) for several
 # flatpak-builder tests
 skip_without_fuse () {
-    if [ ! -w /dev/fuse ] || ! command -v fusermount >/dev/null; then
+    if [ ! -w /dev/fuse ] || ! command -v "$FUSERMOUNT" >/dev/null; then
         echo "1..0 # SKIP this test requires fuse support"
         exit 0
     fi
