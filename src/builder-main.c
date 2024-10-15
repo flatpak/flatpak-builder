@@ -533,6 +533,12 @@ main (int    argc,
 
   git_init_email ();
 
+  if (!builder_context_create_state_dir (build_context, &error))
+  {
+    g_printerr ("Can't create state directory: %s\n", error->message);
+    return 1;
+  }
+
   if (opt_sources_dirs)
     {
       g_autoptr(GPtrArray) sources_dirs = NULL;

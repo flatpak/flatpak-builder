@@ -182,6 +182,9 @@ const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *
 
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
+gboolean        builder_context_create_state_dir (BuilderContext *self,
+                                                  GError        **error);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderContext, g_object_unref)
 
 G_END_DECLS
