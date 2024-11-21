@@ -2761,6 +2761,22 @@ builder_manifest_cleanup (BuilderManifest *self,
             }
         }
 
+      if (builder_context_get_separate_locales (context))
+      {
+        g_autoptr(GFile) root_dir = NULL;
+
+        if (builder_context_get_build_runtime (context))
+          root_dir = g_file_get_child (app_dir, "usr");
+        else
+          root_dir = g_file_get_child (app_dir, "files");
+
+        if (!builder_migrate_locale_dirs (root_dir, error))
+          {
+            g_prefix_error (error, "Can't migrate locale dirs: ");
+            return FALSE;
+          }
+      }
+
       app_root = g_file_get_child (app_dir, "files");
 
       appdata_source = builder_manifest_find_appdata_file (self, app_root);
