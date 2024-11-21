@@ -6,6 +6,7 @@ test_env.set('FLATPAK_TESTS_DEBUG', '1')
 test_env.set('G_TEST_SRCDIR', meson.current_source_dir())
 test_env.set('G_TEST_BUILDDIR', meson.current_build_dir())
 test_env.prepend('PATH', meson.current_build_dir() / '..' / 'src', separator: ':')
+test_env.set('FUSERMOUNT', fusermount_program.full_path())
 
 test_names = [
   'test-builder',
