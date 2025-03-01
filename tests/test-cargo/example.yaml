@@ -1,0 +1,10 @@
+app-id: example
+runtime: org.test.Platform
+sdk: org.test.Sdk
+command: test-cargo
+modules:
+  - name: app
+    buildsystem: cargo
+    sources:
+      - type: dir
+        path: .
