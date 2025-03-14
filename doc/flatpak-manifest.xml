@@ -569,7 +569,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>build-options</option> (object)</term>
-                    <listitem><para>A build options object that can override global options</para></listitem>
+                    <listitem><para>A build options object that can override global options. Note that this is not inherited by nested modules.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>build-commands</option> (array of strings)</term>
