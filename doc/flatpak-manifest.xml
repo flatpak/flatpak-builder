@@ -483,7 +483,7 @@
                 the build options and a list of sources to download and extract before building.
             </para>
             <para>
-                Modules can be nested, in order to turn related modules on and off with a single key.
+                Modules can be nested, in order to turn related modules on and off with a single key. Module scopes are always isolated, so nested modules do <emphasis>not</emphasis> inherit attributes from parent modules.
             </para>
             <para>
                 These are the properties that are accepted:
