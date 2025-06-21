@@ -1113,6 +1113,7 @@ builder_download_uri_buffer (GUri           *uri,
   curl_easy_setopt (session, CURLOPT_WRITEFUNCTION, builder_curl_write_cb);
   curl_easy_setopt (session, CURLOPT_WRITEDATA, &write_data);
   curl_easy_setopt (session, CURLOPT_ERRORBUFFER, error_buffer);
+  curl_easy_setopt (session, CURLOPT_NETRC, CURL_NETRC_OPTIONAL);
 
   if (!disable_http_decompression)
     curl_easy_setopt (session, CURLOPT_ACCEPT_ENCODING, "");
