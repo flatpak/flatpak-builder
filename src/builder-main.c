@@ -27,6 +27,7 @@
 
 #include <glib/gi18n.h>
 #include <gio/gio.h>
+#include <ostree.h>
 #include "libglnx.h"
 
 #include "builder-flatpak-utils.h"
@@ -261,6 +262,80 @@ do_export (BuilderContext *build_context,
 
   return flatpak_spawnv (NULL, NULL, G_SUBPROCESS_FLAGS_NONE, error,
                          (const gchar * const *) args->pdata, NULL);
+}
+
+static gboolean
+commit_screenshot_ref (const char *repo_path,
+                       const char *app_dir_path,
+                       const char *arch,
+                       GError **error)
+{
+  g_autofree char *media_dir_path = NULL;
+  g_autoptr(GFile) media_dir = NULL;
+  g_autoptr(GFile) repo_file = NULL;
+  g_autoptr(OstreeRepo) repo = NULL;
+  g_autoptr(OstreeMutableTree) tree = NULL;
+  g_autoptr(GFile) tree_root = NULL;
+  g_autofree char *commit_checksum = NULL;
+  g_autofree char *ref_name = NULL;
+  g_autoptr(OstreeRepoCommitModifier) modifier = NULL;
+  gboolean ret = FALSE;
+
+  media_dir_path = g_build_filename (app_dir_path, "files/share/app-info/media", NULL);
+  media_dir = g_file_new_for_path (media_dir_path);
+
+  if (!g_file_query_exists (media_dir, NULL))
+    {
+      g_print ("Media directory does not exist, skipping commit\n");
+      return TRUE;
+    }
+
+  ref_name = g_strdup_printf ("screenshots/%s", arch);
+
+  repo_file = g_file_new_for_path (repo_path);
+  repo = ostree_repo_new (repo_file);
+  if (!ostree_repo_open (repo, NULL, error))
+    return FALSE;
+
+  modifier = ostree_repo_commit_modifier_new (OSTREE_REPO_COMMIT_MODIFIER_FLAGS_CANONICAL_PERMISSIONS,
+                                             NULL, NULL, NULL);
+  if (!ostree_repo_prepare_transaction (repo, NULL, NULL, error))
+    return FALSE;
+
+  tree = ostree_mutable_tree_new ();
+
+  if (!ostree_repo_write_directory_to_mtree (repo, media_dir, tree, modifier, NULL, error))
+    goto out;
+
+  if (!ostree_repo_write_mtree (repo, tree, &tree_root, NULL, error))
+    goto out;
+
+  if (!ostree_repo_write_commit (repo,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                 OSTREE_REPO_FILE (tree_root),
+                                 &commit_checksum,
+                                 NULL, error))
+    goto out;
+
+  ostree_repo_transaction_set_ref (repo, NULL, ref_name, commit_checksum);
+
+  if (!ostree_repo_commit_transaction (repo, NULL, NULL, error))
+    goto out;
+
+  g_print ("Committed screenshot ref: %s (%s)\n", ref_name, commit_checksum);
+  ret = TRUE;
+
+out:
+  if (!ret && repo)
+    {
+      if (!ostree_repo_abort_transaction (repo, NULL, NULL))
+        g_warning ("Failed to abort ostree transaction");
+    }
+
+  return ret;
 }
 
 static gboolean
@@ -971,6 +1046,16 @@ main (int    argc,
                       NULL))
         {
           g_printerr ("Export failed: %s\n", error->message);
+          return 1;
+        }
+
+      if (opt_mirror_screenshots_url &&
+          !commit_screenshot_ref (flatpak_file_get_path_cached (export_repo),
+                                  app_dir_path,
+                                  builder_context_get_arch (build_context),
+                                  &error))
+        {
+          g_printerr ("Failed to commit screenshot ref: %s\n", error->message);
           return 1;
         }
 

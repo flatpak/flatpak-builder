@@ -528,7 +528,9 @@
                   in the appstream xml to the specified URL. The resulting files
                   will be stored in the "screenshots" subdirectory in the app directory
                   for versions earlier than 1.3.4 and "files/share/app-info/media"
-                  subdirectory for newer versions.
+                  subdirectory for newer versions. Since version 1.4.5 this
+                  will also create a screenshot ref in the exported OSTree
+                  repo for each architecture containing the mirrored media.
                 </para></listitem>
             </varlistentry>
 
