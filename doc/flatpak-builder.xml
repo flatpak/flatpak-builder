@@ -524,10 +524,11 @@
                 <term><option>--mirror-screenshots-url=URL</option></term>
 
                 <listitem><para>
-                  Mirror any media in the appstream and rewrite the appstream xml
-                  as if they were on the specified URL. The resulting files will
-                  be stored in the "screenshots" subdirectory in the app directory
-                  and needs to be copied to the specified URL for the appdata to work.
+                  Mirror any media in the appstream and rewrite the media URLs
+                  in the appstream xml to the specified URL. The resulting files
+                  will be stored in the "screenshots" subdirectory in the app directory
+                  for versions earlier than 1.3.4 and "files/share/app-info/media"
+                  subdirectory for newer versions.
                 </para></listitem>
             </varlistentry>
 
