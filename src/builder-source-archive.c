@@ -507,7 +507,7 @@ unzip (GFile       *dir,
        GError     **error)
 {
   gboolean res;
-  const char *argv[] = { "unzip", "-q", zip_path, NULL };
+  const char *argv[] = { "bsdunzip", "-q", zip_path, NULL };
 
   res = flatpak_spawnv (dir, NULL, 0, error, argv, NULL);
 
