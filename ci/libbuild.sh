@@ -50,7 +50,7 @@ pkg_install_builddeps() {
     else
         yum -y install yum-utils
         # Base buildroot, copied from the mock config sadly
-        yum -y install bash bzip2 coreutils cpio diffutils system-release findutils gawk gcc gcc-c++ grep gzip info make patch redhat-rpm-config rpm-build sed shadow-utils tar unzip util-linux which xz
+        yum -y install bash bzip2 coreutils cpio diffutils system-release findutils gawk gcc gcc-c++ grep gzip info make patch redhat-rpm-config rpm-build sed shadow-utils tar libarchive-tools util-linux which xz
     fi
     # builddeps+runtime deps
     pkg_builddep $pkg

@@ -40,7 +40,7 @@ Very commonly used:
  * cp
  * git
  * 7z
- * unzip
+ * bsdunzip (libarchive)
 
 Rarely used:
 
