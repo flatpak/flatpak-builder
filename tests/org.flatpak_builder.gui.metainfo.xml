@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.flatpak_builder.gui</id>
+  <launchable type="desktop-id">org.flatpak_builder.gui.desktop</launchable>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0+</project_license>
+  <name>org.flatpak_builder.gui</name>
+  <developer_name>Flatpak</developer_name>
+  <summary>Foo foo foo foo</summary>
+  <url type="homepage">https://flatpak.org</url>
+  <description>
+    <p>An example desktop application</p>
+  </description>
+  <screenshots>
+    <!-- appstream silently continues without error if the file fails to
+         download. since the tag only accepts http(s) urls, we add
+         multiple sources so that in case one link fails, at least one
+         of the other ones work. Replace with any other screenshot
+         link if it fails
+     -->
+    <screenshot type="default">
+      <caption>An example screenshot</caption>
+      <image>https://raw.githubusercontent.com/flatpak/flatpak.github.io/0b56895e271bbcc7f86f9570933a96adff99e110/source/img/endless-apps.original.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>An example screenshot</caption>
+      <image>https://docs.flathub.org/img/card.png</image>
+    </screenshot>
+  </screenshots>
+  <url type="bugtracker">https://flatpak.org</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.0.1" date="2020-08-28"/>
+  </releases>
+</component>
