@@ -58,6 +58,9 @@ dist_installed_test_data = \
 	tests/org.test.Deprecated.SHA1.file.yaml \
 	tests/hello.sh \
 	tests/hello.tar.xz \
+	tests/org.flatpak_builder.gui.desktop \
+	tests/org.flatpak_builder.gui.json \
+	tests/org.flatpak_builder.gui.metainfo.xml \
 	$(NULL)
 
 installed_test_keyringdir = $(installed_testdir)/test-keyring

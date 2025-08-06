@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Example
+GenericName=Example
+Comment=Example
+Exec=hello %U
+Icon=org.flatpak_builder.gui
+Type=Application
+Categories=Network;
+Version=1.1
