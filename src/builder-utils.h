@@ -216,6 +216,10 @@ gboolean flatpak_version_check (int major,
                                 int minor,
                                 int micro);
 
+gboolean appstream_version_check (int major,
+                                  int minor,
+                                  int micro);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
 G_END_DECLS
