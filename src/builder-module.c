@@ -73,6 +73,7 @@ struct BuilderModule
   GList          *modules;
   char          **build_commands;
   char          **test_commands;
+  char          **license_files;
 };
 
 typedef struct
@@ -117,6 +118,7 @@ enum {
   PROP_MODULES,
   PROP_BUILD_COMMANDS,
   PROP_TEST_COMMANDS,
+  PROP_LICENSE_FILES,
   LAST_PROP
 };
 
@@ -162,6 +164,7 @@ builder_module_finalize (GObject *object)
   g_list_free_full (self->modules, g_object_unref);
   g_strfreev (self->build_commands);
   g_strfreev (self->test_commands);
+  g_strfreev (self->license_files);
 
   if (self->changes)
     g_ptr_array_unref (self->changes);
@@ -297,6 +300,10 @@ builder_module_get_property (GObject    *object,
 
     case PROP_RUN_TESTS:
       g_value_set_boolean (value, self->run_tests);
+      break;
+
+    case PROP_LICENSE_FILES:
+      g_value_set_boxed (value, self->license_files);
       break;
 
     default:
@@ -474,6 +481,12 @@ builder_module_set_property (GObject      *object,
 
     case PROP_RUN_TESTS:
       self->run_tests = g_value_get_boolean (value);
+      break;
+
+    case PROP_LICENSE_FILES:
+      tmp = self->license_files;
+      self->license_files = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
       break;
 
     default:
@@ -701,6 +714,14 @@ builder_module_class_init (BuilderModuleClass *klass)
                                                          "",
                                                          FALSE,
                                                          G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_LICENSE_FILES,
+                                   g_param_spec_boxed ("license-files",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
+
 }
 
 static void
@@ -1502,12 +1523,223 @@ find_file_with_extension (GFile *dir,
 }
 
 static gboolean
-builder_module_build_helper (BuilderModule  *self,
-                             BuilderCache   *cache,
-                             BuilderContext *context,
-                             GFile          *source_dir,
-                             gboolean        run_shell,
-                             GError        **error)
+find_defined_license_files (GStrv       license_files,
+                            GFile      *source_dir,
+                            GPtrArray  *files,
+                            GError    **error)
+{
+  for (size_t i = 0; license_files[i] != NULL; i++)
+    {
+      const char *license_file_path = license_files[i];
+      g_autoptr(GFile) license_file =
+        g_file_resolve_relative_path (source_dir, license_file_path);
+      g_autofree char *rel_path = NULL;
+      GFileType file_type;
+
+      rel_path = g_file_get_relative_path (source_dir, license_file);
+      if (rel_path == NULL)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                       "License path outside the source directory");
+          return FALSE;
+        }
+
+      if (!g_file_query_exists (license_file, NULL))
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                       "License file \"%s\" does not exist", rel_path);
+          return FALSE;
+        }
+
+      file_type = g_file_query_file_type (license_file,
+                                          G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                          NULL);
+      if (file_type != G_FILE_TYPE_REGULAR)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                       "License file \"%s\" is not a regular file", rel_path);
+          return FALSE;
+        }
+
+      g_ptr_array_add (files, g_steal_pointer (&license_file));
+    }
+
+  return TRUE;
+}
+
+static const char *default_licence_file_patterns[] = {
+  "COPYING",
+  "COPYRIGHT",
+  "Copyright",
+  "copyright",
+  "LICEN",
+  "Licen",
+  "licen",
+  NULL
+};
+
+static gboolean
+find_default_license_files (BuilderModule  *self,
+                            GFile          *source_dir,
+                            GPtrArray      *files,
+                            GError        **error)
+{
+  g_autoptr(GFileEnumerator) dir_enum = NULL;
+  GFileInfo *next;
+  g_autoptr(GError) my_error = NULL;
+
+  dir_enum = g_file_enumerate_children (source_dir, "standard::name,standard::type",
+                                        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                        NULL, error);
+  if (!dir_enum)
+    return FALSE;
+
+  while ((next = g_file_enumerator_next_file (dir_enum, NULL, &my_error)))
+    {
+      g_autoptr(GFileInfo) child_info = next;
+      const char *name = g_file_info_get_name (child_info);
+
+      if (g_file_info_get_file_type (child_info) != G_FILE_TYPE_REGULAR)
+        continue;
+
+      for (size_t i = 0; default_licence_file_patterns[i] != NULL; i++)
+        {
+          const char *pattern = default_licence_file_patterns[i];
+          g_autoptr(GFile) license_file = NULL;
+
+          if (!g_str_has_prefix (name, pattern))
+            continue;
+
+          license_file = g_file_get_child (source_dir, name);
+          g_ptr_array_add (files, g_steal_pointer (&license_file));
+          break;
+        }
+    }
+
+  if (my_error != NULL)
+    {
+      g_propagate_error (error, g_steal_pointer (&my_error));
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+find_license_files (BuilderModule  *self,
+                    GFile          *source_dir,
+                    GPtrArray     **license_files_out,
+                    GError        **error)
+{
+  g_autoptr(GPtrArray) license_files =
+    g_ptr_array_new_with_free_func (g_object_unref);
+
+  if (self->license_files)
+    {
+      if (!find_defined_license_files (self->license_files,
+                                       source_dir,
+                                       license_files,
+                                       error))
+        return FALSE;
+    }
+  else
+    {
+      if (!find_default_license_files (self,
+                                       source_dir,
+                                       license_files,
+                                       error))
+        return FALSE;
+    }
+
+  if (license_files_out)
+    *license_files_out = g_steal_pointer (&license_files);
+  return TRUE;
+}
+
+static GFile *
+get_license_dst_file (GFile *license_dir,
+                      GFile *license_file)
+{
+  g_autofree char *license_file_name = g_file_get_basename (license_file);
+  const char *candidate = license_file_name;
+  int i = 1;
+
+  while (TRUE)
+    {
+      g_autoptr(GFile) dst = NULL;
+      g_autofree char *owned_candidate = NULL;
+
+      if (!candidate)
+        {
+          owned_candidate = g_strdup_printf ("LICENSE_%u", i);
+          candidate = owned_candidate;
+          i++;
+        }
+
+      dst = g_file_get_child (license_dir, candidate);
+      if (!g_file_query_exists (dst, NULL))
+        return g_steal_pointer (&dst);
+
+      candidate = NULL;
+    }
+}
+
+static gboolean
+builder_module_install_licenses (BuilderModule  *self,
+                                 const char     *id,
+                                 GFile          *source_dir,
+                                 GFile          *app_dir,
+                                 GError        **error)
+{
+  g_autoptr(GPtrArray) license_files = NULL;
+  g_autoptr(GFile) license_dir = NULL;
+
+  if (!find_license_files (self, source_dir, &license_files, error))
+    return FALSE;
+
+  if (license_files->len == 0)
+    return TRUE;
+
+  license_dir = g_file_new_build_filename (g_file_get_path (app_dir),
+                                           "files/share/licenses",
+                                           id,
+                                           self->name,
+                                           NULL);
+  if (!flatpak_mkdir_p (license_dir, NULL, error))
+    return FALSE;
+
+  for (size_t i = 0; i < license_files->len; i++)
+    {
+      GFile *license_file = license_files->pdata[i];
+      g_autoptr(GFile) dst = NULL;
+      g_autofree char *rel_path = NULL;
+
+      rel_path = g_file_get_relative_path (source_dir, license_file);
+      g_assert (rel_path != NULL);
+
+      g_print ("Recording license file %s\n", rel_path);
+
+      dst = get_license_dst_file (license_dir, license_file);
+
+      if (!g_file_copy (license_file, dst,
+                        G_FILE_COPY_OVERWRITE,
+                        NULL,
+                        NULL, NULL,
+                        error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+builder_module_build_helper (BuilderModule   *self,
+                             const char      *id,
+                             BuilderCache    *cache,
+                             BuilderContext  *context,
+                             GFile           *source_dir,
+                             gboolean         run_shell,
+                             GError         **error)
 {
   GFile *app_dir = builder_context_get_app_dir (context);
   g_autofree char *make_j = NULL;
@@ -1777,10 +2009,10 @@ builder_module_build_helper (BuilderModule  *self,
       libdir = builder_options_get_libdir (self->build_options, context);
 
       if (meson)
-	{
-	  /* Meson's setup command is now meson setup */
+        {
+          /* Meson's setup command is now meson setup */
           g_ptr_array_add (configure_args_arr, g_strdup ("setup"));
-	}
+        }
 
       if (cmake || cmake_ninja)
         {
@@ -1918,10 +2150,6 @@ builder_module_build_helper (BuilderModule  *self,
         return FALSE;
     }
 
-  /* Post installation scripts */
-
-  builder_set_term_title (_("Post-Install %s"), self->name);
-
   if (builder_context_get_separate_locales (context))
     {
       g_autoptr(GFile) root_dir = NULL;
@@ -1937,6 +2165,13 @@ builder_module_build_helper (BuilderModule  *self,
           return FALSE;
         }
     }
+
+  if (!builder_module_install_licenses (self, id, source_dir, app_dir, error))
+    return FALSE;
+
+  /* Post installation scripts */
+
+  builder_set_term_title (_("Post-Install %s"), self->name);
 
   if (self->post_install)
     {
@@ -2009,11 +2244,12 @@ builder_module_build_helper (BuilderModule  *self,
 }
 
 gboolean
-builder_module_build (BuilderModule  *self,
-                      BuilderCache   *cache,
-                      BuilderContext *context,
-                      gboolean        run_shell,
-                      GError        **error)
+builder_module_build (BuilderModule   *self,
+                      const char      *id,
+                      BuilderCache    *cache,
+                      BuilderContext  *context,
+                      gboolean         run_shell,
+                      GError         **error)
 {
   g_autoptr(GFile) source_dir = NULL;
   g_autoptr(GFile) build_parent_dir = NULL;
@@ -2051,7 +2287,7 @@ builder_module_build (BuilderModule  *self,
       return FALSE;
     }
 
-  res = builder_module_build_helper (self, cache, context, source_dir, run_shell, error);
+  res = builder_module_build_helper (self, id, cache, context, source_dir, run_shell, error);
 
   /* Clean up build dir */
 

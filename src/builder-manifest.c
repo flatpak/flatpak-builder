@@ -2101,7 +2101,7 @@ builder_manifest_build_shell (BuilderManifest *self,
   if (found == NULL)
     return flatpak_fail (error, "Can't find module %s", modulename);
 
-  if (!builder_module_build (found, NULL, context, TRUE, error))
+  if (!builder_module_build (found, self->id, NULL, context, TRUE, error))
     return FALSE;
 
   return TRUE;
@@ -2150,7 +2150,7 @@ builder_manifest_build (BuilderManifest *self,
             return FALSE;
           if (!builder_context_enable_rofiles (context, error))
             return FALSE;
-          if (!builder_module_build (m, cache, context, FALSE, error))
+          if (!builder_module_build (m, self->id, cache, context, FALSE, error))
             return FALSE;
           if (!builder_context_disable_rofiles (context, error))
             return FALSE;
