@@ -77,11 +77,12 @@ gboolean builder_module_ensure_writable (BuilderModule  *self,
                                          BuilderCache   *cache,
                                          BuilderContext *context,
                                          GError        **error);
-gboolean builder_module_build (BuilderModule  *self,
-                               BuilderCache   *cache,
-                               BuilderContext *context,
-                               gboolean        run_shell,
-                               GError        **error);
+gboolean builder_module_build (BuilderModule   *self,
+                               const char      *id,
+                               BuilderCache    *cache,
+                               BuilderContext  *context,
+                               gboolean         run_shell,
+                               GError         **error);
 gboolean builder_module_update (BuilderModule  *self,
                                 BuilderContext *context,
                                 GError        **error);

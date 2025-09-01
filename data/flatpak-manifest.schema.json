@@ -470,6 +470,14 @@
             "type": "string"
           }
         },
+        "license-files": {
+          "description": "Array of paths to LICENSE files of the module",
+          "type": "array",
+          "items": {
+            "description": "LICENSE file of the module",
+            "type": "string"
+          }
+        },
         "modules": {
           "description": "An array of objects specifying the modules to be built in order. String members in the array are interpreted as the name of a separate json or yaml file that contains a module.",
           "type": "array",

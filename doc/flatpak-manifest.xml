@@ -626,6 +626,10 @@
                     <listitem><para>Array of commands to run during the tests.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>license-files</option> (array of strings)</term>
+                    <listitem><para>Array of paths to LICENSE files of the module.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>modules</option> (array of objects or strings)</term>
                     <listitem><para>An array of objects specifying nested modules to be built before this one.
                     String members in the array are interpreted as names of a separate json or yaml file that contains a module.</para></listitem>
