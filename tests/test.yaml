@@ -36,6 +36,7 @@ modules:
         make-args: [BAR=2]
         make-install-args: [BAR=3]
         build-commands: ['echo foo > /app/out']
+        license-files: ['mytest/LICENSE']
         sources:
           - type: file
             path: test-configure
@@ -52,6 +53,9 @@ modules:
             path: org.test.Hello.appdata.xml
           - type: file
             path: org.test.Hello.xml
+          - type: file
+            path: LICENSE
+            dest: mytest
           - type: shell
             commands:
               - mkdir /app/cleanup/

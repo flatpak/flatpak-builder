@@ -74,6 +74,10 @@
                             "path": "Hello.xml"
                         },
                         {
+                            "type": "file",
+                            "path": "LICENSE"
+                        },
+                        {
                             "type": "script",
                             "dest-filename": "hello2.sh",
                             "commands": [ "echo \"Hello world2, from a sandbox\"" ]

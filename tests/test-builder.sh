@@ -61,6 +61,7 @@ cp $(dirname $0)/module2.yaml include1/include2/
 cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
+echo "MY LICENSE" > ./LICENSE
 
 for MANIFEST in test.json test.yaml test-rename.json test-rename-appdata.json ; do
     echo "building manifest $MANIFEST" >&2
@@ -95,6 +96,8 @@ for MANIFEST in test.json test.yaml test-rename.json test-rename-appdata.json ; 
 
     ${FLATPAK} build appdir /app/bin/hello2.sh > hello_out2
     assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
+
+    assert_file_has_content appdir/files/share/licenses/org.test.Hello2/test/LICENSE '^MY LICENSE$'
 
     echo "ok build"
 done
