@@ -72,6 +72,10 @@
                             "path": "org.test.Hello.xml"
                         },
                         {
+                            "type": "file",
+                            "path": "LICENSE"
+                        },
+                        {
                             "type": "shell",
                             "commands": [
                                 "mkdir /app/cleanup/",
