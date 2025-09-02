@@ -39,7 +39,8 @@ config_data.set('GLIB_VERSION_MIN_REQUIRED', 'GLIB_VERSION_2_66')
 # We support targeting specific fuse versions to optimize performance.
 # Currently only fuse2 has optimizations but this allows for future fuse3
 # optimizations.
-config_data.set('ASSUME_FUSE_2', get_option('fuse') == '2')
+config_data.set('ASSUME_FUSE_2', fusermount_program.version().version_compare('< 3.0.0'))
+config_data.set_quoted('FUSERMOUNT', fusermount_program.full_path())
 
 config_h = configure_file(
   configuration: config_data,
