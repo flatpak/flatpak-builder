@@ -1780,6 +1780,22 @@ builder_module_build_helper (BuilderModule  *self,
 	{
 	  /* Meson's setup command is now meson setup */
           g_ptr_array_add (configure_args_arr, g_strdup ("setup"));
+          /*
+          * By default network access inside the build sandbox is disabled,
+          * however meson defaults into trying to initialize fallbacks and attempt to
+          * download them, returning a potentially misleading error message.
+          *
+          * Setting wrap-mode to nodownload will instruct meson to not try to use the
+          * network to fetch any resources and only the pre-existing checkouts will be
+          * taken into account. This matches both the default network permission
+          * and the design of flatpak-builder for bundling and staging all the sources
+          * ahead of time.
+          *
+          * Side effect is that it makes it slightly harder for projects to use the
+          * network access at build time, is they also have to edit their meson setup
+          * arguments to change the wrap-mode.
+          */
+          g_ptr_array_add (configure_args_arr, g_strdup ("--wrap-mode=nodownload"));
 	}
 
       if (cmake || cmake_ninja)
