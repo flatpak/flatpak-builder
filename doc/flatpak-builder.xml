@@ -578,6 +578,16 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--override-source-date-epoch</option></term>
+
+                <listitem><para>
+                  Set this timestamp as SOURCE_DATE_EPOCH to perform the
+                  build, instead of the last modification time of the manifest.
+                  This is available since 1.3.1.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--add-tag=TAG</option></term>
 
                 <listitem><para>
