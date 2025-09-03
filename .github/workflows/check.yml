@@ -141,7 +141,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Configure flatpak-builder
-      run: meson setup ${BUILDDIR} .
+      run: meson setup --wrap-mode nodownload ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
