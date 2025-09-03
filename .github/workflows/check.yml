@@ -166,3 +166,9 @@ jobs:
         path: |
           builddir/meson-logs/testlog.txt
           installed-test-logs/
+
+    - name: Configure flatpak-builder with Meson wraps
+      run: meson setup --wrap-mode=forcefallback ${BUILDDIR}_wrap .
+
+    - name: Build flatpak-builder with Meson wraps
+      run: meson compile -C ${BUILDDIR}_wrap
