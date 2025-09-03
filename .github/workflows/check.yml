@@ -25,13 +25,13 @@ jobs:
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools
+        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
+        docbook-xsl xmlto xsltproc
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
         submodules: true
     - name: configure
-      # TODO: Enable gtk-doc builds
       run: ./autogen.sh
       env:
         CFLAGS: -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2
@@ -58,7 +58,8 @@ jobs:
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools
+        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
+        docbook-xsl xmlto xsltproc
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
@@ -131,13 +132,15 @@ jobs:
           patch \
           shared-mime-info \
           socat \
-          libarchive-tools
+          libarchive-tools \
+          docbook-xsl \
+          xmlto \
+          xsltproc
 
     - name: Check out flatpak-builder
       uses: actions/checkout@v4
 
     - name: Configure flatpak-builder
-      # TODO: Enable gtk-doc builds
       run: meson . ${BUILDDIR}
 
     - name: Build flatpak-builder with Meson
