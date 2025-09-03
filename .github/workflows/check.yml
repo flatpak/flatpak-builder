@@ -146,6 +146,15 @@ jobs:
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
 
+    - name: Upload docs
+      uses: actions/upload-artifact@v4
+      with:
+        if-no-files-found: error
+        overwrite: true
+        name: docs
+        path: |
+          builddir/doc/
+
     - name: Run tests with Meson
       run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose
 
