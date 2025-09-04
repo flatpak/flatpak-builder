@@ -3056,9 +3056,16 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_autofree char *arg_media_dir =  g_strdup_printf ("--media-dir=%s",
                                                                  flatpak_file_get_path_cached (media_dir));
 
+              gboolean has_no_partial_urls = appstream_version_check (0, 16, 3);
+              if (!has_no_partial_urls)
+                {
+                  g_warning ("Found AppStream version < 0.16.3. Failed to add '--no-partial-urls' to compose");
+                }
+
               g_print ("Running appstreamcli compose\n");
               g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (media_dir));
               if (!appstreamcli_compose (error,
+                                         has_no_partial_urls ? "--no-partial-urls" : NULL,
                                          "--prefix=/",
                                          origin,
                                          arg_base_url,
