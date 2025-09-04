@@ -1,3 +1,16 @@
+Changes in 1.4.5
+================
+
+* Support automatically installing common license files for modules
+* Add license-files option to define license files to install per module
+* Support committing mirrored media as screenshot ref to exported repo
+* Enable authenticated downloads via netrc
+* Create CACHEDIR.TAG file in state dir
+* Create gitignore file in state dir
+* Switch to bsdunzip from unzip
+* Install both platform and sdk from combined runtime manifest
+* Improvements to docs and CI
+
 Changes in 1.4.4
 ================
 
