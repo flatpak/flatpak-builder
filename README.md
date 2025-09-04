@@ -41,6 +41,7 @@ Very commonly used:
  * git
  * 7z
  * bsdunzip (libarchive)
+ * git-lfs
 
 Rarely used:
 

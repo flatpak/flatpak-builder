@@ -26,7 +26,7 @@ jobs:
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
-        docbook-xsl xmlto xsltproc
+        docbook-xsl xmlto xsltproc git-lfs
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
@@ -59,7 +59,7 @@ jobs:
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
         libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
         libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
-        docbook-xsl xmlto xsltproc
+        docbook-xsl xmlto xsltproc git-lfs
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
@@ -136,7 +136,8 @@ jobs:
           libarchive-tools \
           docbook-xsl \
           xmlto \
-          xsltproc
+          xsltproc \
+          git-lfs
 
     - name: Check out flatpak-builder
       uses: actions/checkout@v4
