@@ -772,6 +772,10 @@
                         <term><option>disable-submodules</option> (boolean)</term>
                         <listitem><para>Don't checkout the git submodules when cloning the repository.</para></listitem>
                     </varlistentry>
+                    <varlistentry>
+                        <term><option>disable-lfs</option> (boolean)</term>
+                        <listitem><para>Don't explicitly fetch or checkout LFS git objects. This will be ignored by Git if LFS filters are active in system or global gitconfig.</para></listitem>
+                    </varlistentry>
                 </variablelist>
             </refsect3>
             <refsect3>

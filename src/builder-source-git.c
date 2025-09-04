@@ -48,6 +48,7 @@ struct BuilderSourceGit
   gboolean      disable_fsckobjects;
   gboolean      disable_shallow_clone;
   gboolean      disable_submodules;
+  gboolean      disable_lfs;
 };
 
 typedef struct
@@ -67,6 +68,7 @@ enum {
   PROP_DISABLE_FSCKOBJECTS,
   PROP_DISABLE_SHALLOW_CLONE,
   PROP_DISABLE_SUBMODULES,
+  PROP_DISABLE_LFS,
   LAST_PROP
 };
 
@@ -128,6 +130,10 @@ builder_source_git_get_property (GObject    *object,
       g_value_set_boolean (value, self->disable_submodules);
       break;
 
+    case PROP_DISABLE_LFS:
+      g_value_set_boolean (value, self->disable_lfs);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -178,6 +184,10 @@ builder_source_git_set_property (GObject      *object,
 
     case PROP_DISABLE_SUBMODULES:
       self->disable_submodules = g_value_get_boolean (value);
+      break;
+
+    case PROP_DISABLE_LFS:
+      self->disable_lfs = g_value_get_boolean (value);
       break;
 
     default:
@@ -255,6 +265,8 @@ builder_source_git_download (BuilderSource  *source,
 
   if (!self->disable_submodules)
     flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+  if (self->disable_lfs)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS;
   if (update_vcs)
     flags |= FLATPAK_GIT_MIRROR_FLAGS_UPDATE;
   if (self->disable_fsckobjects)
@@ -303,6 +315,9 @@ builder_source_git_extract (BuilderSource  *source,
   if (!self->disable_submodules)
     mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
 
+  if (self->disable_lfs)
+    mirror_flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS;
+
   if (!builder_git_checkout (location, get_branch (self, location),
                              dest, context, mirror_flags, error))
     return FALSE;
@@ -335,6 +350,9 @@ builder_source_git_bundle (BuilderSource  *source,
 
   if (!self->disable_submodules)
     flags |= FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES;
+
+  if (self->disable_lfs)
+    flags |= FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS;
 
   if (!builder_git_shallow_mirror_ref (location,
                                        flatpak_file_get_path_cached (mirror_dir),
@@ -477,6 +495,14 @@ builder_source_git_class_init (BuilderSourceGitClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_DISABLE_SUBMODULES,
                                    g_param_spec_boolean ("disable-submodules",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+
+  g_object_class_install_property (object_class,
+                                   PROP_DISABLE_LFS,
+                                   g_param_spec_boolean ("disable-lfs",
                                                          "",
                                                          "",
                                                          FALSE,
