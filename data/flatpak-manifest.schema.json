@@ -840,6 +840,10 @@
         "disable-submodules": {
           "description": "Don't checkout the git submodules when cloning the repository.",
           "type": "boolean"
+        },
+        "disable-lfs": {
+          "description": "Don't explicitly fetch or checkout LFS git objects.",
+          "type": "boolean"
         }
       },
       "patternProperties": {

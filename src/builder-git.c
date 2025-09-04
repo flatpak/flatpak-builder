@@ -194,6 +194,7 @@ git_lfs_is_available (void)
 
 static gboolean
 builder_git_run_lfs (GFile       *dir,
+                     FlatpakGitMirrorFlags flags,
                      GError     **error,
                      const char  *subcommand,
                      ...)
@@ -202,6 +203,9 @@ builder_git_run_lfs (GFile       *dir,
   g_autoptr(GPtrArray) args = g_ptr_array_new ();
   const char *arg;
   gboolean ok;
+
+  if (flags & FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS)
+    return TRUE;
 
   if (!git_lfs_is_available ())
     return TRUE;
@@ -657,7 +661,7 @@ builder_git_mirror_repo (const char     *repo_location,
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
-          if (!builder_git_run_lfs (mirror_dir, error,
+          if (!builder_git_run_lfs (mirror_dir, flags, error,
                                     "fetch", "--all", NULL))
             return FALSE;
 
@@ -690,7 +694,7 @@ builder_git_mirror_repo (const char     *repo_location,
                     NULL))
             return FALSE;
 
-          if (!builder_git_run_lfs (mirror_dir, error,
+          if (!builder_git_run_lfs (mirror_dir, flags, error,
                                     "fetch", "--all", NULL))
             return FALSE;
         }
@@ -795,7 +799,7 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
             "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
     return FALSE;
 
-  if (!builder_git_run_lfs (mirror_dir, error,
+  if (!builder_git_run_lfs (mirror_dir, flags, error,
                             "fetch", "origin", full_ref, NULL))
     return FALSE;
 
@@ -949,14 +953,16 @@ builder_git_checkout (const char     *repo_location,
             "config", "--bool", "core.bare", "false", NULL))
     return FALSE;
 
-  if (!builder_git_run_lfs (dest, error, "install", "--local", NULL))
-    return FALSE;
+  if (!builder_git_run_lfs (dest, mirror_flags, error,
+                            "install", "--local", NULL))
+      return FALSE;
 
   if (!git (dest, NULL, 0, error,
             "checkout", branch, NULL))
     return FALSE;
 
-  if (!builder_git_run_lfs (dest, error, "checkout", NULL))
+  if (!builder_git_run_lfs (dest, mirror_flags, error,
+                            "checkout", NULL))
     return FALSE;
 
   if (mirror_flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
