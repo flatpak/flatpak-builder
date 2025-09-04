@@ -153,29 +153,23 @@ git_lfs (GFile   *dir,
          char   **output,
          GSubprocessFlags flags,
          GError **error,
-         ...)
+         const char **args)
 {
-  GPtrArray *args;
-  const gchar *arg;
+  GPtrArray *full_args;
   gboolean res;
-  va_list ap;
 
-  va_start (ap, error);
+  full_args = g_ptr_array_new ();
+  g_ptr_array_add (full_args, "git");
+  g_ptr_array_add (full_args, "lfs");
 
-  args = g_ptr_array_new ();
-  g_ptr_array_add (args, "git");
-  g_ptr_array_add (args, "lfs");
+  for (const char **arg = args; *arg; arg++)
+    g_ptr_array_add (full_args, (char *) *arg);
 
-  while ((arg = va_arg (ap, const gchar *)))
-    g_ptr_array_add (args, (gchar *) arg);
+  g_ptr_array_add (full_args, NULL);
 
-  g_ptr_array_add (args, NULL);
+  res = flatpak_spawnv (dir, output, flags, error, (const char **) full_args->pdata, NULL);
 
-  res = flatpak_spawnv (dir, output, flags, error, (const char **) args->pdata, NULL);
-
-  g_ptr_array_free (args, TRUE);
-  va_end (ap);
-
+  g_ptr_array_free (full_args, TRUE);
   return res;
 }
 
@@ -189,7 +183,7 @@ git_lfs_is_available (void)
       g_autoptr(GError) my_error = NULL;
       gsize new_lfs_available = 2;
 
-      if (git_lfs (NULL, NULL, 0, &my_error, "version", NULL))
+      if (git_lfs (NULL, NULL, 0, &my_error, (const char *[]){"version", NULL}))
         new_lfs_available = 1;
       else
         g_debug ("git-lfs is not available: %s", my_error->message);
@@ -207,7 +201,9 @@ builder_git_run_lfs (GFile       *dir,
                      const char  *subcommand,
                      ...)
 {
-  va_list args;
+  va_list ap;
+  GPtrArray *args;
+  const char *arg;
   gboolean ok;
 
   if (flags & FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS)
@@ -216,13 +212,24 @@ builder_git_run_lfs (GFile       *dir,
   if (!git_lfs_is_available ())
     return TRUE;
 
-  va_start (args, subcommand);
-  ok = git_lfs (dir, NULL, 0, error, subcommand, args);
-  va_end (args);
+  args = g_ptr_array_new ();
+  g_ptr_array_add (args, (char *) subcommand);
+
+  va_start (ap, subcommand);
+  while ((arg = va_arg (ap, const char *)))
+    g_ptr_array_add (args, (char *) arg);
+  va_end (ap);
+
+  g_ptr_array_add (args, NULL);
+
+  g_print ("Running git lfs %s\n", subcommand);
+  ok = git_lfs (dir, NULL, 0, error, (const char **) args->pdata);
+
+  g_ptr_array_free (args, TRUE);
 
   if (!ok)
     {
-      git_lfs (dir, NULL, 0, NULL, "logs", "last", NULL);
+      git_lfs (dir, NULL, 0, NULL, (const char *[]){"logs", "last", NULL});
       return FALSE;
     }
 
@@ -659,7 +666,6 @@ builder_git_mirror_repo (const char     *repo_location,
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
-          g_print ("Fetching LFS assets\n");
           if (!builder_git_run_lfs (mirror_dir, flags, error,
                                     "fetch", "--all", NULL))
             return FALSE;
@@ -693,7 +699,6 @@ builder_git_mirror_repo (const char     *repo_location,
                     NULL))
             return FALSE;
 
-          g_print ("Fetching LFS assets\n");
           if (!builder_git_run_lfs (mirror_dir, flags, error,
                                     "fetch", "--all", NULL))
             return FALSE;
