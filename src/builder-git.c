@@ -149,6 +149,94 @@ git_has_version (int major,
 }
 
 static gboolean
+git_lfs (GFile   *dir,
+         char   **output,
+         GSubprocessFlags flags,
+         GError **error,
+         const char **args)
+{
+  GPtrArray *full_args;
+  gboolean res;
+
+  full_args = g_ptr_array_new ();
+  g_ptr_array_add (full_args, "git");
+  g_ptr_array_add (full_args, "lfs");
+
+  for (const char **arg = args; *arg; arg++)
+    g_ptr_array_add (full_args, (char *) *arg);
+
+  g_ptr_array_add (full_args, NULL);
+
+  res = flatpak_spawnv (dir, output, flags, error, (const char **) full_args->pdata, NULL);
+
+  g_ptr_array_free (full_args, TRUE);
+  return res;
+}
+
+static gboolean
+git_lfs_is_available (void)
+{
+  static gsize lfs_available = 0;
+
+  if (g_once_init_enter (&lfs_available))
+    {
+      g_autoptr(GError) my_error = NULL;
+      gsize new_lfs_available = 2;
+
+      if (git_lfs (NULL, NULL, 0, &my_error, (const char *[]){"version", NULL}))
+        new_lfs_available = 1;
+      else
+        g_debug ("git-lfs is not available: %s", my_error->message);
+
+      g_once_init_leave (&lfs_available, new_lfs_available);
+    }
+
+  return lfs_available == 1;
+}
+
+static gboolean
+builder_git_run_lfs (GFile       *dir,
+                     FlatpakGitMirrorFlags flags,
+                     GError     **error,
+                     const char  *subcommand,
+                     ...)
+{
+  va_list ap;
+  GPtrArray *args;
+  const char *arg;
+  gboolean ok;
+
+  if (flags & FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS)
+    return TRUE;
+
+  if (!git_lfs_is_available ())
+    return TRUE;
+
+  args = g_ptr_array_new ();
+  g_ptr_array_add (args, (char *) subcommand);
+
+  va_start (ap, subcommand);
+  while ((arg = va_arg (ap, const char *)))
+    g_ptr_array_add (args, (char *) arg);
+  va_end (ap);
+
+  g_ptr_array_add (args, NULL);
+
+  g_print ("Running git lfs %s\n", subcommand);
+  ok = git_lfs (dir, NULL, 0, error, (const char **) args->pdata);
+
+  g_ptr_array_free (args, TRUE);
+
+  if (!ok)
+    {
+      git_lfs (dir, NULL, 0, NULL, (const char *[]){"logs", "last", NULL});
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
 git_version_supports_fsck_and_shallow (void)
 {
   return git_has_version (1,8,3,2);
@@ -578,6 +666,10 @@ builder_git_mirror_repo (const char     *repo_location,
                     origin, full_ref_mapping, NULL))
             return FALSE;
 
+          if (!builder_git_run_lfs (mirror_dir, flags, error,
+                                    "fetch", "--all", NULL))
+            return FALSE;
+
 	  /* It turns out that older versions of git (at least 2.7.4)
 	   * cannot check out a commit unless a real tag/branch points
 	   * to it, which is not the case for e.g. gitbug pull requests.
@@ -605,6 +697,10 @@ builder_git_mirror_repo (const char     *repo_location,
                     "fetch", "-f", "-p", "--no-recurse-submodules", "--tags", origin, "*:*",
                     was_shallow ? "--unshallow" : NULL,
                     NULL))
+            return FALSE;
+
+          if (!builder_git_run_lfs (mirror_dir, flags, error,
+                                    "fetch", "--all", NULL))
             return FALSE;
         }
 
@@ -706,6 +802,10 @@ builder_git_shallow_mirror_ref (const char     *repo_location,
   full_ref_colon_full_ref = g_strdup_printf ("%s:%s", full_ref, full_ref);
   if (!git (mirror_dir, NULL, 0, error,
             "fetch", "--depth", "1", "origin", full_ref_colon_full_ref, NULL))
+    return FALSE;
+
+  if (!builder_git_run_lfs (mirror_dir, flags, error,
+                            "fetch", "origin", full_ref, NULL))
     return FALSE;
 
   /* Always mirror submodules */
@@ -858,9 +958,18 @@ builder_git_checkout (const char     *repo_location,
             "config", "--bool", "core.bare", "false", NULL))
     return FALSE;
 
+  if (!builder_git_run_lfs (dest, mirror_flags, error,
+                            "install", NULL))
+    return FALSE;
+
   if (!git (dest, NULL, 0, error,
             "checkout", branch, NULL))
     return FALSE;
+
+  if (!builder_git_run_lfs (dest, mirror_flags, error,
+                            "checkout", NULL))
+    return FALSE;
+
 
   if (mirror_flags & FLATPAK_GIT_MIRROR_FLAGS_MIRROR_SUBMODULES)
     if (!git_extract_submodule (repo_location, dest, branch, context, error))
