@@ -85,6 +85,7 @@ jobs:
       CC: ${{ matrix.compiler }}
       BASE_CFLAGS: -Wp,-D_FORTIFY_SOURCE=2
       BUILDDIR: builddir
+      CONFIG_OPTS: -Dinstalled_tests=true
 
     steps:
     - name: Install Dependencies
@@ -141,7 +142,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Configure flatpak-builder
-      run: meson setup --wrap-mode nodownload ${BUILDDIR} .
+      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
@@ -168,7 +169,7 @@ jobs:
           installed-test-logs/
 
     - name: Configure flatpak-builder with Meson wraps
-      run: meson setup --wrap-mode=forcefallback ${BUILDDIR}_wrap .
+      run: meson setup --wrap-mode=forcefallback ${CONFIG_OPTS} ${BUILDDIR}_wrap .
 
     - name: Build flatpak-builder with Meson wraps
       run: meson compile -C ${BUILDDIR}_wrap
