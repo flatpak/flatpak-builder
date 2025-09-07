@@ -105,9 +105,9 @@ if get_option('installed_tests')
     'test-runtime.json',
     'test.json',
     'test.yaml',
-    'tests/org.flatpak_builder.gui.desktop',
-    'tests/org.flatpak_builder.gui.json',
-    'tests/org.flatpak_builder.gui.metainfo.xml',
+    'org.flatpak_builder.gui.desktop',
+    'org.flatpak_builder.gui.json',
+    'org.flatpak_builder.gui.metainfo.xml',
 
     install_dir: installed_testdir,
     install_mode: 'rw-r--r--',
