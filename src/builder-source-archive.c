@@ -703,7 +703,7 @@ init_git (GFile   *dir,
   basename = g_file_get_basename (dir);
   if (!git (dir, error, "init", NULL) ||
       !git (dir, error, "add", "--ignore-errors", ".", NULL) ||
-      !git (dir, error, "commit", "-m", basename, NULL))
+      !git (dir, error, "commit", "--no-gpg-sign", "-m", basename, NULL))
     {
       g_free (basename);
       return FALSE;
