@@ -28,9 +28,9 @@ Configure arguments are documented in `meson_options.txt`.
 
 ## Runtime dependencies
 
-The `flatpak-builder` tool requires `flatpak` being available on the host to
-function. Depending on the manifest used it also requires some commands be available on
-the host.
+The `flatpak-builder` tool requires `flatpak` and `appstreamcli` >=
+0.16.3 being available on the host to function. Depending on the
+manifest used it also requires some commands be available on the host.
 
 Very commonly used:
 
