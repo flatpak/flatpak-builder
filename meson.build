@@ -40,10 +40,6 @@ endforeach
 # The debugedit program is a hard dependency
 debugedit = find_program('debugedit', version: '>= 5.0')
 
-# Require appstream with compose plugin installed
-appstreamcli = find_program('appstreamcli', version: '>= 0.15.0')
-appstreamcli_compose = run_command(appstreamcli, ['compose', '--help'], check: true)
-
 subdir('src')
 subdir('doc')
 if get_option('tests')

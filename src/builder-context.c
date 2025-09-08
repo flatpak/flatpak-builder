@@ -86,6 +86,8 @@ struct BuilderContext
   gboolean        no_shallow_clone;
   gboolean        opt_export_only;
   char           *opt_mirror_screenshots_url;
+  gboolean        opt_compose_enable_screencasts;
+  gboolean        opt_compose_enable_partial_urls;
 
   BuilderSdkConfig *sdk_config;
 };
@@ -374,6 +376,32 @@ const char *
 builder_context_get_opt_mirror_screenshots_url (BuilderContext *self)
 {
   return self->opt_mirror_screenshots_url;
+}
+
+void
+builder_context_set_opt_compose_enable_screencasts (BuilderContext *self,
+                                                    gboolean opt_compose_enable_screencasts)
+{
+    self->opt_compose_enable_screencasts = !!opt_compose_enable_screencasts;
+}
+
+gboolean
+builder_context_get_opt_compose_enable_screencasts (BuilderContext *self)
+{
+    return self->opt_compose_enable_screencasts;
+}
+
+void
+builder_context_set_opt_compose_enable_partial_urls (BuilderContext *self,
+                                                     gboolean opt_compose_enable_partial_urls)
+{
+    self->opt_compose_enable_partial_urls = !!opt_compose_enable_partial_urls;
+}
+
+gboolean
+builder_context_get_opt_compose_enable_partial_urls (BuilderContext *self)
+{
+    return self->opt_compose_enable_partial_urls;
 }
 
 GFile *

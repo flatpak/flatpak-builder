@@ -89,6 +89,8 @@ static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
 static gint64 opt_source_date_epoch = -1;
+static gboolean opt_compose_enable_screencasts;
+static gboolean opt_compose_enable_partial_urls;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -144,6 +146,8 @@ static GOptionEntry entries[] = {
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
+  { "compose-enable-screencasts", 0, 0, G_OPTION_ARG_NONE, &opt_compose_enable_screencasts, "Allow screencasts in Appstream catalogue", NULL },
+  { "compose-enable-partial-urls", 0, 0, G_OPTION_ARG_NONE, &opt_compose_enable_partial_urls, "Allow partial URLs in Appstream catalogue", NULL },
   { NULL }
 };
 
@@ -605,6 +609,8 @@ main (int    argc,
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
   builder_context_set_opt_export_only (build_context, opt_export_only);
   builder_context_set_opt_mirror_screenshots_url (build_context, opt_mirror_screenshots_url);
+  builder_context_set_opt_compose_enable_screencasts (build_context, opt_compose_enable_screencasts);
+  builder_context_set_opt_compose_enable_partial_urls (build_context, opt_compose_enable_partial_urls);
 
   git_init_email ();
 

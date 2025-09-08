@@ -41,22 +41,6 @@ else
                       [AC_MSG_ERROR([You need at least version $FLATPAK_REQS of flatpak, your version is $FLATPAK_VERSION])])
 fi
 
-AC_CHECK_PROG([APPSTREAMCLI], [appstreamcli], [appstreamcli], [false])
-if test "x$APPSTREAMCLI" = xfalse; then
-   AC_MSG_ERROR([You need appstreamcli installed])
-   APPSTREAMCLI_VERSION=`$APPSTREAMCLI --version | sed 's,.*\ \([0-9]*\.[0-9]*\.[0-9]*\)$,\1,'`
-   AX_COMPARE_VERSION([$APPSTREAMCLI_REQS],[gt],[$APPSTREAMCLI_VERSION],
-                      [AC_MSG_ERROR([You need at least version $APPSTREAMCLI_REQS of appstreamcli, your version is $APPSTREAMCLI_VERSION])])
-fi
-
-AC_MSG_CHECKING([whether appstreamcli has compose support])
-AS_IF([appstreamcli compose --help >/dev/null 2>&1],
-      [AC_MSG_RESULT(yes)],
-      [
-       AC_MSG_RESULT(no)
-       AC_MSG_ERROR([appstreamcli must have compose support enabled and installed])
-      ])
-
 LT_PREREQ([2.2.6])
 LT_INIT([disable-static])
 
@@ -102,7 +86,7 @@ PKG_PROG_PKG_CONFIG([0.24])
 # For libglnx
 AC_CHECK_HEADER([sys/xattr.h], [], [AC_MSG_ERROR([You must have sys/xattr.h from glibc])])
 
-PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl])
+PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl appstream >= $APPSTREAMCLI_REQS appstream-compose >= $APPSTREAMCLI_REQS])
 
 dnl ************************
 dnl *** check for libelf ***
