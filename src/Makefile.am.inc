@@ -53,4 +53,4 @@ flatpak_builder_SOURCES = \
 	$(NULL)
 
 flatpak_builder_LDADD = $(AM_LDADD) $(BASE_LIBS) $(LIBELF_LIBS) $(YAML_LIBS) libglnx.la
-flatpak_builder_CFLAGS = $(AM_CFLAGS) $(BASE_CFLAGS) $(YAML_CFLAGS)
+flatpak_builder_CFLAGS = -I$(top_srcdir)/src $(AM_CFLAGS) $(BASE_CFLAGS) $(YAML_CFLAGS)

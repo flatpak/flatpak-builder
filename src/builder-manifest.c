@@ -30,6 +30,9 @@
 #include <sys/statfs.h>
 #include <glib/gi18n.h>
 
+#define I_KNOW_THE_APPSTREAM_COMPOSE_API_IS_SUBJECT_TO_CHANGE
+#include <appstream-compose.h>
+
 #include "builder-manifest.h"
 #include "builder-utils.h"
 #include "builder-flatpak-utils.h"
@@ -2404,26 +2407,57 @@ cmpstringp (const void *p1, const void *p2)
 }
 
 static gboolean
-appstreamcli_compose (GError **error,
-                      ...)
+builder_appstreamcli_compose (const gchar *origin,
+                              const gchar *app_id,
+                              const gchar *result_root,
+                              const gchar *data_dir,
+                              const gchar *icon_dir,
+                              const gchar *media_dir,
+                              const gchar *hint_dir,
+                              const gchar *media_baseurl,
+                              GError **error)
 {
-  g_autoptr(GPtrArray) args = NULL;
-  const gchar *arg;
-  va_list ap;
+  g_autoptr(AscCompose) compose = NULL;
+  g_autoptr(AscDirectoryUnit) dirunit = NULL;
+  g_autofree gchar *desktop_component = NULL;
 
-  args = g_ptr_array_new_with_free_func (g_free);
-  g_ptr_array_add (args, g_strdup ("appstreamcli"));
-  g_ptr_array_add (args, g_strdup ("compose"));
+  g_return_val_if_fail (origin != NULL, FALSE);
+  g_return_val_if_fail (app_id != NULL, FALSE);
+  g_return_val_if_fail (result_root != NULL, FALSE);
+  g_return_val_if_fail (data_dir != NULL, FALSE);
+  g_return_val_if_fail (icon_dir != NULL, FALSE);
+  g_return_val_if_fail (hint_dir != NULL, FALSE);
 
-  va_start (ap, error);
-  while ((arg = va_arg (ap, const gchar *)))
-    g_ptr_array_add (args, g_strdup (arg));
-  g_ptr_array_add (args, NULL);
-  va_end (ap);
+  compose = asc_compose_new ();
 
-  if (!flatpak_spawnv (NULL, NULL, 0, error, (const char * const *)args->pdata, NULL))
+  asc_compose_set_format (compose, AS_FORMAT_KIND_XML);
+  asc_compose_set_origin (compose, origin);
+  asc_compose_set_prefix (compose, "/");
+
+  asc_compose_add_allowed_cid (compose, app_id);
+  desktop_component = g_strdup_printf ("%s.desktop", app_id);
+  asc_compose_add_allowed_cid (compose, desktop_component);
+
+  dirunit = asc_directory_unit_new (result_root);
+  asc_compose_add_unit (compose, ASC_UNIT (dirunit));
+
+  asc_compose_set_data_result_dir (compose, data_dir);
+  asc_compose_set_icons_result_dir (compose, icon_dir);
+  asc_compose_set_media_baseurl (compose, media_baseurl);
+  asc_compose_set_media_result_dir (compose, media_dir);
+  asc_compose_set_hints_result_dir (compose, hint_dir);
+
+  g_autoptr(GPtrArray) results = asc_compose_run (compose, NULL, error);
+  if (results == NULL)
     {
-      g_prefix_error (error, "ERROR: appstreamcli compose failed: ");
+      g_prefix_error (error, "AppStream compose failed: ");
+      return FALSE;
+    }
+
+  if (asc_compose_has_errors (compose))
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "AppStream compose completed with errors");
       return FALSE;
     }
 
@@ -3033,56 +3067,46 @@ builder_manifest_cleanup (BuilderManifest *self,
 
       if (self->appstream_compose && appdata_file != NULL)
         {
-          g_autofree char *origin = g_strdup_printf ("--origin=%s",
-                                                     builder_manifest_get_id (self));
-          g_autofree char *components_arg = g_strdup_printf ("--components=%s,%s.desktop",
-                                                             self->id, self->id);
           const char *app_root_path = flatpak_file_get_path_cached (app_root);
-          g_autofree char *result_root_arg = g_strdup_printf ("--result-root=%s", app_root_path);
-          g_autoptr(GFile) xml_dir = flatpak_build_file (app_root, "share/app-info/xmls", NULL);
+          g_autoptr(GFile) data_out = flatpak_build_file (app_root, "share/app-info/xmls", NULL);
           g_autoptr(GFile) icon_out = flatpak_build_file (app_root, "share/app-info/icons/flatpak", NULL);
-          g_autoptr(GFile) media_dir = flatpak_build_file (app_root, "share/app-info/media", NULL);
-          g_autofree char *data_dir = g_strdup_printf ("--data-dir=%s",
-                                                       flatpak_file_get_path_cached (xml_dir));
-          g_autofree char *icon_dir = g_strdup_printf ("--icons-dir=%s",
-                                                       flatpak_file_get_path_cached (icon_out));
+          g_autoptr(GFile) media_out = flatpak_build_file (app_root, "share/app-info/media", NULL);
+          g_autoptr(GFile) hint_out = flatpak_build_file (app_root, "appstream", NULL);
+          const char *data_dir = flatpak_file_get_path_cached(data_out);
+          const char *icon_dir = flatpak_file_get_path_cached(icon_out);
+          const char *media_dir = flatpak_file_get_path_cached(media_out);
+          const char *hint_dir = flatpak_file_get_path_cached(hint_out);
           const char *opt_mirror_screenshots_url = builder_context_get_opt_mirror_screenshots_url (context);
           gboolean opt_export_only = builder_context_get_opt_export_only (context);
 
+          g_print ("Running appstreamcli compose\n");
           if (opt_mirror_screenshots_url && !opt_export_only)
             {
               g_autofree char *url = g_build_filename (opt_mirror_screenshots_url, NULL);
-              g_autofree char *arg_base_url = g_strdup_printf ("--media-baseurl=%s", url);
-              g_autofree char *arg_media_dir =  g_strdup_printf ("--media-dir=%s",
-                                                                 flatpak_file_get_path_cached (media_dir));
 
-              g_print ("Running appstreamcli compose\n");
-              g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (media_dir));
-              if (!appstreamcli_compose (error,
-                                         "--prefix=/",
-                                         origin,
-                                         arg_base_url,
-                                         arg_media_dir,
-                                         result_root_arg,
-                                         data_dir,
-                                         icon_dir,
-                                         components_arg,
-                                         app_root_path,
-                                         NULL))
-              return FALSE;
+              g_print ("Saving screenshots in %s\n", media_dir);
+              if (!builder_appstreamcli_compose (builder_manifest_get_id (self),
+                                                 self->id,
+                                                 app_root_path,
+                                                 data_dir,
+                                                 icon_dir,
+                                                 media_dir,
+                                                 hint_dir,
+                                                 url,
+                                                 error))
+                return FALSE;
             }
           else
             {
-              g_print ("Running appstreamcli compose\n");
-              if (!appstreamcli_compose (error,
-                                         "--prefix=/",
-                                         origin,
-                                         result_root_arg,
-                                         data_dir,
-                                         icon_dir,
-                                         components_arg,
-                                         app_root_path,
-                                         NULL))
+              if (!builder_appstreamcli_compose (builder_manifest_get_id (self),
+                                                 self->id,
+                                                 app_root_path,
+                                                 data_dir,
+                                                 icon_dir,
+                                                 NULL,
+                                                 hint_dir,
+                                                 NULL,
+                                                 error))
                 return FALSE;
             }
         }

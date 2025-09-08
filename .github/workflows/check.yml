@@ -20,7 +20,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
+        sudo apt-get install -y libglib2.0 attr automake libappstream-compose-dev gettext autopoint bison dbus gtk-doc-tools \
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
@@ -53,7 +53,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
+        sudo apt-get install -y libglib2.0 attr automake libappstream-compose-dev gettext autopoint bison dbus gtk-doc-tools \
         libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
         libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
         libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
@@ -95,7 +95,7 @@ jobs:
           attr \
           automake \
           autopoint \
-          appstream-compose \
+          libappstream-compose-dev \
           bison \
           debugedit \
           dbus \
