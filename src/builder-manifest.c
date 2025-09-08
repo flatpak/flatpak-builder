@@ -2415,6 +2415,8 @@ builder_appstreamcli_compose (const gchar *origin,
                               const gchar *media_dir,
                               const gchar *hint_dir,
                               const gchar *media_baseurl,
+                              gboolean     enable_screencasts,
+                              gboolean     enable_partial_urls,
                               GError **error)
 {
   g_autoptr(AscCompose) compose = NULL;
@@ -2448,6 +2450,14 @@ builder_appstreamcli_compose (const gchar *origin,
   asc_compose_set_hints_result_dir (compose, hint_dir);
 
   asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_PROPAGATE_CUSTOM);
+
+#if AS_CHECK_VERSION(0, 16, 3)
+  if (!enable_partial_urls)
+    asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_NO_PARTIAL_URLS);
+#endif
+
+  if (!enable_screencasts)
+    asc_compose_remove_flags (compose, ASC_COMPOSE_FLAG_ALLOW_SCREENCASTS);
 
   g_autoptr(GPtrArray) results = asc_compose_run (compose, NULL, error);
   if (results == NULL)
@@ -3080,6 +3090,8 @@ builder_manifest_cleanup (BuilderManifest *self,
           const char *hint_dir = flatpak_file_get_path_cached(hint_out);
           const char *opt_mirror_screenshots_url = builder_context_get_opt_mirror_screenshots_url (context);
           gboolean opt_export_only = builder_context_get_opt_export_only (context);
+          gboolean opt_enable_screencasts = builder_context_get_opt_compose_enable_screencasts(context);
+          gboolean opt_enable_partial_urls = builder_context_get_opt_compose_enable_partial_urls(context);
 
           g_print ("Running appstreamcli compose\n");
           if (opt_mirror_screenshots_url && !opt_export_only)
@@ -3095,6 +3107,8 @@ builder_manifest_cleanup (BuilderManifest *self,
                                                  media_dir,
                                                  hint_dir,
                                                  url,
+                                                 opt_enable_screencasts,
+                                                 opt_enable_partial_urls,
                                                  error))
                 return FALSE;
             }
@@ -3108,6 +3122,8 @@ builder_manifest_cleanup (BuilderManifest *self,
                                                  NULL,
                                                  hint_dir,
                                                  NULL,
+                                                 FALSE,
+                                                 opt_enable_partial_urls,
                                                  error))
                 return FALSE;
             }

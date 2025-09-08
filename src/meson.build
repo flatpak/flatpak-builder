@@ -57,6 +57,7 @@ flatpak_builder_deps = [
   dependency('libglnx', default_options: ['tests=false']),
   dependency('libxml-2.0', version: '>= 2.4'),
   dependency('ostree-1', version: '>= 2017.14'),
+  dependency('appstream', version: '>=0.15.0'),
   dependency('appstream-compose', version: '>=0.15.0'),
   yaml_dep,
 ]

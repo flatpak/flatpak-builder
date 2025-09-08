@@ -180,6 +180,16 @@ void            builder_context_set_opt_mirror_screenshots_url (BuilderContext *
 
 const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *self);
 
+void            builder_context_set_opt_compose_enable_screencasts (BuilderContext *self,
+                                                                    gboolean opt_compose_enable_screencasts);
+
+gboolean        builder_context_get_opt_compose_enable_screencasts (BuilderContext *self);
+
+void            builder_context_set_opt_compose_enable_partial_urls (BuilderContext *self,
+                                                                     gboolean opt_compose_enable_partial_urls);
+
+gboolean        builder_context_get_opt_compose_enable_partial_urls (BuilderContext *self);
+
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 gboolean        builder_context_create_state_dir (BuilderContext *self,

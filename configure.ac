@@ -86,7 +86,7 @@ PKG_PROG_PKG_CONFIG([0.24])
 # For libglnx
 AC_CHECK_HEADER([sys/xattr.h], [], [AC_MSG_ERROR([You must have sys/xattr.h from glibc])])
 
-PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl appstream-compose >= $APPSTREAMCLI_REQS])
+PKG_CHECK_MODULES(BASE, [glib-2.0 >= $GLIB_REQS gio-2.0 gio-unix-2.0 ostree-1 >= $OSTREE_REQS json-glib-1.0 libxml-2.0 >= 2.4 libcurl appstream >= $APPSTREAMCLI_REQS appstream-compose >= $APPSTREAMCLI_REQS])
 
 dnl ************************
 dnl *** check for libelf ***
