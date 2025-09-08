@@ -2447,6 +2447,8 @@ builder_appstreamcli_compose (const gchar *origin,
   asc_compose_set_media_result_dir (compose, media_dir);
   asc_compose_set_hints_result_dir (compose, hint_dir);
 
+  asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_PROPAGATE_CUSTOM);
+
   g_autoptr(GPtrArray) results = asc_compose_run (compose, NULL, error);
   if (results == NULL)
     {
