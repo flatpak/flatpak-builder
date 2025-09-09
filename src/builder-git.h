@@ -31,6 +31,7 @@ typedef enum {
   FLATPAK_GIT_MIRROR_FLAGS_DISABLE_FSCK = 1 << 2,
   FLATPAK_GIT_MIRROR_FLAGS_DISABLE_SHALLOW = 1 << 3,
   FLATPAK_GIT_MIRROR_FLAGS_WILL_FETCH_FROM = 1 << 4,
+  FLATPAK_GIT_MIRROR_FLAGS_DISABLE_LFS = 1 << 5,
 } FlatpakGitMirrorFlags;
 
 gboolean builder_git_mirror_repo        (const char      *repo_location,
