@@ -588,6 +588,21 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--compose-url-policy=POLICY</option></term>
+
+                <listitem><para>
+                  Set the AppStream compose URL policy. Accepted values
+                  are <literal>partial</literal> and <literal>full</literal>.
+                  <literal>full</literal> requires AppStream version >= 0.16.3.
+                  Defaults to <literal>partial</literal> if unspecified.
+                  This policy only takes effect when used in conjunction
+                  with <option>--mirror-screenshots-url=URL</option>;
+                  otherwise the Appstream catalogue will preserve
+                  the source media URLs.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--add-tag=TAG</option></term>
 
                 <listitem><para>

@@ -29,6 +29,11 @@
 
 G_BEGIN_DECLS
 
+typedef enum {
+  BUILDER_AS_URL_POLICY_PARTIAL = 0,
+  BUILDER_AS_URL_POLICY_FULL
+} BuilderAsUrlPolicy;
+
 /* Same as SOUP_HTTP_URI_FLAGS, means all possible flags for http uris */
 
 #if GLIB_CHECK_VERSION (2, 68, 0)
@@ -184,6 +189,10 @@ BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 gboolean        builder_context_create_state_dir (BuilderContext *self,
                                                   GError        **error);
+
+void             builder_context_set_as_url_policy (BuilderContext      *self,
+                                                    BuilderAsUrlPolicy  policy);
+BuilderAsUrlPolicy builder_context_get_as_url_policy (BuilderContext   *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderContext, g_object_unref)
 

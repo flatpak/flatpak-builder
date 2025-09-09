@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..8"
+echo "1..9"
 
 setup_repo
 install_repo
@@ -144,3 +144,13 @@ ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) ou
 find outdir_sc -path "*/screenshots/image-1_orig.png" -type f | grep -q .
 
 echo "ok screenshot ref commit"
+
+# test compose partial url
+${FLATPAK_BUILDER} --force-clean builddir_sc \
+    --mirror-screenshots-url=https://example.org/media \
+    --state-dir .fp-compose-url-policy \
+    --compose-url-policy=partial \
+    org.flatpak_builder.gui.json >&2
+gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak_builder.gui.xml.gz|grep -Eq '>org/flatpak_builder/gui/[^/]+/screenshots/image-1_orig\.png</image>'
+
+echo "ok compose partial url"

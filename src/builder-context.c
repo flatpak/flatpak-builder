@@ -88,6 +88,8 @@ struct BuilderContext
   char           *opt_mirror_screenshots_url;
 
   BuilderSdkConfig *sdk_config;
+
+  BuilderAsUrlPolicy as_url_policy;
 };
 
 typedef struct
@@ -1239,6 +1241,19 @@ builder_context_create_state_dir (BuilderContext *self,
   }
 
   return TRUE;
+}
+
+void
+builder_context_set_as_url_policy (BuilderContext     *self,
+                                   BuilderAsUrlPolicy  policy)
+{
+  self->as_url_policy = policy;
+}
+
+BuilderAsUrlPolicy
+builder_context_get_as_url_policy (BuilderContext *self)
+{
+  return self->as_url_policy;
 }
 
 BuilderContext *

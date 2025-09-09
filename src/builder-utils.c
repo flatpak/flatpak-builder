@@ -1837,3 +1837,52 @@ flatpak_version_check (int major,
 
   return FALSE;
 }
+
+gboolean
+appstream_version_check (int major,
+                         int minor,
+                         int micro)
+{
+  static int as_major = 0;
+  static int as_minor = 0;
+  static int as_micro = 0;
+
+  if (as_major == 0 &&
+      as_minor == 0 &&
+      as_micro == 0)
+    {
+      const char * argv[] = { "appstreamcli", "--version", NULL };
+      g_autoptr(GSubprocess) subp = NULL;
+      g_autofree char *out = NULL;
+      g_auto(GStrv) lines = NULL;
+
+      subp = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDOUT_PIPE, NULL);
+      g_subprocess_communicate_utf8 (subp, NULL, NULL, &out, NULL, NULL);
+
+      lines = g_strsplit (out, "\n", -1);
+
+      for (size_t i = 0; lines[i] != NULL; i++)
+        {
+          /* Only prefer library version over cli version in case of mismatch */
+          if (g_str_has_prefix (lines[i], "AppStream library version:"))
+            {
+              if (sscanf (lines[i], "AppStream library version: %d.%d.%d", &as_major, &as_minor, &as_micro) == 3)
+                break;
+            }
+          else if (g_str_has_prefix (lines[i], "AppStream version:"))
+            {
+              if (sscanf (lines[i], "AppStream version: %d.%d.%d", &as_major, &as_minor, &as_micro) == 3)
+                break;
+            }
+        }
+
+      if (as_major == 0 && as_minor == 0 && as_micro == 0)
+        g_warning ("Failed to find appstream version");
+
+      g_debug ("Found AppStream version %d.%d.%d", as_major, as_minor, as_micro);
+    }
+
+  return (as_major > major) ||
+         (as_major == major && as_minor > minor) ||
+         (as_major == major && as_minor == minor && as_micro >= micro);
+}

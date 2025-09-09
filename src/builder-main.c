@@ -89,6 +89,7 @@ static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
 static gint64 opt_source_date_epoch = -1;
+static gchar *opt_as_url_policy = NULL;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -144,6 +145,7 @@ static GOptionEntry entries[] = {
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
+  { "compose-url-policy", 0, 0, G_OPTION_ARG_STRING, &opt_as_url_policy, "Set the AppStream compose URL policy ('partial' or 'full'). Partial if unspecified.", "POLICY" },
   { NULL }
 };
 
@@ -605,6 +607,28 @@ main (int    argc,
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
   builder_context_set_opt_export_only (build_context, opt_export_only);
   builder_context_set_opt_mirror_screenshots_url (build_context, opt_mirror_screenshots_url);
+
+  if (opt_mirror_screenshots_url)
+    {
+      if (opt_as_url_policy == NULL)
+        builder_context_set_as_url_policy (build_context, BUILDER_AS_URL_POLICY_PARTIAL);
+      else if (g_strcmp0 (opt_as_url_policy, "full") == 0)
+        {
+          if (!appstream_version_check (0, 16, 3))
+            {
+              g_printerr ("AppStream version >= 0.16.3 required for 'full' compose URL policy\n");
+              return 1;
+            }
+          builder_context_set_as_url_policy (build_context, BUILDER_AS_URL_POLICY_FULL);
+        }
+      else if (g_strcmp0 (opt_as_url_policy, "partial") == 0)
+        builder_context_set_as_url_policy (build_context, BUILDER_AS_URL_POLICY_PARTIAL);
+      else
+        {
+          g_printerr ("Invalid value for --compose-url-policy: %s\n", opt_as_url_policy);
+          return 1;
+        }
+    }
 
   git_init_email ();
 
