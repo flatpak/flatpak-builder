@@ -141,6 +141,6 @@ ${FLATPAK_BUILDER} --repo=$REPO/repo_sc --force-clean builddir_sc \
     org.flatpak_builder.gui.json >&2
 ostree --repo=$REPO/repo_sc refs|grep -Eq "^screenshots/$(flatpak --default-arch)$"
 ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) outdir_sc
-find outdir_sc -path "*/screenshots/image-1_orig.png" -type f | grep -q .
+find outdir_sc -path "*/icons/64x64/org.test.Hello.png" -type f | grep -q .
 
 echo "ok screenshot ref commit"

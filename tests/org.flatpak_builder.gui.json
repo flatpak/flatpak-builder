@@ -3,17 +3,15 @@
     "runtime": "org.test.Platform",
     "sdk": "org.test.Sdk",
     "command": "hello",
+    "appstream-compose": false,
     "modules": [
         {
             "name": "hello_gui",
             "buildsystem": "simple",
             "build-commands": [
-                "mkdir -p ${FLATPAK_DEST}/bin ${FLATPAK_DEST}/share/metainfo ${FLATPAK_DEST}/share/applications",
-                "mkdir -p ${FLATPAK_DEST}/share/icons/hicolor/64x64/apps",
+                "mkdir -p ${FLATPAK_DEST}/bin",
                 "cp -vf hello.sh ${FLATPAK_DEST}/bin/hello",
-                "cp -vf ${FLATPAK_ID}.metainfo.xml ${FLATPAK_DEST}/share/metainfo/${FLATPAK_ID}.metainfo.xml",
-                "cp -vf ${FLATPAK_ID}.desktop ${FLATPAK_DEST}/share/applications/${FLATPAK_ID}.desktop",
-                "cp -vf org.test.Hello.png ${FLATPAK_DEST}/share/icons/hicolor/64x64/apps/${FLATPAK_ID}.png"
+                "DIR=\"${FLATPAK_DEST}/share/app-info/media/org/flatpak_builder/gui/foobar/icons/64x64\" && mkdir -p \"$DIR\" && cp -vf org.test.Hello.png \"$DIR\""
             ],
             "sources": [
                 {
@@ -22,14 +20,6 @@
                     "commands": [
                         "echo \"Hello world, from a sandbox\""
                     ]
-                },
-                {
-                    "type": "file",
-                    "path": "org.flatpak_builder.gui.desktop"
-                },
-                {
-                    "type": "file",
-                    "path": "org.flatpak_builder.gui.metainfo.xml"
                 },
                 {
                     "type": "file",
