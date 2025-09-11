@@ -135,12 +135,16 @@ ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
 
 echo "ok runtime build cleanup with build-args"
 
-# test screenshot ref commit
-${FLATPAK_BUILDER} --repo=$REPO/repo_sc --force-clean builddir_sc \
-    --mirror-screenshots-url=https://example.org/media \
-    org.flatpak_builder.gui.json >&2
-ostree --repo=$REPO/repo_sc refs|grep -Eq "^screenshots/$(flatpak --default-arch)$"
-ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) outdir_sc
-find outdir_sc -path "*/screenshots/image-1_orig.png" -type f | grep -q .
+if [ -n "${FLATPAK_BUILDER_TESTS_OFFLINE-}" ]; then
+    echo "ok # SKIP - test requires Internet access"
+else
+    # test screenshot ref commit
+    ${FLATPAK_BUILDER} --repo=$REPO/repo_sc --force-clean builddir_sc \
+        --mirror-screenshots-url=https://example.org/media \
+        org.flatpak_builder.gui.json >&2
+    ostree --repo=$REPO/repo_sc refs|grep -Eq "^screenshots/$(flatpak --default-arch)$"
+    ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) outdir_sc
+    find outdir_sc -path "*/screenshots/image-1_orig.png" -type f | grep -q .
 
-echo "ok screenshot ref commit"
+    echo "ok screenshot ref commit"
+fi
