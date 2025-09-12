@@ -865,10 +865,12 @@ main (int    argc,
               GFile *state_dir = builder_context_get_state_dir (build_context);
 
               if (g_file_equal (app_dir, state_dir) ||
+                  g_file_equal (app_dir, cwd_dir) ||
+                  g_file_has_prefix (cwd_dir, app_dir) ||
                   g_file_has_prefix (state_dir, app_dir))
                 {
-                  g_printerr ("Refusing to delete state directory "
-                              "or its parents\n");
+                  g_printerr ("Refusing to delete current working directory, state directory "
+                              "or their parents\n");
                   return 1;
                 }
 
