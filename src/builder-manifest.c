@@ -1708,6 +1708,12 @@ builder_manifest_start (BuilderManifest *self,
                          self->sdk,
                          builder_manifest_get_runtime_version (self));
 
+  if (self->sdk_commit != NULL)
+    g_debug ("Using %s version %s commit %s",
+             self->sdk,
+             builder_manifest_get_runtime_version (self),
+             self->sdk_commit);
+
   sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_runtime_version (self), context);
   if (sdk_path != NULL &&
       !builder_context_load_sdk_config (context, sdk_path, error))
@@ -1720,6 +1726,12 @@ builder_manifest_start (BuilderManifest *self,
                          self->runtime,
                          builder_manifest_get_runtime_version (self));
 
+  if (self->runtime_commit != NULL)
+    g_debug ("Using %s version %s commit %s",
+             self->runtime,
+             builder_manifest_get_runtime_version (self),
+             self->runtime_commit);
+
   if (self->base != NULL && *self->base != 0)
     {
       self->base_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->base,
@@ -1727,6 +1739,12 @@ builder_manifest_start (BuilderManifest *self,
       if (!download_only && self->base_commit == NULL)
         return flatpak_fail (error, "Unable to find app %s version %s",
                              self->base, builder_manifest_get_base_version (self));
+
+      if (self->base_commit != NULL)
+        g_debug ("Using %s version %s commit %s",
+                 self->base,
+                 builder_manifest_get_base_version (self),
+                 self->base_commit);
     }
 
   if (!expand_modules (context, self->modules, &self->expanded_modules, names, error))
