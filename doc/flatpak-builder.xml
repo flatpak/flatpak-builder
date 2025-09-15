@@ -474,7 +474,9 @@
 
                 <listitem><para>
                     Erase the previous contents of DIRECTORY if it is
-                    not empty.
+                    not empty. Since 1.4.6, deletion will be refused
+                    if DIRECTORY is the current working directory, the
+                    state directory, or any of their parent directories.
                 </para></listitem>
             </varlistentry>
 
