@@ -529,7 +529,7 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>rm-configure</option> (boolean)</term>
-                    <listitem><para>If true, remove the configure script before starting build</para></listitem>
+                    <listitem><para>If true, remove the configure script before starting build. This requires the configure script to exist in the source directory.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>no-autogen</option> (boolean)</term>
