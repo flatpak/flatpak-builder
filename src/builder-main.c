@@ -219,6 +219,8 @@ do_export (BuilderContext *build_context,
 
   g_ptr_array_add (args, g_strdup_printf ("--arch=%s", builder_context_get_arch (build_context)));
 
+  g_ptr_array_add (args, g_strdup ("--update-appstream"));
+
   if (runtime)
     g_ptr_array_add (args, g_strdup ("--runtime"));
 
