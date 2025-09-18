@@ -309,6 +309,47 @@ skip_without_python2 () {
     fi
 }
 
+appstream_has_version () {
+    req_major=$1
+    req_minor=$2
+    req_micro=$3
+
+    maj=0; min=0; mic=0
+
+    out=$(appstreamcli --version 2>/dev/null) || return 1
+
+    while IFS= read -r line; do
+        case "$line" in
+            "AppStream library version:"* )
+                ver=$(echo "$line" | awk '{print $4}')
+                ;;
+            "AppStream version:"* )
+                ver=$(echo "$line" | awk '{print $3}')
+                ;;
+            * ) continue ;;
+        esac
+
+        maj=$(echo "$ver" | cut -d. -f1)
+        min=$(echo "$ver" | cut -d. -f2)
+        mic=$(echo "$ver" | cut -d. -f3)
+        break
+    done <<EOF
+$out
+EOF
+
+    if [ "$maj" -gt "$req_major" ]; then
+        return 0
+    elif [ "$maj" -eq "$req_major" ]; then
+        if [ "$min" -gt "$req_minor" ]; then
+            return 0
+        elif [ "$min" -eq "$req_minor" ]; then
+            [ "$mic" -ge "$req_micro" ] && return 0
+        fi
+    fi
+
+    return 1
+}
+
 cleanup () {
     gpg-connect-agent --homedir "${FL_GPG_HOMEDIR}" killagent /bye >&2 || true
     if test -n "${TEST_SKIP_CLEANUP:-}"; then
