@@ -590,6 +590,22 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--compose-enable-screencasts</option></term>
+
+                <listitem><para>
+                  Allow screencasts in Appstream catalogue.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
+                <term><option>--compose-enable-partial-urls</option></term>
+                <listitem><para>
+                  Use partial URLs in Appstream catalogue. Requires
+                  appstream >= 0.16.3.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--add-tag=TAG</option></term>
 
                 <listitem><para>

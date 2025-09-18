@@ -57,12 +57,15 @@ flatpak_builder_deps = [
   dependency('libglnx', default_options: ['tests=false']),
   dependency('libxml-2.0', version: '>= 2.4'),
   dependency('ostree-1', version: '>= 2017.14'),
+  dependency('appstream', version: '>=0.15.0'),
+  dependency('appstream-compose', version: '>=0.15.0'),
   yaml_dep,
 ]
 
 flatpak_builder = executable(
   'flatpak-builder',
   flatpak_builder_sources,
+  include_directories: include_directories('.'),
   dependencies: flatpak_builder_deps,
   install: true,
 )
