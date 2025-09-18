@@ -108,6 +108,8 @@ if get_option('installed_tests')
     'org.flatpak_builder.gui.desktop',
     'org.flatpak_builder.gui.json',
     'org.flatpak_builder.gui.metainfo.xml',
+    'org.flatpak.appstream_media.json',
+    'org.test.Hello-256.png',
 
     install_dir: installed_testdir,
     install_mode: 'rw-r--r--',
