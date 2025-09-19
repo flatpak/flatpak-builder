@@ -1,3 +1,18 @@
+Changes in 1.4.6
+================
+
+* Support specifying appstream compose URL policy with `--compose-url-policy`
+* Support fetching and checking out Git LFS objects
+* Add disable-lfs option to disable fetching Git LFS objects on a per source basis
+* Prevent deleting current working directory, state directory or their parents with force-clean
+* Create appstream ref branches in locally exported repo
+* Log sdk, runtime and base versions and commits used with `--verbose`
+* Pass `--no-gpg-sign` to `git commit` when committing archives inside state directory
+* Pass `--no-gpg-sign` to `git am` when applying patches
+* Fix the meson build with `-Dinstalled_tests=true`
+* Fix the screenshot ref commit test to work offline
+* Improvements to docs and CI
+
 Changes in 1.4.5
 ================
 
