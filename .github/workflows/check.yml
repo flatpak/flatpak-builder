@@ -16,6 +16,9 @@ jobs:
   check-autotools:
     name: Build with gcc and test
     runs-on: ubuntu-22.04
+    concurrency:
+      group: ci-gcc-${{ github.ref }}
+      cancel-in-progress: true
     steps:
     - name: Install Dependencies
       run: |
@@ -49,6 +52,9 @@ jobs:
   clang:
     name: Build with clang
     runs-on: ubuntu-22.04
+    concurrency:
+      group: ci-clang-${{ github.ref }}
+      cancel-in-progress: true
     steps:
     - name: Install Dependencies
       run: |
@@ -80,6 +86,9 @@ jobs:
       matrix:
         os: ['ubuntu-22.04', 'ubuntu-24.04']
         compiler: ['gcc', 'clang']
+    concurrency:
+      group: ci-${{ matrix.os }}-${{ matrix.compiler }}-${{ github.ref }}
+      cancel-in-progress: true
 
     env:
       CC: ${{ matrix.compiler }}
