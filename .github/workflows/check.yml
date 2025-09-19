@@ -12,6 +12,9 @@ env:
   DEBIAN_FRONTEND: noninteractive
   TESTS_TIMEOUT: 10 # in minutes
 
+permissions:
+  contents: read
+
 jobs:
   check-autotools:
     name: Build with gcc and test
