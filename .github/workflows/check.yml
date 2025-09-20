@@ -16,6 +16,11 @@ jobs:
   check-autotools:
     name: Build with gcc and test
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-gcc-${{ github.ref }}
+      cancel-in-progress: true
     steps:
     - name: Install Dependencies
       run: |
@@ -49,6 +54,11 @@ jobs:
   clang:
     name: Build with clang
     runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    concurrency:
+      group: ci-clang-${{ github.ref }}
+      cancel-in-progress: true
     steps:
     - name: Install Dependencies
       run: |
@@ -76,10 +86,15 @@ jobs:
   check-meson:
     name: Ubuntu meson build
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       matrix:
         os: ['ubuntu-22.04', 'ubuntu-24.04']
         compiler: ['gcc', 'clang']
+    concurrency:
+      group: ci-${{ matrix.os }}-${{ matrix.compiler }}-${{ github.ref }}
+      cancel-in-progress: true
 
     env:
       CC: ${{ matrix.compiler }}
