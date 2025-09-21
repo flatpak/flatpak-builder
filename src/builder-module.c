@@ -1749,6 +1749,9 @@ builder_module_build_helper (BuilderModule   *self,
   g_autofree char *n_jobs = NULL;
   const char *make_cmd = NULL;
   const char *test_arg = NULL;
+  const char *cflags = NULL;
+  const char *cxxflags = NULL;
+  const char *ldflags = NULL;
 
   gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE;
   g_autoptr(GFile) configure_file = NULL;
@@ -1794,6 +1797,9 @@ builder_module_build_helper (BuilderModule   *self,
     return FALSE;
 
   env = builder_options_get_env (self->build_options, context);
+  cflags  = g_environ_getenv (env, "CFLAGS");
+  cxxflags = g_environ_getenv (env, "CXXFLAGS");
+  ldflags  = g_environ_getenv (env, "LDFLAGS");
   config_opts = builder_options_get_config_opts (self->build_options, context, self->config_opts);
   secret_opts = builder_options_get_secret_opts (self->build_options, context, self->secret_opts);
   secret_env = builder_options_get_secret_env (self->build_options, context, self->secret_env);
@@ -2029,6 +2035,12 @@ builder_module_build_helper (BuilderModule   *self,
       else if (qmake)
         {
           g_ptr_array_add (configure_args_arr, g_strdup_printf ("PREFIX='%s'", prefix));
+          if (cflags)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("QMAKE_CFLAGS+=%s", cflags));
+          if (cxxflags)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("QMAKE_CXXFLAGS+=%s", cxxflags));
+          if (ldflags)
+            g_ptr_array_add (configure_args_arr, g_strdup_printf ("QMAKE_LFLAGS+=%s", ldflags));
           /* TODO: What parameter for qmake? */
         }
       else if (meson)
