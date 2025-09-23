@@ -359,6 +359,39 @@ migrate_locale_dir (GFile      *source_dir,
 }
 
 gboolean
+builder_ensure_dirs_at (int          start_dfd,
+                        const char **components,
+                        int         *out_dfd,
+                        GError     **error)
+{
+  glnx_autofd int current = -1;
+
+  current = dup (start_dfd);
+  if (current < 0)
+    return glnx_throw_errno_prefix (error, "dup");
+
+  for (size_t i = 0; components[i] != NULL; i++)
+    {
+      glnx_autofd int next = -1;
+      const char *name = components[i];
+
+      if (!glnx_ensure_dir (current, name, 0755, error))
+        return FALSE;
+
+      next = openat (current, name,
+                     O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+      if (next < 0)
+        return glnx_throw_errno_prefix (error, "openat %s", name);
+
+      glnx_close_fd (&current);
+      current = g_steal_fd (&next);
+    }
+
+  *out_dfd = g_steal_fd (&current);
+  return TRUE;
+}
+
+gboolean
 builder_migrate_locale_dirs (GFile   *root_dir,
                              GError **error)
 {
