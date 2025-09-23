@@ -147,6 +147,15 @@ flatpak_path_match_prefix (const char *pattern,
   while (*string == '/')
     string++;
 
+  {
+    size_t len = strlen (pattern);
+    if (len > 1 && pattern[len - 1] == '/')
+      {
+        g_autofree char *normalized = g_strndup (pattern, len - 1);
+        return flatpak_path_match_prefix (normalized, string);
+      }
+  }
+
   while (TRUE)
     {
       switch (c = *pattern++)
