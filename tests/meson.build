@@ -14,6 +14,7 @@ test_names = [
   'test-builder-python',
   'test-builder-flags',
   'test-builder-cleanup',
+  'test-builder-licence-paths',
 ]
 
 tap_test = find_program(

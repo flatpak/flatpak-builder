@@ -81,6 +81,12 @@ typedef struct
   GObjectClass parent_class;
 } BuilderModuleClass;
 
+typedef struct {
+  int fd;
+  char *src_name;
+  char *dst_name;
+} LicenseFile;
+
 static void serializable_iface_init (JsonSerializableIface *serializable_iface);
 
 G_DEFINE_TYPE_WITH_CODE (BuilderModule, builder_module, G_TYPE_OBJECT,
@@ -1524,46 +1530,82 @@ find_file_with_extension (GFile *dir,
   return NULL;
 }
 
+static void
+license_file_clear (LicenseFile *lf)
+{
+  glnx_close_fd (&lf->fd);
+  g_free (lf->src_name);
+  g_free (lf->dst_name);
+}
+
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (LicenseFile, license_file_clear)
+
+static gboolean
+collect_license_file (int         fd,
+                      const char *src_path,
+                      const char *dest_name,
+                      GPtrArray  *files,
+                      GError    **error)
+{
+  glnx_autofd int rd_fd = -1;
+  LicenseFile *lf;
+
+  rd_fd = glnx_fd_reopen (fd, O_RDONLY, error);
+  if (rd_fd < 0)
+    return FALSE;
+
+  lf = g_new0 (LicenseFile, 1);
+  lf->fd = g_steal_fd (&rd_fd);
+  lf->src_name = g_strdup (src_path);
+  lf->dst_name = g_strdup (dest_name);
+  g_ptr_array_add (files, lf);
+
+  return TRUE;
+}
+
+static void
+license_file_free (gpointer p)
+{
+  LicenseFile *lf = p;
+  license_file_clear (lf);
+  g_free (lf);
+}
+
 static gboolean
 find_defined_license_files (GStrv       license_files,
                             GFile      *source_dir,
                             GPtrArray  *files,
                             GError    **error)
 {
+  glnx_autofd int source_dfd = -1;
+
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (source_dir),
+                       TRUE, &source_dfd, error))
+    return FALSE;
+
   for (size_t i = 0; license_files[i] != NULL; i++)
     {
       const char *license_file_path = license_files[i];
-      g_autoptr(GFile) license_file =
-        g_file_resolve_relative_path (source_dir, license_file_path);
-      g_autofree char *rel_path = NULL;
-      GFileType file_type;
+      g_autofree char *dest_name = g_path_get_basename (license_file_path);
+      glnx_autofd int fd = -1;
 
-      rel_path = g_file_get_relative_path (source_dir, license_file);
-      if (rel_path == NULL)
+      fd = glnx_chaseat (source_dfd, license_file_path,
+                         GLNX_CHASE_RESOLVE_BENEATH |
+                         GLNX_CHASE_MUST_BE_REGULAR,
+                         error);
+      if (fd < 0)
         {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "License path outside the source directory");
+          g_prefix_error (error, "License file \"%s\": ", license_file_path);
           return FALSE;
         }
 
-      if (!g_file_query_exists (license_file, NULL))
-        {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "License file \"%s\" does not exist", rel_path);
-          return FALSE;
-        }
-
-      file_type = g_file_query_file_type (license_file,
-                                          G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                          NULL);
-      if (file_type != G_FILE_TYPE_REGULAR)
-        {
-          g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
-                       "License file \"%s\" is not a regular file", rel_path);
-          return FALSE;
-        }
-
-      g_ptr_array_add (files, g_steal_pointer (&license_file));
+      if (!collect_license_file (fd,
+                                 license_file_path,
+                                 dest_name,
+                                 files,
+                                 error))
+        return FALSE;
     }
 
   return TRUE;
@@ -1586,42 +1628,72 @@ find_default_license_files (BuilderModule  *self,
                             GPtrArray      *files,
                             GError        **error)
 {
-  g_autoptr(GFileEnumerator) dir_enum = NULL;
-  GFileInfo *next;
-  g_autoptr(GError) my_error = NULL;
+  glnx_autofd int source_dfd = -1;
+  g_auto(GLnxDirFdIterator) dfd_iter = { 0, };
+  struct dirent *dent;
+  struct stat dir_st;
 
-  dir_enum = g_file_enumerate_children (source_dir, "standard::name,standard::type",
-                                        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                        NULL, error);
-  if (!dir_enum)
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (source_dir),
+                       TRUE, &source_dfd, error))
     return FALSE;
 
-  while ((next = g_file_enumerator_next_file (dir_enum, NULL, &my_error)))
-    {
-      g_autoptr(GFileInfo) child_info = next;
-      const char *name = g_file_info_get_name (child_info);
+  if (!glnx_dirfd_iterator_init_at (source_dfd, ".", FALSE, &dfd_iter, error))
+    return FALSE;
 
-      if (g_file_info_get_file_type (child_info) != G_FILE_TYPE_REGULAR)
-        continue;
+  if (fstat (dfd_iter.fd, &dir_st) < 0)
+    return glnx_throw_errno_prefix (error, "fstat dir");
+
+  while (TRUE)
+    {
+      if (!glnx_dirfd_iterator_next_dent_ensure_dtype (&dfd_iter, &dent, NULL, error))
+        return FALSE;
+
+      if (dent == NULL)
+        break;
 
       for (size_t i = 0; default_licence_file_patterns[i] != NULL; i++)
         {
-          const char *pattern = default_licence_file_patterns[i];
-          g_autoptr(GFile) license_file = NULL;
-
-          if (!g_str_has_prefix (name, pattern))
+          if (!g_str_has_prefix (dent->d_name, default_licence_file_patterns[i]))
             continue;
 
-          license_file = g_file_get_child (source_dir, name);
-          g_ptr_array_add (files, g_steal_pointer (&license_file));
+          glnx_autofd int opath_fd = -1;
+          glnx_autofd int fd = -1;
+          struct stat st;
+
+          opath_fd = openat (dfd_iter.fd, dent->d_name,
+                             O_PATH | O_NOFOLLOW | O_CLOEXEC);
+          if (opath_fd < 0)
+            {
+              if (G_IN_SET (errno, ENOENT, EACCES))
+                continue;
+
+              return glnx_throw_errno_prefix (error, "openat %s", dent->d_name);
+            }
+
+          if (fstat (opath_fd, &st) < 0)
+            return glnx_throw_errno_prefix (error, "fstat %s", dent->d_name);
+
+          if (dent->d_ino != 0 &&
+              (dent->d_ino != st.st_ino || st.st_dev != dir_st.st_dev))
+            continue;
+
+          if (!S_ISREG (st.st_mode))
+            continue;
+
+          fd = glnx_fd_reopen (opath_fd, O_RDONLY, error);
+          if (fd < 0)
+            return FALSE;
+
+          if (!collect_license_file (fd,
+                                     dent->d_name,
+                                     dent->d_name,
+                                     files,
+                                     error))
+            return FALSE;
+
           break;
         }
-    }
-
-  if (my_error != NULL)
-    {
-      g_propagate_error (error, g_steal_pointer (&my_error));
-      return FALSE;
     }
 
   return TRUE;
@@ -1634,7 +1706,7 @@ find_license_files (BuilderModule  *self,
                     GError        **error)
 {
   g_autoptr(GPtrArray) license_files =
-    g_ptr_array_new_with_free_func (g_object_unref);
+    g_ptr_array_new_with_free_func (license_file_free);
 
   if (self->license_files)
     {
@@ -1658,34 +1730,6 @@ find_license_files (BuilderModule  *self,
   return TRUE;
 }
 
-static GFile *
-get_license_dst_file (GFile *license_dir,
-                      GFile *license_file)
-{
-  g_autofree char *license_file_name = g_file_get_basename (license_file);
-  const char *candidate = license_file_name;
-  int i = 1;
-
-  while (TRUE)
-    {
-      g_autoptr(GFile) dst = NULL;
-      g_autofree char *owned_candidate = NULL;
-
-      if (!candidate)
-        {
-          owned_candidate = g_strdup_printf ("LICENSE_%u", i);
-          candidate = owned_candidate;
-          i++;
-        }
-
-      dst = g_file_get_child (license_dir, candidate);
-      if (!g_file_query_exists (dst, NULL))
-        return g_steal_pointer (&dst);
-
-      candidate = NULL;
-    }
-}
-
 static gboolean
 builder_module_install_licenses (BuilderModule  *self,
                                  const char     *id,
@@ -1695,8 +1739,23 @@ builder_module_install_licenses (BuilderModule  *self,
                                  GError        **error)
 {
   g_autoptr(GPtrArray) license_files = NULL;
-  g_autoptr(GFile) license_dir = NULL;
-  g_autoptr(GFile) dest_dir = NULL;
+  glnx_autofd int app_dfd = -1;
+  glnx_autofd int dest_dfd = -1;
+  const char *components[] = {
+    builder_context_get_build_runtime (context) ? "usr" : "files",
+    "share",
+    "licenses",
+    id,
+    self->name,
+    NULL
+  };
+
+  if (strchr (id, '/'))
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                   "Disallowed character in id '%s'", id);
+      return FALSE;
+    }
 
   if (!find_license_files (self, source_dir, &license_files, error))
     return FALSE;
@@ -1704,37 +1763,41 @@ builder_module_install_licenses (BuilderModule  *self,
   if (license_files->len == 0)
     return TRUE;
 
-  dest_dir = builder_context_get_build_runtime (context)
-               ? g_file_get_child (app_dir, "usr")
-               : g_file_get_child (app_dir, "files");
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (app_dir),
+                       TRUE, &app_dfd, error))
+    return FALSE;
 
-  license_dir = g_file_resolve_relative_path (dest_dir,
-                                              g_build_filename ("share/licenses",
-                                                                id,
-                                                                self->name,
-                                                                NULL));
-  if (!flatpak_mkdir_p (license_dir, NULL, error))
+  if (!builder_ensure_dirs_at (app_dfd, components, &dest_dfd, error))
     return FALSE;
 
   for (size_t i = 0; i < license_files->len; i++)
     {
-      GFile *license_file = license_files->pdata[i];
-      g_autoptr(GFile) dst = NULL;
-      g_autofree char *rel_path = NULL;
+      LicenseFile *lf = license_files->pdata[i];
+      glnx_autofd int out_fd = -1;
+      const char *candidate = lf->dst_name;
+      g_autofree char *owned_candidate = NULL;
+      int j = 1;
 
-      rel_path = g_file_get_relative_path (source_dir, license_file);
-      g_assert (rel_path != NULL);
+      while (TRUE)
+        {
+          out_fd = openat (dest_dfd, candidate,
+                           O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0644);
+          if (out_fd >= 0)
+            break;
+          if (errno != EEXIST)
+            return glnx_throw_errno_prefix (error, "openat");
 
-      g_print ("Recording license file %s\n", rel_path);
+          g_free (owned_candidate);
+          owned_candidate = g_strdup_printf ("LICENSE_%u", j);
+          candidate = owned_candidate;
+          j++;
+        }
 
-      dst = get_license_dst_file (license_dir, license_file);
+      g_print ("Recording license file %s\n", lf->src_name);
 
-      if (!g_file_copy (license_file, dst,
-                        G_FILE_COPY_OVERWRITE,
-                        NULL,
-                        NULL, NULL,
-                        error))
-        return FALSE;
+      if (glnx_regfile_copy_bytes (lf->fd, out_fd, -1) < 0)
+        return glnx_throw_errno_prefix (error, "copying license file");
     }
 
   return TRUE;
