@@ -1256,6 +1256,8 @@ setup_build_args (GFile          *app_dir,
     g_ptr_array_add (args, g_strdup_printf ("--bind-mount=%s=%s", source_dir_path, source_dir_path_canonical));
 
   g_ptr_array_add (args, g_strdup_printf ("--bind-mount=%s%s=%s", builddir, module_name, source_dir_path_canonical));
+  g_ptr_array_add (args, g_strdup_printf ("--bind-mount=/run/active-build=%s", source_dir_path_canonical));
+
   if (cwd_subdir)
     g_ptr_array_add (args, g_strdup_printf ("--build-dir=%s%s/%s", builddir, module_name, cwd_subdir));
   else
