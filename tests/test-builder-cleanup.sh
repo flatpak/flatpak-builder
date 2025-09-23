@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..8"
+echo "1..9"
 
 setup_repo
 install_repo
@@ -280,3 +280,27 @@ run_build test-invalid-pattern1.json
 assert_has_file appdir/files/share/doc/file
 
 echo "ok invalid pattern 1 did not cleanup"
+
+cat > test-cleanup-trailing-slash.json <<'EOF'
+{
+  "app-id": "org.test.CleanupTrailingSlash",
+  "runtime": "org.test.Platform",
+  "sdk": "org.test.Sdk",
+  "cleanup": ["/share/doc/"],
+  "modules": [{
+    "name": "test",
+    "buildsystem": "simple",
+    "build-commands": [
+      "mkdir -p /app/share/doc",
+      "echo x > /app/share/doc/file"
+    ]
+  }]
+}
+EOF
+
+run_build test-cleanup-trailing-slash.json
+
+assert_not_has_file appdir/files/share/doc/file
+assert_not_has_dir  appdir/files/share/doc
+
+echo "ok trailing slash works"

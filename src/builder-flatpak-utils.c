@@ -156,6 +156,20 @@ flatpak_path_match_prefix (const char *pattern,
             return string;
           return NULL;
 
+        case '/':
+          if (*pattern == 0)
+            {
+              /* treat as directory boundary, don't consume match */
+              if (*string == '/' || *string == 0)
+                return string;
+              return NULL;
+            }
+          if (*string == '/')
+            string++;
+          else
+            return NULL;
+          break;
+
         case '?':
           if (*string == '/' || *string == 0)
             return NULL;
