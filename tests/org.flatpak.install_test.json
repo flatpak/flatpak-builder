@@ -1,0 +1,27 @@
+{
+    "id": "org.flatpak.install_test",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "command": "hello",
+    "modules": [
+        {
+            "name": "install_test",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p ${FLATPAK_DEST}/bin ${FLATPAK_DEST}/lib/debug ${FLATPAK_DEST}/share/locale/es",
+                "cp -vf hello.sh ${FLATPAK_DEST}/bin/hello",
+                "echo foo > ${FLATPAK_DEST}/lib/debug/hello.debug",
+                "echo foo > ${FLATPAK_DEST}/share/locale/es/hello.mo"
+            ],
+            "sources": [
+                {
+                    "type": "script",
+                    "dest-filename": "hello.sh",
+                    "commands": [
+                        "echo \"Hello world, from a sandbox\""
+                    ]
+                }
+            ]
+        }
+    ]
+}

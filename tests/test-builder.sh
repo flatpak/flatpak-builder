@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..10"
+echo "1..11"
 
 setup_repo
 install_repo
@@ -55,6 +55,7 @@ cp $(dirname $0)/org.flatpak_builder.gui.metainfo.xml .
 cp $(dirname $0)/org.test.Hello.png .
 cp $(dirname $0)/org.test.Hello-256.png .
 cp $(dirname $0)/org.flatpak.appstream_media.json .
+cp $(dirname $0)/org.flatpak.install_test.json .
 mkdir include1
 cp $(dirname $0)/module1.json include1/
 cp $(dirname $0)/module1.yaml include1/
@@ -173,3 +174,13 @@ if appstream_has_version 0 16 3; then
 else
     echo "ok # Skip AppStream < 0.16.3"
 fi
+
+# test install
+${FLATPAK_BUILDER} --user --install \
+    --force-clean builddir org.flatpak.install_test.json >&2
+REFS=$(flatpak list --all --columns=ref 2>/dev/null)
+echo "$REFS" | grep -q "org\.flatpak\.install_test"
+echo "$REFS" | grep -q "org\.flatpak\.install_test\.Debug"
+echo "$REFS" | grep -q "org\.flatpak\.install_test\.Locale"
+
+echo "ok install"
