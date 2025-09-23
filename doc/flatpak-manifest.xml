@@ -1024,7 +1024,8 @@
           <filename>build/$modulename-$count</filename> in the state dir (which is typically <filename>.flatpak-builder/</filename>).
           Additionally there is a symlink <filename>build/$modulename</filename> to the latest version.
           In order to generate reproducible builds this directory is also mounted as <filename>/run/build/$modulename</filename>
-          in the sandbox (or <filename>/run/build-runtime/$modulename</filename> when building runtimes).
+          in the sandbox (or <filename>/run/build-runtime/$modulename</filename> when building runtimes) and also as
+          <filename>/run/active-build</filename> since 1.4.7.
           This is used as current working directory for all build ops.
         </para>
         <para>
