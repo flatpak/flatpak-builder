@@ -36,6 +36,7 @@ struct BuilderSourceDir
 {
   BuilderSource parent;
 
+  char        **hash_cmd;
   char         *path;
   char        **skip;
 };
@@ -49,6 +50,7 @@ G_DEFINE_TYPE (BuilderSourceDir, builder_source_dir, BUILDER_TYPE_SOURCE);
 
 enum {
   PROP_0,
+  PROP_HASH_CMD,
   PROP_PATH,
   PROP_SKIP,
   LAST_PROP
@@ -75,6 +77,10 @@ builder_source_dir_get_property (GObject    *object,
 
   switch (prop_id)
     {
+    case PROP_HASH_CMD:
+      g_value_set_boxed (value, self->hash_cmd);
+      break;
+
     case PROP_PATH:
       g_value_set_string (value, self->path);
       break;
@@ -99,6 +105,12 @@ builder_source_dir_set_property (GObject      *object,
 
   switch (prop_id)
     {
+    case PROP_HASH_CMD:
+      tmp = self->hash_cmd;
+      self->hash_cmd = g_strdupv (g_value_get_boxed (value));
+      g_strfreev (tmp);
+      break;
+
     case PROP_PATH:
       g_free (self->path);
       self->path = g_value_dup_string (value);
@@ -266,12 +278,36 @@ builder_source_dir_update (BuilderSource  *source,
   return TRUE;
 }
 
+static GError*
+builder_source_dir_external_hash_from_cmd(BuilderSourceDir *self,
+                                           BuilderCache *cache)
+{
+  GError *error = NULL;
+  gchar *stdout_output = NULL;
+  if (!g_spawn_sync(NULL, self->hash_cmd, NULL, G_SPAWN_STDOUT_TO_DEV_NULL | G_SPAWN_SEARCH_PATH, NULL, NULL, &stdout_output, NULL, NULL, &error)) {
+    return error;
+  }
+  builder_cache_checksum_data(cache, stdout_output, strlen(stdout_output) + 1);
+  g_free (stdout_output);
+  return NULL;
+}
+
 static void
 builder_source_dir_checksum (BuilderSource  *source,
                               BuilderCache   *cache,
                               BuilderContext *context)
 {
-  /* We can't realistically checksum a directory, so always rebuild */
+  BuilderSourceDir *self = BUILDER_SOURCE_DIR (source);
+  if (self->hash_cmd) {
+    GError* error = builder_source_dir_external_hash_from_cmd(self, cache);
+    if (!error)
+      return;
+
+    g_error_free(error);
+  }
+
+  /* Checksumming a directory is a non-trivial pursuit. We currently opt to not integrate into flatpak directly
+     and rather always rebuild */
   builder_cache_checksum_random (cache);
 }
 
@@ -291,6 +327,14 @@ builder_source_dir_class_init (BuilderSourceDirClass *klass)
   source_class->bundle = builder_source_dir_bundle;
   source_class->update = builder_source_dir_update;
   source_class->checksum = builder_source_dir_checksum;
+
+  g_object_class_install_property (object_class,
+                                   PROP_HASH_CMD,
+                                   g_param_spec_boxed ("hash-cmd",
+                                                       "",
+                                                       "",
+                                                       G_TYPE_STRV,
+                                                       G_PARAM_READWRITE));
 
   g_object_class_install_property (object_class,
                                    PROP_PATH,
