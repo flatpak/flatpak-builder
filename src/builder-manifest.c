@@ -2343,7 +2343,7 @@ _rename_icon (ForeachFile     *self,
            g_str_has_prefix (source_name + strlen (self->rename_icon), "-symbolic.")))
         {
           const char *extension = source_name + strlen (self->rename_icon);
-          g_autofree char *new_name;
+          g_autofree char *new_name = NULL;
           int res;
           if (!prefix)
             new_name = g_strconcat (self->id, extension, NULL);
