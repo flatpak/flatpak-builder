@@ -1822,7 +1822,7 @@ builder_module_build_helper (BuilderModule   *self,
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Invalid buildsystem: \"%s\"",
                    self->name, self->buildsystem);
-      return FALSE;
+      return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
     }
 
   if (simple)
@@ -1831,7 +1831,7 @@ builder_module_build_helper (BuilderModule   *self,
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Buildsystem simple requires specifying \"build-commands\"",
                        self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
     }
   else if (cmake || cmake_ninja)
@@ -1842,7 +1842,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (!g_file_query_exists (cmake_file, NULL))
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find CMakeLists.txt", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
       configure_file = g_object_ref (cmake_file);
     }
@@ -1854,7 +1854,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (!g_file_query_exists (meson_file, NULL))
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find meson.build", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
       configure_file = g_object_ref (meson_file);
     }
@@ -1864,7 +1864,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (configure_file == NULL)
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module: %s: Can't find *.pro file", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
     }
   else if (autotools)
@@ -1876,7 +1876,7 @@ builder_module_build_helper (BuilderModule   *self,
           if (!g_file_delete (configure_file, NULL, error))
             {
               g_prefix_error (error, "module %s: ", self->name);
-              return FALSE;
+              return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
             }
         }
     }
@@ -1903,7 +1903,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (autogen_cmd == NULL)
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Can't find autogen, autogen.sh or bootstrap", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
 
       env_with_noconfigure = g_environ_setenv (g_strdupv (env), "NOCONFIGURE", "1", TRUE);
@@ -1911,13 +1911,13 @@ builder_module_build_helper (BuilderModule   *self,
                   autogen_cmd, NULL))
         {
           g_prefix_error (error, "module %s: ", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
 
       if (!g_file_query_exists (configure_file, NULL))
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: autogen did not create configure", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
 
       has_configure = TRUE;
@@ -1937,7 +1937,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (!g_file_load_contents (configure_file, NULL, &configure_content, NULL, NULL, error))
         {
           g_prefix_error (error, "module %s: ", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
 
       var_require_builddir = strstr (configure_content, "buildapi-variable-require-builddir") != NULL;
@@ -1954,7 +1954,7 @@ builder_module_build_helper (BuilderModule   *self,
           if (!g_file_make_directory (build_dir, NULL, error))
             {
               g_prefix_error (error, "module %s: ", self->name);
-              return FALSE;
+              return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
             }
 
           if (cmake || cmake_ninja)
@@ -2051,7 +2051,7 @@ builder_module_build_helper (BuilderModule   *self,
 
       if (!build (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error,
                   configure_cmd, strv_arg, configure_args, strv_arg, config_opts, secret_arg, secret_opts, NULL))
-        return FALSE;
+        return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
     }
   else
     {
@@ -2065,7 +2065,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (!g_file_query_exists (ninja_file, NULL))
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Can't find ninja file", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
     }
   else if (autotools || cmake || qmake)
@@ -2082,7 +2082,7 @@ builder_module_build_helper (BuilderModule   *self,
       if (makefile_names[i] == NULL)
         {
           g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "module %s: Can't find makefile", self->name);
-          return FALSE;
+          return run_shell ? shell (app_dir, self->name, context, source_dir, build_dir_relative, build_args, env, error) : FALSE;
         }
     }
 
