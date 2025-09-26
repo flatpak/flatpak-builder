@@ -3395,8 +3395,18 @@ builder_manifest_finish (BuilderManifest *self,
           g_autoptr(GFile) metadata_locale_file = NULL;
           g_autofree char *metadata_contents = NULL;
           g_autofree char *locale_id = builder_manifest_get_locale_id (self);
+          g_autoptr(GKeyFile) old_keyfile = g_key_file_new ();
+          g_autofree char *locale_group = NULL;
 
           metadata_file = g_file_get_child (app_dir, "metadata");
+          locale_group = g_strdup_printf ("Extension %s", locale_id);
+
+          if (g_key_file_load_from_file (old_keyfile,
+                                         flatpak_file_get_path_cached (metadata_file),
+                                         G_KEY_FILE_KEEP_COMMENTS|G_KEY_FILE_KEEP_TRANSLATIONS,
+                                         NULL) &&
+              g_key_file_has_group (old_keyfile, locale_group))
+            return flatpak_fail (error, "Group '%s' already exists in metadata", locale_group);
 
           extension_contents = g_strdup_printf ("\n"
                                                 "[Extension %s]\n"
@@ -3439,9 +3449,19 @@ builder_manifest_finish (BuilderManifest *self,
           g_autofree char *extension_contents = NULL;
           g_autoptr(GFileOutputStream) output = NULL;
           g_autofree char *debug_id = builder_manifest_get_debug_id (self);
+          g_autoptr(GKeyFile) old_keyfile = g_key_file_new ();
+          g_autofree char *debug_group = NULL;
 
           metadata_file = g_file_get_child (app_dir, "metadata");
           metadata_debuginfo_file = g_file_get_child (app_dir, "metadata.debuginfo");
+          debug_group = g_strdup_printf ("Extension %s", debug_id);
+
+          if (g_key_file_load_from_file (old_keyfile,
+                                         flatpak_file_get_path_cached (metadata_file),
+                                         G_KEY_FILE_KEEP_COMMENTS|G_KEY_FILE_KEEP_TRANSLATIONS,
+                                         NULL) &&
+              g_key_file_has_group (old_keyfile, debug_group))
+            return flatpak_fail (error, "Group %s already exists in metadata", debug_group);
 
           extension_contents = g_strdup_printf ("\n"
                                                 "[Extension %s]\n"
@@ -3896,8 +3916,18 @@ builder_manifest_finish_platform (BuilderManifest *self,
           g_autoptr(GFile) metadata_locale_file = NULL;
           g_autofree char *metadata_contents = NULL;
           g_autofree char *locale_id = builder_manifest_get_locale_id_platform (self);
+          g_autoptr(GKeyFile) old_keyfile = g_key_file_new ();
+          g_autofree char *locale_group = NULL;
 
           metadata_file = g_file_get_child (app_dir, "metadata.platform");
+          locale_group = g_strdup_printf ("Extension %s", locale_id);
+
+          if (g_key_file_load_from_file (old_keyfile,
+                                         flatpak_file_get_path_cached (metadata_file),
+                                         G_KEY_FILE_KEEP_COMMENTS|G_KEY_FILE_KEEP_TRANSLATIONS,
+                                         NULL) &&
+              g_key_file_has_group (old_keyfile, locale_group))
+            return flatpak_fail (error, "Group '%s' already exists in metadata.platform", locale_group);
 
           extension_contents = g_strdup_printf ("\n"
                                                 "[Extension %s]\n"
