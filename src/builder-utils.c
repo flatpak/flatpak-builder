@@ -1852,11 +1852,14 @@ appstream_has_version (int major,
       as_micro == 0)
     {
       const char * argv[] = { "appstreamcli", "--version", NULL };
+      g_autoptr(GSubprocessLauncher) launcher = NULL;
       g_autoptr(GSubprocess) subp = NULL;
       g_autofree char *out = NULL;
       g_auto(GStrv) lines = NULL;
 
-      subp = g_subprocess_newv (argv, G_SUBPROCESS_FLAGS_STDOUT_PIPE, NULL);
+      launcher = g_subprocess_launcher_new (G_SUBPROCESS_FLAGS_STDOUT_PIPE);
+      g_subprocess_launcher_setenv (launcher, "LANGUAGE", "C", TRUE);
+      subp = g_subprocess_launcher_spawnv (launcher, argv, NULL);
       g_subprocess_communicate_utf8 (subp, NULL, NULL, &out, NULL, NULL);
 
       lines = g_strsplit (out, "\n", -1);

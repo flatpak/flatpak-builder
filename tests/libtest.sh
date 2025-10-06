@@ -316,7 +316,7 @@ appstream_has_version () {
 
     maj=0; min=0; mic=0
 
-    out=$(appstreamcli --version 2>/dev/null) || return 1
+    out=$(LANGUAGE=C appstreamcli --version 2>/dev/null) || return 1
 
     while IFS= read -r line; do
         case "$line" in
