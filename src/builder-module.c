@@ -1754,6 +1754,7 @@ builder_module_build_helper (BuilderModule   *self,
   const char *ldflags = NULL;
 
   gboolean autotools = FALSE, cmake = FALSE, cmake_ninja = FALSE, meson = FALSE, simple = FALSE, qmake = FALSE;
+  gboolean build_has_network = FALSE;
   g_autoptr(GFile) configure_file = NULL;
   g_autoptr(GFile) build_dir = NULL;
   g_autofree char *build_dir_relative = NULL;
@@ -1795,6 +1796,8 @@ builder_module_build_helper (BuilderModule   *self,
   build_args = builder_options_get_build_args (self->build_options, context, error);
   if (build_args == NULL)
     return FALSE;
+
+  build_has_network = builder_options_build_has_network (build_args);
 
   env = builder_options_get_env (self->build_options, context);
   cflags  = g_environ_getenv (env, "CFLAGS");
@@ -2020,6 +2023,8 @@ builder_module_build_helper (BuilderModule   *self,
         {
           /* Meson's setup command is now meson setup */
           g_ptr_array_add (configure_args_arr, g_strdup ("setup"));
+          if (!build_has_network)
+            g_ptr_array_add (configure_args_arr, g_strdup ("--wrap-mode=nodownload"));
         }
 
       if (cmake || cmake_ninja)

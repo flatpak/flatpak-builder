@@ -1236,6 +1236,36 @@ builder_options_get_build_args (BuilderOptions *self,
   return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
 }
 
+gboolean
+builder_options_build_has_network (char **build_args)
+{
+  gboolean has_network = FALSE;
+
+  if (!build_args)
+    return FALSE;
+
+  /*
+   * The last arg passed to flatpak build wins:
+   *
+   *   --unshare=network --share=network  -> network enabled
+   *   --share=network --unshare=network  -> network disabled
+   *
+   * So we iterate through the entire list
+   */
+
+  for (size_t i = 0; build_args[i]; i++)
+    {
+      const char *arg = build_args[i];
+
+      if (g_strcmp0 (arg, "--unshare=network") == 0)
+        has_network = FALSE;
+      else if (g_strcmp0 (arg, "--share=network") == 0)
+        has_network = TRUE;
+    }
+
+  return has_network;
+}
+
 char **
 builder_options_get_test_args (BuilderOptions *self,
                                BuilderContext *context,
