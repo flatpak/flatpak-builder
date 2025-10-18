@@ -542,6 +542,26 @@
                 <listitem><para>
                   When downloading sources (archives, files, git, bzr, svn), look in this
                   directory for pre-existing copies and use them instead of downloading.
+                  The directory must match the state directory structure:
+                  <itemizedlist>
+                    <listitem>
+                        <para>Files and archives must be inside the folder: <filename>downloads/&lt;sha256&gt;/</filename></para>
+                    </listitem>
+                    <listitem>
+                        <para>
+                            Sources of type <literal>git</literal>, <literal>bzr</literal> and <literal>svn</literal>
+                            must be inside the folder: <filename>&lt;type&gt;/&lt;converted-uri&gt;/</filename>
+                        </para>
+                    </listitem>
+                  </itemizedlist>
+                  The <literal>converted-uri</literal> is constructed from <literal>path</literal> or <literal>url</literal> (in case of <literal>git</literal>)
+                  and from <literal>url</literal> (in case of <literal>bzr</literal> and <literal>svn</literal>). <literal>://</literal> is converted to a single
+                  underscore and every other <literal>/</literal> is replaced by an underscore. For example, <literal>https://github.com/user/repo.git</literal>
+                  becomes <literal>https_github.com_user_repo.git</literal>.
+
+                  In case of <literal>svn</literal> sources if <literal>revision</literal> is present, the folder name is
+                  <filename>svn/&lt;converted-uri&gt;__r&lt;revision&gt;/</filename>. In case of <literal>git</literal>
+                  sources, it needs to be a mirrored clone.
                 </para></listitem>
             </varlistentry>
 
