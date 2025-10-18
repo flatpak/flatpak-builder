@@ -81,6 +81,7 @@ gboolean    builder_options_get_no_debuginfo_compression (BuilderOptions *self,
 							  BuilderContext *context);
 gboolean    builder_options_get_strip (BuilderOptions *self,
                                        BuilderContext *context);
+gboolean builder_options_build_has_network (char **build_args);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderOptions, g_object_unref)
 

@@ -1236,6 +1236,26 @@ builder_options_get_build_args (BuilderOptions *self,
   return (char **) g_ptr_array_free (g_steal_pointer (&array), FALSE);
 }
 
+gboolean
+builder_options_build_has_network (char **build_args)
+{
+
+  if (!build_args)
+    return FALSE;
+
+  for (size_t i = 0; build_args[i]; i++)
+    {
+      const char *arg = build_args[i];
+
+      if (g_strcmp0 (arg, "--unshare=network") == 0)
+        return FALSE;
+      else if (g_strcmp0 (arg, "--share=network") == 0)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 char **
 builder_options_get_test_args (BuilderOptions *self,
                                BuilderContext *context,
