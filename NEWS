@@ -1,3 +1,15 @@
+Changes in 1.4.7
+================
+
+* Pass `--wrap-mode=nodownload` to `meson setup` if building without network for the meson buildsystem
+* Install debug extension by default when using the `--install` argument
+* Support setting environment buildflags for the qmake buildsystem
+* Create a fixed alias for builddir of current module at `/run/active-build`
+* Set LANGUAGE to avoid AppStream output localisation
+* Fix a compiler warning
+* Improvements to docs and CI
+* Start new branching policy, document maintainance and versioning docs
+
 Changes in 1.4.6
 ================
 
