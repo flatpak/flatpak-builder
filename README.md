@@ -8,7 +8,7 @@ It reads a JSON or YAML based manifest to automatically download, build, and ins
 
 For information on the manifest format see `man flatpak-manifest`. A JSON Schema for this format is [available here](https://github.com/flatpak/flatpak-builder/blob/main/data/flatpak-manifest.schema.json).
 
-To use the JSON schema, in [an editor with support](https://code.visualstudio.com/docs/languages/json) for schemas, you can include this line in your manifest: 
+To use the JSON schema, in [an editor with support](https://code.visualstudio.com/docs/languages/json) for schemas, you can include this line in your manifest:
 
 ```json
   "$schema": "https://raw.githubusercontent.com/flatpak/flatpak-builder/main/data/flatpak-manifest.schema.json"
@@ -25,6 +25,31 @@ Flatpak-builder uses the [Meson build system](https://mesonbuild.com/). To build
 ```
 
 Configure arguments are documented in `meson_options.txt`.
+
+# Versioning Policy
+
+Flatpak Builder, like Flatpak, follows the GLib-style versioning policy,
+where the version is formatted as `MAJOR.MINOR.PATCH`. The `MAJOR`
+version is currently set to `1`.
+
+- Odd `MINOR` versions indicate an unstable release.
+- Even `MINOR` versions indicate a stable release.
+
+Stable releases are limited to bug fixes and minor, non-breaking
+improvements. Each stable release line is maintained on a dedicated
+`flatpak-builder-1.MINOR.x` branch.
+
+At any given time, only one unstable release line and only one stable
+release line are supported.
+
+## Supported versions
+
+The currently supported release lines are:
+
+| Release line | Supported          | Status              |
+| -------------| ------------------ | --------------------|
+| 1.5.x        | Yes                | Development branch  |
+| 1.4.x        | Yes                | Stable branch       |
 
 ## Runtime dependencies
 
