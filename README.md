@@ -73,3 +73,7 @@ Rarely used:
  * rpm2cpio & cpio
  * svn
  * bzr
+
+# Maintainance docs
+
+Please see the [maintainance docs](https://github.com/flatpak/flatpak-builder/blob/main/MAINT.md).
