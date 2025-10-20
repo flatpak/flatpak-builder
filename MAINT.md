@@ -17,14 +17,15 @@
 ## Releasing
 
 - Update the `NEWS`
-- Update version number in `meson.build` and `configure.ac`.
+- Update version number in `meson.build`.
 - Open a  PR titled "Release $VERSION" with the above to see if CI passes.
 - Merge the PR to the target branch.
 - Check out the target branch, pull the above change locally and make
   sure the submodules are correct and checked out.
-- Build with `meson` and `make`, with all options enabled.
-- Create a tarball with `make dist`. The tarball is created from a
-  clean checkout. It is produced as `flatpak-builder-$VERSION.tar.xz`.
+- Build with `meson`, with all options enabled.
+- Create a tarball with `meson dist --include-subprojects -C builddir`.
+  The tarball is created from a clean checkout. It is produced as
+  `builddir/meson-dist/flatpak-builder-$VERSION.tar.xz`.
 - Verify the project is buildable using the tarball. The tarball MUST
   contain the submodule files.
 
