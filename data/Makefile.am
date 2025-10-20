@@ -1,1 +1,0 @@
-EXTRA_DIST = flatpak-manifest.schema.json
