@@ -2023,6 +2023,15 @@ builder_module_build_helper (BuilderModule   *self,
         {
           /* Meson's setup command is now meson setup */
           g_ptr_array_add (configure_args_arr, g_strdup ("setup"));
+         /*
+          * When project dependencies are absent, Meson by default tries
+          * to initialise fallbacks and attempts to download them over
+          * the network, returning a potentially misleading error
+          * message.
+          *
+          * Setting wrap-mode to `nodownload` instructs Meson to not try
+          * to use the network to fetch any resources
+          */
           if (!build_has_network)
             g_ptr_array_add (configure_args_arr, g_strdup ("--wrap-mode=nodownload"));
         }
