@@ -4,11 +4,11 @@ on:
   push:
     branches:
     - main
-    - 'flatpak-builder-1.[0-9]*[02468].x'
+    - 'flatpak-builder-1.*.x'
   pull_request:
     branches:
     - main
-    - 'flatpak-builder-1.[0-9]*[02468].x'
+    - 'flatpak-builder-1.*.x'
 
 env:
   DEBIAN_FRONTEND: noninteractive
