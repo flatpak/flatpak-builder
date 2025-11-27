@@ -1,0 +1,26 @@
+{
+    "id": "org.test.DefaultBranch",
+    "runtime": "org.gnome.Platform",
+    "sdk": "org.gnome.Sdk",
+    "command": "hello",
+    "branch": "something",
+    "modules": [
+        {
+            "name": "install_test",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p ${FLATPAK_DEST}/bin",
+                "cp -vf hello.sh ${FLATPAK_DEST}/bin/hello"
+            ],
+            "sources": [
+                {
+                    "type": "script",
+                    "dest-filename": "hello.sh",
+                    "commands": [
+                        "echo \"Hello world, from a sandbox\""
+                    ]
+                }
+            ]
+        }
+    ]
+}

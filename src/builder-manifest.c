@@ -1477,19 +1477,25 @@ builder_manifest_get_runtime_version (BuilderManifest *self)
   return self->runtime_version ? self->runtime_version : "master";
 }
 
+/* default-branch can only be set through the cli, where branch
+ * is extracted from the manifest. As such the intended behavior
+ * is that the cli arguments should always override the branch
+ * set in the manifest, so your manifest can set the branch
+ * but you are still able to do --default-branch=test-build
+ */
 const char *
 builder_manifest_get_branch (BuilderManifest *self,
                              BuilderContext  *context)
 {
-  if (self->branch)
-    return self->branch;
-
   if (context &&
       builder_context_get_default_branch (context))
     return builder_context_get_default_branch (context);
 
   if (self->default_branch)
     return self->default_branch;
+
+  if (self->branch)
+    return self->branch;
 
   return "master";
 }
