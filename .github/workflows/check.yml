@@ -61,7 +61,8 @@ jobs:
           libdw-dev \
           libelf-dev \
           libflatpak-dev \
-          libfuse-dev \
+          libfuse3-dev \
+          fuse3 \
           libgirepository1.0-dev \
           libglib2.0-dev \
           libgpgme11-dev \
