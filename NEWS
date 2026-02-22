@@ -3,6 +3,7 @@ Changes in 1.5.0
 
 TBD
 
+* Drop libglnx submodule and convert it to a subtree
 * Drop autotools, the project now only supports building with meson
 * Prevent writing duplicate groups to metadata file
 * Disable all filesystem access in flatpak-builder --run sandbox

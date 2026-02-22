@@ -1,3 +1,0 @@
-[submodule "libglnx"]
-	path = subprojects/libglnx
-	url = https://gitlab.gnome.org/GNOME/libglnx.git
