@@ -560,7 +560,9 @@
                 </varlistentry>
                 <varlistentry>
                     <term><option>builddir</option> (boolean)</term>
-                    <listitem><para>Use a build directory that is separate from the source directory</para></listitem>
+                    <listitem><para>Use a build directory that is separate from the source directory. This
+                    defaults to <literal>true</literal> for the <option>meson</option> <option>buildsystem</option>
+                    since version 0.9.9 and since 1.5.0 for <option>cmake</option> and <option>cmake-ninja</option>.</para></listitem>
                 </varlistentry>
                 <varlistentry>
                     <term><option>subdir</option> (string)</term>

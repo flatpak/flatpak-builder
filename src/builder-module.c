@@ -1952,7 +1952,7 @@ builder_module_build_helper (BuilderModule   *self,
         }
 
       var_require_builddir = strstr (configure_content, "buildapi-variable-require-builddir") != NULL;
-      use_builddir = var_require_builddir || self->builddir || meson;
+      use_builddir = var_require_builddir || self->builddir || meson || cmake || cmake_ninja;
 
       if (use_builddir)
         {

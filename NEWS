@@ -8,6 +8,7 @@ TBD
 * Prevent writing duplicate groups to metadata file
 * Disable all filesystem access in flatpak-builder --run sandbox
 * Add ability to set custom fusermount path
+* Default to builddir true for cmake and cmake-ninja buildsystems
 
 Changes in 1.4.6
 ================
