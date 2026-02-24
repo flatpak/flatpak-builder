@@ -9,6 +9,7 @@ TBD
 * Disable all filesystem access in flatpak-builder --run sandbox
 * Add ability to set custom fusermount path
 * Support setting state-dir for run
+* Default to builddir true for cmake and cmake-ninja buildsystems
 
 Changes in 1.4.6
 ================
