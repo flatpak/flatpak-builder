@@ -3043,6 +3043,19 @@ builder_manifest_cleanup (BuilderManifest *self,
                 }
             }
 
+          /* If the desktop file didn't set a custom wmclass it relied on the filename
+             matching the wmclass which is no longer true so lets manually set it back. */
+          if (self->rename_desktop_file
+              && !g_strv_contains ((const char * const*)desktop_keys,
+                                   G_KEY_FILE_DESKTOP_KEY_STARTUP_WM_CLASS))
+            {
+              g_autofree char *old_name = g_strndup (self->rename_desktop_file,
+                                                     strlen (self->rename_desktop_file) - strlen (".desktop"));
+
+              g_key_file_set_string (keyfile, G_KEY_FILE_DESKTOP_GROUP,
+                                     G_KEY_FILE_DESKTOP_KEY_STARTUP_WM_CLASS, old_name);
+            }
+
           g_free (desktop_contents);
           desktop_contents = g_key_file_to_data (keyfile, &desktop_size, error);
           if (desktop_contents == NULL)
