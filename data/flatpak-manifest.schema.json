@@ -22,8 +22,16 @@
           "description": "This is set in the environment variable CFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.",
           "type": "string"
         },
+        "cgo-cflags": {
+          "description": "This is set in the environment variable CGO_CFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces. If unset, defaults to the value of cflags.",
+          "type": "string"
+        },
         "cflags-override": {
           "description": "If this is true, clear cflags from previous build options before adding it from these options.",
+          "type": "boolean"
+        },
+        "cgo-cflags-override": {
+          "description": "If this is true, clear cgo-cflags from previous build options before adding it from these options. If set without cgo-cflags, CGO_CFLAGS will not be set.",
           "type": "boolean"
         },
         "cppflags": {
@@ -38,16 +46,32 @@
           "description": "This is set in the environment variable CXXFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.",
           "type": "string"
         },
+        "cgo-cxxflags": {
+          "description": "This is set in the environment variable CGO_CXXFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces. If unset, defaults to the value of cxxflags.",
+          "type": "string"
+        },
         "cxxflags-override": {
           "description": "If this is true, clear cxxflags from previous build options before adding it from these options.",
+          "type": "boolean"
+        },
+        "cgo-cxxflags-override": {
+          "description": "If this is true, clear cgo-cxxflags from previous build options before adding it from these options. If set without cgo-cxxflags, CGO_CXXFLAGS will not be set.",
           "type": "boolean"
         },
         "ldflags": {
           "description": "This is set in the environment variable LDFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.",
           "type": "string"
         },
+        "cgo-ldflags": {
+          "description": "This is set in the environment variable CGO_LDFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces. If unset, defaults to the value of ldflags.",
+          "type": "string"
+        },
         "ldflags-override": {
           "description": "If this is true, clear ldflags from previous build options before adding it from these options.",
+          "type": "boolean"
+        },
+        "cgo-ldflags-override": {
+          "description": "If this is true, clear cgo-ldflags from previous build options before adding it from these options. If set without cgo-ldflags, CGO_LDFLAGS will not be set.",
           "type": "boolean"
         },
         "prefix": {
