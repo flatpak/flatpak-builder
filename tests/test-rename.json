@@ -79,6 +79,11 @@
                             "path": "LICENSE"
                         },
                         {
+                            "type": "file",
+                            "path": "LICENSES/CC0.txt",
+                            "dest": "LICENSES"
+                        },
+                        {
                             "type": "script",
                             "dest-filename": "hello2.sh",
                             "commands": [ "echo \"Hello world2, from a sandbox\"" ]
