@@ -2442,6 +2442,7 @@ builder_module_checksum (BuilderModule  *self,
   builder_cache_checksum_str (cache, self->buildsystem);
   builder_cache_checksum_str (cache, self->install_rule);
   builder_cache_checksum_compat_boolean (cache, self->run_tests);
+  builder_cache_checksum_strv (cache, self->license_files);
 
   if (self->build_options)
     builder_options_checksum (self->build_options, cache, context);
