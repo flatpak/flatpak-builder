@@ -1580,6 +1580,14 @@ static const char *default_licence_file_patterns[] = {
   NULL
 };
 
+static const char *license_dir_names[] = {
+    "LICENCES",
+    "LICENSES",
+    "licences",
+    "licenses",
+    NULL
+};
+
 static gboolean
 find_default_license_files (BuilderModule  *self,
                             GFile          *source_dir,
@@ -1622,6 +1630,43 @@ find_default_license_files (BuilderModule  *self,
     {
       g_propagate_error (error, g_steal_pointer (&my_error));
       return FALSE;
+    }
+
+  for (size_t i = 0; license_dir_names[i] != NULL; i++)
+    {
+      g_autoptr(GFile) license_dir = g_file_get_child (source_dir, license_dir_names[i]);
+      g_autoptr(GFileEnumerator) subdir_enum = NULL;
+      GFileInfo *next;
+      g_autoptr(GError) subdir_error = NULL;
+
+      if (g_file_query_file_type (license_dir,
+                                  G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                  NULL) != G_FILE_TYPE_DIRECTORY)
+        continue;
+
+      subdir_enum = g_file_enumerate_children (license_dir, "standard::name,standard::type",
+                                               G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                               NULL, NULL);
+      if (subdir_enum == NULL)
+        continue;
+
+      while ((next = g_file_enumerator_next_file (subdir_enum, NULL, &subdir_error)))
+        {
+          g_autoptr(GFileInfo) sub_info = next;
+          g_autoptr(GFile) license_file = NULL;
+
+          if (g_file_info_get_file_type (sub_info) != G_FILE_TYPE_REGULAR)
+            continue;
+
+          license_file = g_file_enumerator_get_child (subdir_enum, sub_info);
+          g_ptr_array_add (files, g_steal_pointer (&license_file));
+        }
+
+      if (subdir_error != NULL)
+        {
+          g_propagate_error (error, g_steal_pointer (&subdir_error));
+          return FALSE;
+        }
     }
 
   return TRUE;
