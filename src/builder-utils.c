@@ -400,17 +400,23 @@ parse_yaml_node_to_json (yaml_document_t *doc, yaml_node_t *node)
       scalar = (gchar *) node->data.scalar.value;
       if (node->data.scalar.style == YAML_PLAIN_SCALAR_STYLE)
         {
-          if (strcmp (scalar, "true") == 0)
+          if (strcmp (scalar, "true") == 0 ||
+              strcmp (scalar, "True") == 0 ||
+              strcmp (scalar, "TRUE") == 0)
             {
               json_node_init_boolean (json, TRUE);
               break;
             }
-          else if (strcmp (scalar, "false") == 0)
+          else if (strcmp (scalar, "false") == 0 ||
+                   strcmp (scalar, "False") == 0 ||
+                   strcmp (scalar, "FALSE") == 0)
             {
               json_node_init_boolean (json, FALSE);
               break;
             }
-          else if (strcmp (scalar, "null") == 0)
+          else if (strcmp (scalar, "null") == 0 ||
+                   strcmp (scalar, "Null") == 0 ||
+                   strcmp (scalar, "NULL") == 0)
             {
               json_node_init_null (json);
               break;
