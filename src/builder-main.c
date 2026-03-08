@@ -156,6 +156,7 @@ static GOptionEntry run_entries[] = {
   { "log-session-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_session_bus, N_("Log session bus calls"), NULL },
   { "log-system-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_system_bus, N_("Log system bus calls"), NULL },
   { "ccache", 0, 0, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache", NULL },
+  { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { NULL }
 };
 
