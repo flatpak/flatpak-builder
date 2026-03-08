@@ -729,6 +729,28 @@
                         <term><option>dest-filename</option> (string)</term>
                         <listitem><para>Filename to for the downloaded file, defaults to the basename of url.</para></listitem>
                     </varlistentry>
+                    <varlistentry>
+                        <term><option>install-dir</option> (string)</term>
+                        <listitem>
+                            <para>
+                                Install the file into this directory relative to <literal>FLATPAK_DEST</literal>.
+                                The directory will be created if it doesn't exist and the install will be
+                                skipped with a warning if the file already exists in the target path.
+                            </para>
+                        </listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>install-mode</option> (string)</term>
+                        <listitem>
+                            <para>
+                                Optional octal permissions to apply to the installed file,
+                                such as <literal>0755</literal> or <literal>755</literal>.
+                                This option requires <option>install-dir</option> to be set. If
+                                this is not set the original permissions on the file will be
+                                preserved.
+                            </para>
+                        </listitem>
+                    </varlistentry>
                 </variablelist>
             </refsect3>
             <refsect3>

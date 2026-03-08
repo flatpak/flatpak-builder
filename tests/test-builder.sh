@@ -69,6 +69,7 @@ cp $(dirname $0)/source2.json include1/include2/
 cp $(dirname $0)/data2 include1/include2/
 cp $(dirname $0)/data2.patch include1/include2/
 echo "MY LICENSE" > ./LICENSE
+touch ./foobar
 
 for MANIFEST in test.json test.yaml test-rename.json test-rename-appdata.json ; do
     echo "building manifest $MANIFEST" >&2
@@ -105,6 +106,13 @@ for MANIFEST in test.json test.yaml test-rename.json test-rename-appdata.json ; 
     assert_file_has_content hello_out2 '^Hello world2, from a sandbox$'
 
     assert_file_has_content appdir/files/share/licenses/org.test.Hello2/test/LICENSE '^MY LICENSE$'
+
+    assert_has_file appdir/files/share/icons/hicolor/64x64/apps/foobar
+    PERMS=$(stat -c "%a" appdir/files/share/icons/hicolor/64x64/apps/foobar)
+    if [ "$PERMS" != "755" ]; then
+        echo "not ok install-dir+install-mode: expected 755, got $PERMS"
+        exit 1
+    fi
 
     echo "ok build"
 done

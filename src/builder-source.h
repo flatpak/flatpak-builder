@@ -63,6 +63,10 @@ typedef struct
                        BuilderOptions *build_options,
                        BuilderContext *context,
                        GError        **error);
+  gboolean (* install)(BuilderSource  *self,
+                       GFile          *build_dir,
+                       BuilderContext *context,
+                       GError        **error);
   gboolean (* bundle)(BuilderSource  *self,
                       BuilderContext *context,
                       GError        **error);
@@ -97,6 +101,10 @@ gboolean builder_source_download (BuilderSource  *self,
 gboolean builder_source_extract (BuilderSource  *self,
                                  GFile          *source_dir,
                                  BuilderOptions *build_options,
+                                 BuilderContext *context,
+                                 GError        **error);
+gboolean builder_source_install (BuilderSource  *self,
+                                 GFile          *build_dir,
                                  BuilderContext *context,
                                  GError        **error);
 gboolean builder_source_bundle (BuilderSource  *self,
