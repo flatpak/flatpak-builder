@@ -76,6 +76,12 @@
                             "path": "LICENSE"
                         },
                         {
+                            "type": "file",
+                            "path": "foobar",
+                            "install-dir": "share/icons/hicolor/64x64/apps",
+                            "install-mode": "0755"
+                        },
+                        {
                             "type": "shell",
                             "commands": [
                                 "mkdir /app/cleanup/",

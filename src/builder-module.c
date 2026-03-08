@@ -2211,6 +2211,20 @@ builder_module_build_helper (BuilderModule   *self,
         }
     }
 
+  for (GList *l = self->sources; l != NULL; l = l->next)
+  {
+    BuilderSource *source = l->data;
+
+    if (!builder_source_is_enabled (source, context))
+      continue;
+
+    if (!builder_source_install (source, source_dir, context, error))
+      {
+        g_prefix_error (error, "module %s: ", self->name);
+        return FALSE;
+      }
+  }
+
   /* Run unit tests */
 
   if (self->run_tests && builder_context_get_run_tests (context))

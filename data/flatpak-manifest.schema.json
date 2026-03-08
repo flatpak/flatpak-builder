@@ -1019,6 +1019,15 @@
         "dest-filename": {
           "description": "Filename to for the downloaded file, defaults to the basename of url.",
           "type": "string"
+        },
+        "install-dir": {
+          "description": "Directory relative to FLATPAK_DEST where the file will be installed. The directory is created if absent and the install is skipped with a warning if the file exists in the target path.",
+          "type": "string"
+        },
+        "install-mode": {
+          "description": "Optional octal permissions applied to the installed file, e.g. '755' or '0755'. Requires install-dir. If absent, the original permissions of the file are preserved.",
+          "type": "string",
+          "pattern": "^[0-7]{3,4}$"
         }
       },
       "patternProperties": {
@@ -1037,7 +1046,8 @@
             { "required": [ "sha1" ] },
             { "required": [ "md5" ] }
           ]
-        }
+        },
+        "install-mode": { "required": [ "install-dir" ] }
       },
       "additionalProperties": false
     },

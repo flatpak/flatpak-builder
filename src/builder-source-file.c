@@ -46,6 +46,8 @@ struct BuilderSourceFile
   char         *dest_filename;
   char         *http_referer;
   gboolean      disable_http_decompression;
+  char         *install_dir;
+  char         *install_mode;
 };
 
 typedef struct
@@ -67,6 +69,8 @@ enum {
   PROP_MIRROR_URLS,
   PROP_HTTP_REFERER,
   PROP_DISABLE_HTTP_DECOMPRESSION,
+  PROP_INSTALL_DIR,
+  PROP_INSTALL_MODE,
   LAST_PROP
 };
 
@@ -84,6 +88,8 @@ builder_source_file_finalize (GObject *object)
   g_free (self->dest_filename);
   g_free (self->http_referer);
   g_strfreev (self->mirror_urls);
+  g_free (self->install_dir);
+  g_free (self->install_mode);
 
   G_OBJECT_CLASS (builder_source_file_parent_class)->finalize (object);
 }
@@ -136,6 +142,14 @@ builder_source_file_get_property (GObject    *object,
 
     case PROP_DISABLE_HTTP_DECOMPRESSION:
       g_value_set_boolean (value, self->disable_http_decompression);
+      break;
+
+    case PROP_INSTALL_DIR:
+      g_value_set_string (value, self->install_dir);
+      break;
+
+    case PROP_INSTALL_MODE:
+      g_value_set_string (value, self->install_mode);
       break;
 
     default:
@@ -216,6 +230,16 @@ builder_source_file_set_property (GObject      *object,
       self->disable_http_decompression = g_value_get_boolean (value);
       break;
 
+    case PROP_INSTALL_DIR:
+      g_free (self->install_dir);
+      self->install_dir = g_value_dup_string (value);
+      break;
+
+    case PROP_INSTALL_MODE:
+      g_free (self->install_mode);
+      self->install_mode = g_value_dup_string (value);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
     }
@@ -230,6 +254,20 @@ builder_source_file_validate (BuilderSource  *source,
   if (self->dest_filename != NULL &&
       strchr (self->dest_filename, '/') != NULL)
     return flatpak_fail (error, "No slashes allowed in dest-filename, use dest property for directory");
+
+  if (self->install_dir != NULL && g_path_is_absolute (self->install_dir))
+    return flatpak_fail (error, "install-dir must be relative to FLATPAK_DEST");
+
+  if (self->install_mode != NULL)
+    {
+      char *end;
+      guint64 mode = g_ascii_strtoull (self->install_mode, &end, 8);
+      if (*end != '\0' || mode > 07777)
+        return flatpak_fail (error, "install-mode must be a valid octal permission string");
+    }
+
+  if (self->install_mode != NULL && self->install_dir == NULL)
+    return flatpak_fail (error, "install-mode requires install-dir to be set");
 
   return TRUE;
 }
@@ -553,6 +591,87 @@ builder_source_file_extract (BuilderSource  *source,
 }
 
 static gboolean
+builder_source_file_install (BuilderSource  *source,
+                             GFile          *build_dir,
+                             BuilderContext *context,
+                             GError        **error)
+{
+  BuilderSourceFile *self = BUILDER_SOURCE_FILE (source);
+  const char *filename;
+  g_autofree char *basename = NULL;
+  g_autofree char *dst_path = NULL;
+  g_autoptr(GFile) src = NULL;
+  g_autoptr(GFile) install_dir = NULL;
+  g_autoptr(GFile) dst = NULL;
+  g_autoptr(GFile) dest_dir = NULL;
+  GFile *app_dir = NULL;
+
+  if (self->install_dir == NULL || self->install_dir[0] == '\0')
+    return TRUE;
+
+  if (self->dest_filename)
+    filename = self->dest_filename;
+  else
+    {
+      gboolean is_local, is_inline;
+      g_autoptr(GFile) source_file = get_source_file (self, context, &is_local, &is_inline, error);
+      if (source_file == NULL)
+        return FALSE;
+      basename = g_file_get_basename (source_file);
+      filename = basename;
+    }
+
+  app_dir = builder_context_get_app_dir (context);
+  dest_dir = builder_context_get_build_runtime (context)
+              ? g_file_get_child (app_dir, "usr")
+              : g_file_get_child (app_dir, "files");
+  install_dir = g_file_resolve_relative_path (dest_dir, self->install_dir);
+
+  if (!g_file_has_prefix (install_dir, dest_dir))
+    return flatpak_fail (error, "install-dir cannot escape the install prefix");
+
+  src = g_file_get_child (build_dir, filename);
+  dst = g_file_get_child (install_dir, filename);
+  dst_path = g_file_get_path (dst);
+
+  if (!flatpak_file_query_exists_nofollow (src))
+    return flatpak_fail (error, "Source file '%s' not found", filename);
+
+  if (!flatpak_mkdir_p (install_dir, NULL, error))
+    return FALSE;
+
+  if (flatpak_file_query_exists_nofollow (dst))
+    g_printerr ("Warning: %s already exists, skipping install\n", dst_path);
+  else
+    {
+      if (!g_file_copy (src, dst, G_FILE_COPY_NOFOLLOW_SYMLINKS,
+                        NULL, NULL, NULL, error))
+        return FALSE;
+
+      if (self->install_mode)
+        {
+          guint32 mode = (guint32) g_ascii_strtoull (self->install_mode, NULL, 8);
+
+          if (!g_file_set_attribute (dst,
+                                     G_FILE_ATTRIBUTE_UNIX_MODE,
+                                     G_FILE_ATTRIBUTE_TYPE_UINT32,
+                                     &mode,
+                                     G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+                                     NULL,
+                                     error))
+            return FALSE;
+        }
+
+      if (self->install_mode)
+        g_print ("Installed %s to %s with permissions %s\n", filename, dst_path, self->install_mode);
+      else
+        g_print ("Installed %s to %s with default permissions\n", filename, dst_path);
+    }
+
+  return TRUE;
+}
+
+static gboolean
 builder_source_file_bundle (BuilderSource  *source,
                             BuilderContext *context,
                             GError        **error)
@@ -655,6 +774,8 @@ builder_source_file_checksum (BuilderSource  *source,
   builder_cache_checksum_compat_str (cache, self->sha512);
   builder_cache_checksum_str (cache, self->dest_filename);
   builder_cache_checksum_compat_strv (cache, self->mirror_urls);
+  builder_cache_checksum_compat_str (cache, self->install_dir);
+  builder_cache_checksum_compat_str (cache, self->install_mode);
 }
 
 static void
@@ -670,6 +791,7 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
   source_class->show_deps = builder_source_file_show_deps;
   source_class->download = builder_source_file_download;
   source_class->extract = builder_source_file_extract;
+  source_class->install = builder_source_file_install;
   source_class->bundle = builder_source_file_bundle;
   source_class->update = builder_source_file_update;
   source_class->checksum = builder_source_file_checksum;
@@ -746,6 +868,20 @@ builder_source_file_class_init (BuilderSourceFileClass *klass)
                                                         "",
                                                         "",
                                                         FALSE,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_INSTALL_DIR,
+                                   g_param_spec_string ("install-dir",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_INSTALL_MODE,
+                                   g_param_spec_string ("install-mode",
+                                                        "",
+                                                        "",
+                                                        NULL,
                                                         G_PARAM_READWRITE));
 }
 
