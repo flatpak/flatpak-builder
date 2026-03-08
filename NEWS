@@ -11,7 +11,7 @@ TBD
 * Support setting state-dir for run
 * Default to builddir true for cmake and cmake-ninja buildsystems
 * Handle case-insensitive YAML boolean and null scalars
-* Support setting CGO buildflags in builder environment
+* Support setting CGO buildflags and RUSTFLAGS in builder environment
 
 Changes in 1.4.6
 ================

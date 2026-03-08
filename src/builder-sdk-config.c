@@ -30,6 +30,7 @@ struct BuilderSdkConfig {
   char         *cflags;
   char         *cxxflags;
   char         *ldflags;
+  char         *rustflags;
 };
 
 typedef struct
@@ -49,6 +50,7 @@ builder_sdk_config_finalize (GObject *object)
   g_free (self->cflags);
   g_free (self->cxxflags);
   g_free (self->ldflags);
+  g_free (self->rustflags);
 
   G_OBJECT_CLASS (builder_sdk_config_parent_class)->finalize (object);
 }
@@ -60,6 +62,7 @@ enum {
   PROP_CFLAGS,
   PROP_CXXFLAGS,
   PROP_LDFLAGS,
+  PROP_RUSTFLAGS,
   LAST_PROP
 };
 
@@ -91,6 +94,10 @@ builder_sdk_config_get_property (GObject    *object,
 
     case PROP_LDFLAGS:
       g_value_set_string (value, self->ldflags);
+      break;
+
+    case PROP_RUSTFLAGS:
+      g_value_set_string (value, self->rustflags);
       break;
 
     default:
@@ -131,6 +138,11 @@ builder_sdk_config_set_property (GObject      *object,
     case PROP_LDFLAGS:
       g_free (self->ldflags);
       self->ldflags = g_value_dup_string(value);
+      break ;
+
+    case PROP_RUSTFLAGS:
+      g_free (self->rustflags);
+      self->rustflags = g_value_dup_string(value);
       break ;
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
@@ -181,6 +193,13 @@ builder_sdk_config_class_init (BuilderSdkConfigClass *klass)
                                                         "",
                                                         NULL,
                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_RUSTFLAGS,
+                                   g_param_spec_string ("rustflags",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
 }
 
 static void
@@ -217,6 +236,12 @@ const char *
 builder_sdk_config_get_ldflags (BuilderSdkConfig *self)
 {
   return self->ldflags;
+}
+
+const char *
+builder_sdk_config_get_rustflags (BuilderSdkConfig *self)
+{
+  return self->rustflags;
 }
 
 BuilderSdkConfig *

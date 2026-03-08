@@ -365,6 +365,14 @@
                     <listitem><para>If this is true, clear cgo-ldflags from previous build options before adding it from these options. If set without cgo-ldflags, CGO_LDFLAGS will not be set.</para></listitem>
                 </varlistentry>
                 <varlistentry>
+                    <term><option>rustflags</option> (string)</term>
+                    <listitem><para>This is set in the environment variable RUSTFLAGS during the build. Multiple specifications of this (in e.g. per-arch area) are concatenated, separated by spaces.</para></listitem>
+                </varlistentry>
+                <varlistentry>
+                    <term><option>rustflags-override</option> (boolean)</term>
+                    <listitem><para>If this is true, clear rustflags from previous build options before adding it from these options.</para></listitem>
+                </varlistentry>
+                <varlistentry>
                     <term><option>prefix</option> (string)</term>
                     <listitem><para>The build prefix for the modules (defaults to <filename>/app</filename> for
                     applications and <filename>/usr</filename> for runtimes).</para></listitem>

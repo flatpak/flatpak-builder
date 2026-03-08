@@ -38,6 +38,7 @@ const char *      builder_sdk_config_get_cppflags (BuilderSdkConfig  *self);
 const char *      builder_sdk_config_get_cflags   (BuilderSdkConfig  *self);
 const char *      builder_sdk_config_get_cxxflags (BuilderSdkConfig  *self);
 const char *      builder_sdk_config_get_ldflags  (BuilderSdkConfig  *self);
+const char *      builder_sdk_config_get_rustflags  (BuilderSdkConfig  *self);
 
 BuilderSdkConfig *builder_sdk_config_from_file    (GFile             *file,
                                                    GError           **error);
