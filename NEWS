@@ -10,6 +10,7 @@ TBD
 * Add ability to set custom fusermount path
 * Support setting state-dir for run
 * Default to builddir true for cmake and cmake-ninja buildsystems
+* Handle case-insensitive YAML boolean and null scalars
 
 Changes in 1.4.6
 ================
