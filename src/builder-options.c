@@ -53,6 +53,8 @@ struct BuilderOptions
   gboolean    ldflags_override;
   char       *cgo_ldflags;
   gboolean    cgo_ldflags_override;
+  char       *rustflags;
+  gboolean    rustflags_override;
   char       *append_path;
   char       *prepend_path;
   char       *append_ld_library_path;
@@ -98,6 +100,8 @@ enum {
   PROP_LDFLAGS_OVERRIDE,
   PROP_CGO_LDFLAGS,
   PROP_CGO_LDFLAGS_OVERRIDE,
+  PROP_RUSTFLAGS,
+  PROP_RUSTFLAGS_OVERRIDE,
   PROP_PREFIX,
   PROP_LIBDIR,
   PROP_ENV,
@@ -134,6 +138,7 @@ builder_options_finalize (GObject *object)
   g_free (self->cppflags);
   g_free (self->ldflags);
   g_free (self->cgo_ldflags);
+  g_free (self->rustflags);
   g_free (self->append_path);
   g_free (self->prepend_path);
   g_free (self->append_ld_library_path);
@@ -219,6 +224,14 @@ builder_options_get_property (GObject    *object,
 
     case PROP_CGO_LDFLAGS_OVERRIDE:
       g_value_set_boolean (value, self->cgo_ldflags_override);
+      break;
+
+    case PROP_RUSTFLAGS:
+      g_value_set_string (value, self->rustflags);
+      break;
+
+    case PROP_RUSTFLAGS_OVERRIDE:
+      g_value_set_boolean (value, self->rustflags_override);
       break;
 
     case PROP_APPEND_PATH:
@@ -378,6 +391,15 @@ builder_options_set_property (GObject      *object,
 
     case PROP_CGO_LDFLAGS_OVERRIDE:
       self->cgo_ldflags_override = g_value_get_boolean (value);
+      break;
+
+    case PROP_RUSTFLAGS:
+      g_clear_pointer (&self->rustflags, g_free);
+      self->rustflags = g_value_dup_string (value);
+      break;
+
+    case PROP_RUSTFLAGS_OVERRIDE:
+      self->rustflags_override = g_value_get_boolean (value);
       break;
 
     case PROP_APPEND_PATH:
@@ -594,6 +616,20 @@ builder_options_class_init (BuilderOptionsClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_CGO_LDFLAGS_OVERRIDE,
                                    g_param_spec_boolean ("cgo-ldflags-override",
+                                                         "",
+                                                         "",
+                                                         FALSE,
+                                                         G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_RUSTFLAGS,
+                                   g_param_spec_string ("rustflags",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_RUSTFLAGS_OVERRIDE,
+                                   g_param_spec_boolean ("rustflags-override",
                                                          "",
                                                          "",
                                                          FALSE,
@@ -1087,6 +1123,15 @@ builder_options_get_cgo_ldflags (BuilderOptions *self, BuilderContext *context)
                                     ldflags);
 }
 
+char *
+builder_options_get_rustflags (BuilderOptions *self, BuilderContext *context)
+{
+  return builder_options_get_flags (self, context,
+                                    G_STRUCT_OFFSET (BuilderOptions, rustflags),
+                                    G_STRUCT_OFFSET (BuilderOptions, rustflags_override),
+                                    get_sdk_flags (self, context, builder_sdk_config_get_rustflags));
+}
+
 static char *
 builder_options_get_appended_path (BuilderOptions *self, BuilderContext *context, const char *initial_value, size_t append_field_offset, size_t prepend_field_offset)
 {
@@ -1283,6 +1328,7 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   g_autofree char *cgo_cxxflags = NULL;
   g_autofree char *ldflags = NULL;
   g_autofree char *cgo_ldflags = NULL;
+  g_autofree char *rustflags = NULL;
 
   envp = builder_context_extend_env_pre (context, envp);
 
@@ -1313,6 +1359,10 @@ builder_options_get_env (BuilderOptions *self, BuilderContext *context)
   cgo_ldflags = builder_options_get_cgo_ldflags (self, context);
   if (cgo_ldflags)
     envp = g_environ_setenv (envp, "CGO_LDFLAGS", cgo_ldflags, FALSE);
+
+  rustflags = builder_options_get_rustflags (self, context);
+  if (rustflags)
+    envp = g_environ_setenv (envp, "RUSTFLAGS", rustflags, FALSE);
 
   /* We traverse in reverse order because the list is "last first" */
   for (l = g_list_last (options); l != NULL; l = l->prev)
@@ -1561,6 +1611,8 @@ builder_options_checksum (BuilderOptions *self,
   builder_cache_checksum_compat_boolean (cache, self->ldflags_override);
   builder_cache_checksum_str (cache, self->cgo_ldflags);
   builder_cache_checksum_compat_boolean (cache, self->cgo_ldflags_override);
+  builder_cache_checksum_str (cache, self->rustflags);
+  builder_cache_checksum_compat_boolean (cache, self->rustflags_override);
   builder_cache_checksum_str (cache, self->prefix);
   builder_cache_checksum_compat_str (cache, self->libdir);
   builder_cache_checksum_strv (cache, self->env);

@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..4"
+echo "1..7"
 
 setup_repo
 install_repo
@@ -145,3 +145,88 @@ run_build test-cgo-only-override.json
 assert_file_has_content appdir/files/cgo_cflags_out '^unset$'
 
 echo "ok only cgo-cflags-override clears CGO_CFLAGS"
+
+# Default: RUSTFLAGS should be passed. The test SDK does not ship with
+# defaults so it is set here via rustflags explicitly.
+cat > test-rustflags-set.json <<'EOF'
+{
+    "app-id": "org.test.RustflagsSet",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "build-options": {
+        "rustflags": "-C opt-level=2"
+    },
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-commands": [
+            "echo ${RUSTFLAGS} > /app/rustflags_out"
+        ]
+    }]
+}
+EOF
+
+run_build test-rustflags-set.json
+
+assert_file_has_content appdir/files/rustflags_out '\-C opt\-level=2'
+
+echo "ok rustflags is passed by default"
+
+# rustflags-override at module level clears manifest-level rustflags
+# or equivalently clears SDK rustflags
+cat > test-rustflags-override.json <<'EOF'
+{
+    "app-id": "org.test.RustflagsOverride",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "build-options": {
+        "rustflags": "-C debuginfo=0"
+    },
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-options": {
+            "rustflags": "-C opt-level=3",
+            "rustflags-override": true
+        },
+        "build-commands": [
+            "echo ${RUSTFLAGS} > /app/rustflags_out"
+        ]
+    }]
+}
+EOF
+
+run_build test-rustflags-override.json
+
+assert_file_has_content appdir/files/rustflags_out '\-C opt\-level=3'
+assert_not_file_has_content appdir/files/rustflags_out 'debuginfo'
+
+echo "ok rustflags-override at module level clears manifest-level rustflags"
+
+# Only rustflags-override is set, rustflags should be cleared
+cat > test-rustflags-only-override.json <<'EOF'
+{
+    "app-id": "org.test.RustflagsOnlyOverride",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "build-options": {
+        "rustflags": "-C debuginfo=0"
+    },
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-options": {
+            "rustflags-override": true
+        },
+        "build-commands": [
+            "echo ${RUSTFLAGS:-unset} > /app/rustflags_out"
+        ]
+    }]
+}
+EOF
+
+run_build test-rustflags-only-override.json
+
+assert_file_has_content appdir/files/rustflags_out '^unset$'
+
+echo "ok only rustflags-override clears rustflags"
