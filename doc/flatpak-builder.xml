@@ -228,9 +228,9 @@
                   <para>
                   Only the
                   <option>--arch=</option><replaceable>ARCH</replaceable>,
-                  <option>--ccache</option> and
-                  <option>--verbose</option> options can be combined
-                  with this option.
+                  <option>--ccache</option>, <option>--verbose</option>
+                  and <option>--state-dir</option><replaceable>PATH</replaceable>
+                  (since 1.4.8) options can be combined with this option.
                   </para>
                 </listitem>
             </varlistentry>
