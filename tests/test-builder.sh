@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..11"
+echo "1..12"
 
 setup_repo
 install_repo
@@ -56,6 +56,7 @@ cp $(dirname $0)/org.test.Hello.png .
 cp $(dirname $0)/org.test.Hello-256.png .
 cp $(dirname $0)/org.flatpak.appstream_media.json .
 cp $(dirname $0)/org.flatpak.install_test.json .
+cp $(dirname $0)/test-locale-cleanup.json .
 mkdir include1
 cp $(dirname $0)/module1.json include1/
 cp $(dirname $0)/module1.yaml include1/
@@ -184,3 +185,10 @@ echo "$REFS" | grep -q "org\.flatpak\.install_test\.Debug"
 echo "$REFS" | grep -q "org\.flatpak\.install_test\.Locale"
 
 echo "ok install"
+
+${FLATPAK_BUILDER} --repo=$REPO --force-clean appdir test-locale-cleanup.json >&2
+
+assert_not_has_file appdir/files/share/runtime/locale/es/share/es/testA.mo
+assert_has_file appdir/files/share/runtime/locale/es/share/es/testB.mo
+
+echo "ok testB's locale survives after testA's cleanup"
