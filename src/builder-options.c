@@ -884,7 +884,10 @@ builder_options_get_flags (BuilderOptions *self,
       gboolean override = G_STRUCT_MEMBER (gboolean, o, override_field_offset);
 
       if (override && flags)
-        g_string_truncate (flags, 0);
+        {
+          g_string_free (flags, TRUE);
+          flags = NULL;
+        }
 
       if (flag)
         {
