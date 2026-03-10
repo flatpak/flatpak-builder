@@ -4415,6 +4415,17 @@ builder_manifest_install_deps (BuilderManifest *self,
                                          opt_yes,
                                          error))
         return FALSE;
+
+      for (size_t i = 0; self->base_extensions != NULL && self->base_extensions[i] != NULL; i++)
+        {
+          g_print ("Dependency Base extension: %s %s\n", self->base_extensions[i], builder_manifest_get_base_version (self));
+          if (!builder_manifest_install_dep (self, context, remotes, opt_user, opt_installation,
+                                             self->base_extensions[i],
+                                             builder_manifest_get_base_version (self),
+                                             opt_yes,
+                                             error))
+            return FALSE;
+        }
     }
 
   if (!builder_manifest_install_extension_deps (self, context,
