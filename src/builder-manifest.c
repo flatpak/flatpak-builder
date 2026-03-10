@@ -3539,26 +3539,42 @@ builder_manifest_finish (BuilderManifest *self,
 
       if (sub_ids->len > 0)
         {
-          g_autoptr(GFile) metadata_file = NULL;
-          g_autoptr(GFileOutputStream) output = NULL;
-          g_autoptr(GString) extension_contents = g_string_new ("\n"
-                                                                "[Build]\n");
+          g_autoptr(GFile) metadata_file = g_file_get_child (app_dir, "metadata");
+          g_autoptr(GKeyFile) keyfile = g_key_file_new ();
+          g_auto(GStrv) old_subs = NULL;
+          g_autoptr(GPtrArray) all_subs = g_ptr_array_new ();
+          gsize j;
 
-          g_string_append (extension_contents, FLATPAK_METADATA_KEY_BUILD_EXTENSIONS"=");
-          for (i = 0; i < sub_ids->len; i++)
-            {
-              g_string_append (extension_contents, (const char *)sub_ids->pdata[i]);
-              g_string_append (extension_contents, ";");
-            }
-
-          metadata_file = g_file_get_child (app_dir, "metadata");
-          output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
-          if (output == NULL)
+          if (!g_key_file_load_from_file (keyfile,
+                                          flatpak_file_get_path_cached (metadata_file),
+                                          G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+                                          error))
             return FALSE;
 
-          if (!g_output_stream_write_all (G_OUTPUT_STREAM (output),
-                                          extension_contents->str, extension_contents->len,
-                                          NULL, NULL, error))
+          old_subs = g_key_file_get_string_list (keyfile,
+                                                 FLATPAK_METADATA_GROUP_BUILD,
+                                                 FLATPAK_METADATA_KEY_BUILD_EXTENSIONS,
+                                                 NULL, NULL);
+
+          for (j = 0; old_subs != NULL && old_subs[j] != NULL; j++)
+             g_ptr_array_add (all_subs, old_subs[j]);
+
+          for (j = 0; j < sub_ids->len; j++)
+            {
+              if (old_subs == NULL ||
+                  !g_strv_contains ((const char * const *) old_subs, sub_ids->pdata[j]))
+                g_ptr_array_add (all_subs, sub_ids->pdata[j]);
+            }
+
+          g_key_file_set_string_list (keyfile,
+                                      FLATPAK_METADATA_GROUP_BUILD,
+                                      FLATPAK_METADATA_KEY_BUILD_EXTENSIONS,
+                                      (const char * const *) all_subs->pdata,
+                                      all_subs->len);
+
+          if (!g_key_file_save_to_file (keyfile,
+                                        flatpak_file_get_path_cached (metadata_file),
+                                        error))
             return FALSE;
         }
 
@@ -3981,27 +3997,45 @@ builder_manifest_finish_platform (BuilderManifest *self,
 
       if (sub_ids->len > 0)
         {
-          g_autoptr(GFile) metadata_file = NULL;
-          g_autoptr(GFileOutputStream) output = NULL;
-          g_autoptr(GString) extension_contents = g_string_new ("\n"
-                                                                "[Build]\n");
+          g_autoptr(GFile) metadata_file = g_file_get_child (app_dir, "metadata.platform");
+          g_autoptr(GKeyFile) keyfile = g_key_file_new ();
+          g_auto(GStrv) old_subs = NULL;
+          g_autoptr(GPtrArray) all_subs = g_ptr_array_new ();
+          gsize j;
 
-          g_string_append (extension_contents, FLATPAK_METADATA_KEY_BUILD_EXTENSIONS"=");
-          for (i = 0; i < sub_ids->len; i++)
-            {
-              g_string_append (extension_contents, (const char *)sub_ids->pdata[i]);
-              g_string_append (extension_contents, ";");
-            }
-          metadata_file = g_file_get_child (app_dir, "metadata.platform");
           if (!flatpak_break_hardlink (metadata_file, error))
             return FALSE;
-          output = g_file_append_to (metadata_file, G_FILE_CREATE_NONE, NULL, error);
-          if (output == NULL)
+
+          if (!g_key_file_load_from_file (keyfile,
+                                          flatpak_file_get_path_cached (metadata_file),
+                                          G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS,
+                                          error))
             return FALSE;
 
-          if (!g_output_stream_write_all (G_OUTPUT_STREAM (output),
-                                          extension_contents->str, extension_contents->len,
-                                          NULL, NULL, error))
+          old_subs = g_key_file_get_string_list (keyfile,
+                                                 FLATPAK_METADATA_GROUP_BUILD,
+                                                 FLATPAK_METADATA_KEY_BUILD_EXTENSIONS,
+                                                 NULL, NULL);
+
+          for (j = 0; old_subs != NULL && old_subs[j] != NULL; j++)
+            g_ptr_array_add (all_subs, old_subs[j]);
+
+          for (j = 0; j < sub_ids->len; j++)
+            {
+              if (old_subs == NULL ||
+                  !g_strv_contains ((const char * const *) old_subs, sub_ids->pdata[j]))
+                g_ptr_array_add (all_subs, sub_ids->pdata[j]);
+            }
+
+          g_key_file_set_string_list (keyfile,
+                                      FLATPAK_METADATA_GROUP_BUILD,
+                                      FLATPAK_METADATA_KEY_BUILD_EXTENSIONS,
+                                      (const char * const *) all_subs->pdata,
+                                      all_subs->len);
+
+          if (!g_key_file_save_to_file (keyfile,
+                                        flatpak_file_get_path_cached (metadata_file),
+                                        error))
             return FALSE;
         }
 
