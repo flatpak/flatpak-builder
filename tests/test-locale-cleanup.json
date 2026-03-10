@@ -1,0 +1,26 @@
+{
+    "app-id": "org.test.LocaleCleanup",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "modules": [
+        {
+            "name": "testA",
+            "cleanup": [
+                "/share/locale"
+            ],
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/share/locale/es",
+                "touch /app/share/locale/es/testA.mo"
+            ]
+        },
+        {
+            "name": "testB",
+            "buildsystem": "simple",
+            "build-commands": [
+                "mkdir -p /app/share/locale/es",
+                "touch /app/share/locale/es/testB.mo"
+            ]
+        }
+    ]
+}
