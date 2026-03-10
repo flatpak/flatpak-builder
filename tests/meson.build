@@ -123,6 +123,7 @@ if get_option('installed_tests')
     'org.flatpak.appstream_media.json',
     'org.test.Hello-256.png',
     'org.flatpak.install_test.json',
+    'test-locale-cleanup.json',
 
     install_dir: installed_testdir,
     install_mode: 'rw-r--r--',
