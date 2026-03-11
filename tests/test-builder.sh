@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..12"
+echo "1..13"
 
 setup_repo
 install_repo
@@ -41,6 +41,7 @@ cp $(dirname $0)/test-rename-appdata.json .
 cp $(dirname $0)/test.json .
 cp $(dirname $0)/test.yaml .
 cp $(dirname $0)/test-runtime.json .
+cp $(dirname $0)/test-runtime-platform.json .
 cp $(dirname $0)/0001-Add-test-logo.patch .
 cp $(dirname $0)/Hello.desktop .
 cp $(dirname $0)/Hello.xml .
@@ -138,6 +139,23 @@ ${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
     test-runtime.json >&2
 
 echo "ok runtime build cleanup with build-args"
+
+${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
+    test-runtime-platform.json >&2
+
+BUILD_GROUP_COUNT=$(grep -c '^\[Build\]' runtimedir/metadata.platform)
+if [ "$BUILD_GROUP_COUNT" -gt 1 ]; then
+    echo "not ok no duplicate [Build] groups in platform metadata"
+    exit 1
+fi
+
+BUILT_EXTENSIONS_COUNT=$(grep -c '^built-extensions=' runtimedir/metadata.platform)
+if [ "$BUILT_EXTENSIONS_COUNT" -gt 1 ]; then
+    echo "not ok duplicate built-extensions keys in platform metadata"
+    exit 1
+fi
+
+echo "ok no duplicate [Build] groups in platform metadata"
 
 # test screenshot ref commit
 ${FLATPAK_BUILDER} --repo=$REPO/repo_sc --force-clean builddir_sc \
