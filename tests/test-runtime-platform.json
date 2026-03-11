@@ -1,0 +1,9 @@
+{
+    "build-runtime": true,
+    "id": "org.test.Hello.Sdk",
+    "id-platform": "org.test.Hello.Platform",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "separate-locales": true,
+    "modules": []
+}

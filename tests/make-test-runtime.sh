@@ -28,6 +28,8 @@ PATH="$PATH:/usr/sbin:/sbin"
 # Add bash and dependencies
 mkdir -p ${DIR}/usr/bin
 mkdir -p ${DIR}/usr/lib
+mkdir -p ${DIR}/usr/share/runtime/locale/en
+echo "test" > ${DIR}/usr/share/runtime/locale/en/test
 ln -s ../lib ${DIR}/usr/lib64
 ln -s ../lib ${DIR}/usr/lib32
 if test -f /sbin/ldconfig.real; then
