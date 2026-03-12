@@ -328,7 +328,7 @@ builder_module_set_property (GObject      *object,
       self->name = g_value_dup_string (value);
       if ((p = strchr (self->name, ' ')) ||
           (p = strchr (self->name, '/')))
-        g_printerr ("Module names like '%s' containing '%c' are problematic. Expect errors.\n", self->name, *p);
+        g_error ("Disallowed character '%c' in module name '%s'.\n", *p, self->name);
       break;
 
     case PROP_SUBDIR:
