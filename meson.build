@@ -40,7 +40,7 @@ foreach check_function : check_functions
     #include <linux/random.h>
     #include <sys/mman.h>
 
-    int func (void) {
+    void func (void) {
       (void) ''' + check_function + ''';
     }
     ''',
@@ -76,6 +76,8 @@ libglnx_sources = [
   'glnx-backport-testutils.h',
   'glnx-backports.c',
   'glnx-backports.h',
+  'glnx-chase.c',
+  'glnx-chase.h',
   'glnx-console.c',
   'glnx-console.h',
   'glnx-dirfd.c',
