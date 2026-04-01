@@ -22,20 +22,15 @@ jobs:
     name: Build with gcc and test
     runs-on: ubuntu-22.04
     steps:
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
-        libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
-        libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
-        libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
-        libgirepository1.0-dev libappstream-dev libdconf-dev clang socat flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
-        docbook-xsl xmlto xsltproc git-lfs
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
         submodules: true
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y findutils
+        sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
     - name: configure
       run: ./autogen.sh
       env:
@@ -55,20 +50,15 @@ jobs:
     name: Build with clang
     runs-on: ubuntu-22.04
     steps:
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libglib2.0 attr automake appstream-compose gettext autopoint bison dbus gtk-doc-tools \
-        libfuse-dev ostree libostree-dev libarchive-dev libcap-dev libattr1-dev libdw-dev libelf-dev \
-        libjson-glib-dev shared-mime-info desktop-file-utils libpolkit-agent-1-dev libpolkit-gobject-1-dev \
-        libseccomp-dev libsystemd-dev libxml2-utils libgpgme11-dev gobject-introspection \
-        libgirepository1.0-dev libappstream-dev libdconf-dev clang flatpak \
-        libcurl4-gnutls-dev libflatpak-dev libyaml-dev elfutils git patch libarchive-tools \
-        docbook-xsl xmlto xsltproc git-lfs
     - name: Check out flatpak
       uses: actions/checkout@v4
       with:
         submodules: true
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y findutils clang
+        sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
     - name: configure
       # We disable introspection because it fails with clang: https://bugzilla.redhat.com/show_bug.cgi?id=1543295
       run: ./autogen.sh --disable-introspection
@@ -93,59 +83,14 @@ jobs:
       CONFIG_OPTS: -Dinstalled_tests=true
 
     steps:
+    - name: Check out flatpak-builder
+      uses: actions/checkout@v4
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          ${{ matrix.compiler }} \
-          attr \
-          automake \
-          autopoint \
-          appstream-compose \
-          bison \
-          debugedit \
-          dbus \
-          desktop-file-utils \
-          elfutils \
-          flatpak \
-          gettext \
-          git \
-          gobject-introspection \
-          gtk-doc-tools \
-          libappstream-dev \
-          libarchive-dev \
-          libattr1-dev \
-          libcap-dev \
-          libcurl4-gnutls-dev \
-          libdconf-dev \
-          libdw-dev \
-          libelf-dev \
-          libflatpak-dev \
-          libfuse-dev \
-          libgirepository1.0-dev \
-          libglib2.0-dev \
-          libgpgme11-dev \
-          libjson-glib-dev \
-          libostree-dev \
-          libpolkit-agent-1-dev \
-          libpolkit-gobject-1-dev \
-          libseccomp-dev \
-          libsystemd-dev \
-          libxml2-utils \
-          libyaml-dev \
-          meson \
-          ostree \
-          patch \
-          shared-mime-info \
-          socat \
-          libarchive-tools \
-          docbook-xsl \
-          xmlto \
-          xsltproc \
-          git-lfs
-
-    - name: Check out flatpak-builder
-      uses: actions/checkout@v4
+        sudo apt-get install -y meson debugedit ${{ matrix.compiler }}
+        sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
       run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
