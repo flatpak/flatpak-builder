@@ -1,0 +1,100 @@
+name: Release flatpak-builder
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+env:
+  DEBIAN_FRONTEND: noninteractive
+  BUILDDIR: builddir
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        # 6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          submodules: true
+          persist-credentials: false
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y findutils
+          sudo apt-get install -y \
+            gcc \
+            perl \
+            jq \
+            $(xargs < .github/dependencies.apt.txt)
+
+      - name: Configure with autotools
+        run: ./autogen.sh
+
+      - name: Build
+        run: make -j$(getconf _NPROCESSORS_ONLN)
+
+      - name: Verify tag matches version
+        run: |
+          VERSION=$(./configure --version | head -n1 | awk '{print $NF}')
+          TAG="${GITHUB_REF_NAME}"
+
+          echo "Autotools version: $VERSION"
+          echo "Git tag:           $TAG"
+
+          if [ "$VERSION" != "$TAG" ]; then
+            echo "ERROR: Tag does not match autotools version"
+            exit 1
+          fi
+
+          echo "releaseVersion=$VERSION" >> $GITHUB_ENV
+
+      - name: Extract changelog from NEWS
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+
+          {
+            echo "releaseChangelog<<EOF"
+            perl -0777 -ne "print \$1 if /Changes in \Q$VERSION\E\n=+\n\n(.*?)(?=\nChanges in|\Z)/s" NEWS
+            echo ""
+            echo "EOF"
+          } >> $GITHUB_ENV
+
+      - name: Determine prerelease
+        run: |
+          VERSION="${GITHUB_REF_NAME}"
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+
+          if [ $((MINOR % 2)) -eq 1 ]; then
+            echo "preRelease=true" >> $GITHUB_ENV
+          else
+            echo "preRelease=false" >> $GITHUB_ENV
+          fi
+
+      - name: Check distribution
+        run: make distcheck
+
+      - name: Create dist tarball
+        run: |
+          make dist
+          ls -lh flatpak-builder-*.tar.xz
+
+      - name: Compute tarball checksum
+        run: |
+          TARBALL=$(ls flatpak-builder-*.tar.xz)
+          echo "releaseTarball=$TARBALL" >> $GITHUB_ENV
+          sha256sum "$TARBALL" > "$TARBALL.sha256sum"
+
+      - name: Create GitHub release
+        # 1.21.0
+        uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd
+        with:
+          tag: ${{ env.releaseVersion }}
+          name: ${{ env.releaseVersion }}
+          body: ${{ env.releaseChangelog }}
+          prerelease: ${{ env.preRelease }}
+          artifacts: ${{ env.releaseTarball }},${{ env.releaseTarball }}.sha256sum
+          immutableCreate: true
