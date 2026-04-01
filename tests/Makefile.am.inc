@@ -64,6 +64,7 @@ dist_installed_test_data = \
 	tests/org.flatpak.appstream_media.json \
 	tests/org.test.Hello-256.png \
 	tests/org.flatpak.install_test.json \
+	tests/test-locale-cleanup.json \
 	$(NULL)
 
 installed_test_keyringdir = $(installed_testdir)/test-keyring
