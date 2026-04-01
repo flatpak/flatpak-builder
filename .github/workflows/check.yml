@@ -33,60 +33,16 @@ jobs:
       CONFIG_OPTS: -Dinstalled_tests=true
 
     steps:
+    - name: Check out flatpak-builder
+      uses: actions/checkout@v4
+
     - name: Install Dependencies
       run: |
         sudo apt-get update
+        sudo apt-get install -y findutils
         sudo apt-get install -y \
           ${{ matrix.compiler }} \
-          attr \
-          automake \
-          autopoint \
-          appstream-compose \
-          bison \
-          debugedit \
-          dbus \
-          desktop-file-utils \
-          elfutils \
-          flatpak \
-          gettext \
-          git \
-          gobject-introspection \
-          gtk-doc-tools \
-          libappstream-dev \
-          libarchive-dev \
-          libattr1-dev \
-          libcap-dev \
-          libcurl4-gnutls-dev \
-          libdconf-dev \
-          libdw-dev \
-          libelf-dev \
-          libflatpak-dev \
-          libfuse3-dev \
-          fuse3 \
-          libgirepository1.0-dev \
-          libglib2.0-dev \
-          libgpgme11-dev \
-          libjson-glib-dev \
-          libostree-dev \
-          libpolkit-agent-1-dev \
-          libpolkit-gobject-1-dev \
-          libseccomp-dev \
-          libsystemd-dev \
-          libxml2-utils \
-          libyaml-dev \
-          meson \
-          ostree \
-          patch \
-          shared-mime-info \
-          socat \
-          libarchive-tools \
-          docbook-xsl \
-          xmlto \
-          xsltproc \
-          git-lfs
-
-    - name: Check out flatpak-builder
-      uses: actions/checkout@v4
+          $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
       run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
