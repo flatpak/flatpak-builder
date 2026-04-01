@@ -18,33 +18,28 @@
 
 - Update the `NEWS`
 - Update version number in `meson.build` and `configure.ac`.
-- Open a  PR titled "Release $VERSION" with the above to see if CI passes.
-- Merge the PR to the target branch.
-- Check out the target branch, pull the above change locally and make
-  sure the submodules are correct and checked out.
-- Build with `meson` and `make`, with all options enabled.
-- Create a tarball with `make dist`. The tarball is created from a
-  clean checkout. It is produced as `flatpak-builder-$VERSION.tar.xz`.
-- Verify the project is buildable using the tarball. The tarball MUST
-  contain the submodule files.
+- Open a PR titled "Release $VERSION" with the above changes.
+- Build with `meson` and `make`, with all options enabled, locally.
+- Once CI on PR and local builds are successful merge the PR.
 
 ## Tagging
 
-- The tags are created in the `MAJOR.MINOR.PATCH` format eg. `1.4.6`
-  (WITHOUT the `v*` prefix).
-- Ideally the tags should be signed and annotated tags. Optionally
-  git-evtag can be used.
-- The tag message should have the changelog and the checksum of the
-  tarball that will be attached to GitHub releases.
-- Once the tag is pushed, a GitHub release from that tag is to be
-  created.
+- Checkout the target branch and pull the latest changes from above.
+- Create a signed and annotated tag using either git or git-evtag.
 
-  The release tag is the new tag, the title is `VERSION` and the release
-  body is the message from the tag. Additional notifications and details
-  can be documented to the release body.
+```
+git tag -s -m "<MAJOR.MINOR.PATCH>" <MAJOR.MINOR.PATCH>
+```
 
-  Then the `flatpak-builder-$VERSION.tar.xz` tarball is to be attahced.
-  This is the primary way downstreams consume Flatpak builder.
+NOTE. The tags are created in the `MAJOR.MINOR.PATCH` format eg.
+`1.4.6` (WITHOUT the `v*` prefix).
 
+- Push the tag.
 
-NOTE: GitHub releases are set as _immutable_, so please be careful.
+```
+git push origin $TAG
+```
+
+Once the tag is pushed, the GitHub release workflow will rebuild and
+run tests on it. If successful, it will then automatically create a
+GitHub release from the tag with the dist tarballs attached.
