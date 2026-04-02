@@ -1691,10 +1691,12 @@ builder_module_install_licenses (BuilderModule  *self,
                                  const char     *id,
                                  GFile          *source_dir,
                                  GFile          *app_dir,
+                                 BuilderContext *context,
                                  GError        **error)
 {
   g_autoptr(GPtrArray) license_files = NULL;
   g_autoptr(GFile) license_dir = NULL;
+  g_autoptr(GFile) dest_dir = NULL;
 
   if (!find_license_files (self, source_dir, &license_files, error))
     return FALSE;
@@ -1702,11 +1704,15 @@ builder_module_install_licenses (BuilderModule  *self,
   if (license_files->len == 0)
     return TRUE;
 
-  license_dir = g_file_new_build_filename (g_file_get_path (app_dir),
-                                           "files/share/licenses",
-                                           id,
-                                           self->name,
-                                           NULL);
+  dest_dir = builder_context_get_build_runtime (context)
+               ? g_file_get_child (app_dir, "usr")
+               : g_file_get_child (app_dir, "files");
+
+  license_dir = g_file_resolve_relative_path (dest_dir,
+                                              g_build_filename ("share/licenses",
+                                                                id,
+                                                                self->name,
+                                                                NULL));
   if (!flatpak_mkdir_p (license_dir, NULL, error))
     return FALSE;
 
@@ -2178,7 +2184,7 @@ builder_module_build_helper (BuilderModule   *self,
         return FALSE;
     }
 
-  if (!builder_module_install_licenses (self, id, source_dir, app_dir, error))
+  if (!builder_module_install_licenses (self, id, source_dir, app_dir, context, error))
     return FALSE;
 
   /* Post installation scripts */
