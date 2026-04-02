@@ -1134,8 +1134,19 @@ builder_download_uri_buffer (GUri           *uri,
 
   if (retcode != CURLE_OK)
     {
-      g_set_error_literal (error, BUILDER_CURL_ERROR, retcode,
-                           *error_buffer ? error_buffer : curl_easy_strerror (retcode));
+      const char *curl_msg =
+        *error_buffer ? error_buffer : curl_easy_strerror (retcode);
+
+      if (retcode == CURLE_BAD_CONTENT_ENCODING)
+        {
+          g_set_error (error, BUILDER_CURL_ERROR, retcode,
+                       "Failed to download %s: %s "
+                       "Try adding \"disable-http-decompression\": true to this source.",
+                       url, curl_msg);
+        }
+      else
+        g_set_error_literal (error, BUILDER_CURL_ERROR, retcode, curl_msg);
+
       return FALSE;
     }
 
