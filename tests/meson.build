@@ -11,6 +11,7 @@ test_names = [
   'test-builder',
   'test-builder-deprecated',
   'test-builder-python',
+  'test-builder-cleanup',
 ]
 
 tap_test = find_program(
