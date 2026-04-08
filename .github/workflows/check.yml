@@ -34,7 +34,7 @@ jobs:
     - name: configure
       run: ./autogen.sh
       env:
-        CFLAGS: -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2
+        CFLAGS: -Werror -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2
     - name: Build flatpak
       run: make -j $(getconf _NPROCESSORS_ONLN)
     - name: Run tests
@@ -64,7 +64,7 @@ jobs:
       run: ./autogen.sh --disable-introspection
       env:
         CC: clang
-        CFLAGS: -Werror=unused-variable
+        CFLAGS: -Werror
     - name: Build flatpak
       run: make -j $(getconf _NPROCESSORS_ONLN)
 
@@ -93,7 +93,7 @@ jobs:
         sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
-      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
+      run: meson setup --wrap-mode nodownload -Dwerror=true ${CONFIG_OPTS} ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
