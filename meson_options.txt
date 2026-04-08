@@ -29,3 +29,9 @@ option(
   value: 'compatible',
   description: 'Target a specific version of FUSE for best performance or support multiple versions'
 )
+option(
+  'enable_werror',
+  type : 'boolean',
+  description : 'Treat warnings as errors for flatpak-builder',
+  value : false,
+)

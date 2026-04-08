@@ -9,6 +9,10 @@ project(
 
 cc = meson.get_compiler('c')
 
+if get_option('enable_werror')
+  add_project_arguments('-Werror', language: 'c')
+endif
+
 project_c_args = [
   '-Werror=empty-body',
   '-Werror=strict-prototypes',

@@ -71,6 +71,11 @@ AC_DEFINE_UNQUOTED(GETTEXT_PACKAGE, "$PACKAGE", [gettext domain])
 AM_SILENT_RULES([yes])
 AM_MAINTAINER_MODE([enable])
 
+AC_ARG_ENABLE([werror],
+  AS_HELP_STRING([--enable-werror], [Treat warnings as errors for flatpak-builder]),
+  [enable_werror=$enableval],
+  [enable_werror=no])
+
 dnl This list is shared with https://github.com/ostreedev/ostree
 CC_CHECK_FLAGS_APPEND([WARN_CFLAGS], [CFLAGS], [\
 -pipe \
@@ -90,6 +95,11 @@ CC_CHECK_FLAGS_APPEND([WARN_CFLAGS], [CFLAGS], [\
 -Werror=misleading-indentation \
 -Werror=missing-include-dirs \
 ])
+
+AS_IF([test "x$enable_werror" = "xyes"], [
+  CC_CHECK_FLAGS_APPEND([WARN_CFLAGS], [CFLAGS], [-Werror])
+])
+
 AC_SUBST(WARN_CFLAGS)
 
 AX_VALGRIND_CHECK
