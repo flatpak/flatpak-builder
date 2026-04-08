@@ -30,7 +30,7 @@ jobs:
       CC: ${{ matrix.compiler }}
       BASE_CFLAGS: -Wp,-D_FORTIFY_SOURCE=2
       BUILDDIR: builddir
-      CONFIG_OPTS: -Dinstalled_tests=true
+      CONFIG_OPTS: -Denable_werror=true -Dinstalled_tests=true
 
     steps:
     - name: Check out flatpak-builder
