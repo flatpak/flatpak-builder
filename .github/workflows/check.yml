@@ -32,7 +32,7 @@ jobs:
         sudo apt-get install -y findutils
         sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
     - name: configure
-      run: ./autogen.sh
+      run: ./autogen.sh --enable-werror
       env:
         CFLAGS: -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2
     - name: Build flatpak
@@ -61,10 +61,9 @@ jobs:
         sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
     - name: configure
       # We disable introspection because it fails with clang: https://bugzilla.redhat.com/show_bug.cgi?id=1543295
-      run: ./autogen.sh --disable-introspection
+      run: ./autogen.sh --enable-werror --disable-introspection
       env:
         CC: clang
-        CFLAGS: -Werror=unused-variable
     - name: Build flatpak
       run: make -j $(getconf _NPROCESSORS_ONLN)
 
@@ -80,7 +79,7 @@ jobs:
       CC: ${{ matrix.compiler }}
       BASE_CFLAGS: -Wp,-D_FORTIFY_SOURCE=2
       BUILDDIR: builddir
-      CONFIG_OPTS: -Dinstalled_tests=true
+      CONFIG_OPTS: -Denable_werror=true -Dinstalled_tests=true
 
     steps:
     - name: Check out flatpak-builder
