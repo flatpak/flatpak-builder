@@ -87,6 +87,7 @@ dist_test_scripts = \
 	tests/test-builder.sh \
 	tests/test-builder-deprecated.sh \
 	tests/test-builder-python.sh \
+	tests/test-builder-cleanup.sh \
 	$(NULL)
 
 @VALGRIND_CHECK_RULES@
