@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..4"
+echo "1..7"
 
 setup_repo
 install_repo
@@ -167,3 +167,95 @@ assert_file_has_content \
     '^MY DEFAULT LICENSE TEXT$'
 
 echo "ok license file is recorded by default"
+
+mkdir -p source_licence_5/LICENSES mkdir -p source_licence_5/licenses
+echo "MIT LICENSE TEXT" > source_licence_5/LICENSES/MIT.txt
+echo "APACHE LICENSE TEXT" > source_licence_5/licenses/Apache-2.0.txt
+tar czf source_licence_5.tar.gz source_licence_5/
+
+cat > test-license_subdir.json <<'EOF'
+{
+    "app-id": "org.test.licence_subdir",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-commands": [],
+        "sources": [{
+            "type": "archive",
+            "path": "source_licence_5.tar.gz",
+            "dest-filename": "source_licence_5.tar.gz"
+        }]
+    }]
+}
+EOF
+
+run_build test-license_subdir.json
+
+assert_has_file appdir/files/share/licenses/org.test.licence_subdir/test/LICENSES_MIT.txt
+assert_file_has_content \
+    appdir/files/share/licenses/org.test.licence_subdir/test/LICENSES_MIT.txt \
+    '^MIT LICENSE TEXT$'
+assert_has_file appdir/files/share/licenses/org.test.licence_subdir/test/licenses_Apache-2.0.txt
+assert_file_has_content \
+    appdir/files/share/licenses/org.test.licence_subdir/test/licenses_Apache-2.0.txt \
+    '^APACHE LICENSE TEXT$'
+
+echo "ok licence subdir files are collected automatically"
+
+mkdir -p source_licence_6/LICENSES
+ln -s /etc/hostname source_licence_6/LICENSES/MIT.txt
+tar czf source_licence_6.tar.gz source_licence_6/
+
+cat > test-licence_subdir_symlink.json <<'EOF'
+{
+    "app-id": "org.test.licence_subdir_symlink",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-commands": [],
+        "sources": [{
+            "type": "archive",
+            "path": "source_licence_6.tar.gz",
+            "dest-filename": "source_licence_6.tar.gz"
+        }]
+    }]
+}
+EOF
+
+run_build test-licence_subdir_symlink.json
+
+assert_not_has_file appdir/files/share/licenses/org.test.licence_subdir_symlink/test/LICENSES_MIT.txt
+
+echo "ok symlink inside licence subdir is skipped"
+
+mkdir -p source_licence_7
+ln -s /proc/self source_licence_7/LICENSES
+tar czf source_licence_7.tar.gz source_licence_7/
+
+cat > test-licence_subdir_itself_symlink.json <<'EOF'
+{
+    "app-id": "org.test.licence_subdir_itself_symlink",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.Sdk",
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-commands": [],
+        "sources": [{
+            "type": "archive",
+            "path": "source_licence_7.tar.gz",
+            "dest-filename": "source_licence_7.tar.gz"
+        }]
+    }]
+}
+EOF
+
+run_build test-licence_subdir_itself_symlink.json
+
+assert_not_has_file appdir/files/share/licenses/org.test.licence_subdir_itself_symlink/test/LICENSES_environ
+
+echo "ok licence dir symlink is skipped"
