@@ -87,6 +87,18 @@ typedef struct {
   char *dst_name;
 } LicenseFile;
 
+typedef struct
+{
+  const char * const *patterns;
+  const char         *prefix;
+  GPtrArray          *files;
+} LicenseScanData;
+
+typedef gboolean (*LicenseScanCb) (int         fd,
+                                   const char *name,
+                                   gpointer    user_data,
+                                   GError    **error);
+
 static void serializable_iface_init (JsonSerializableIface *serializable_iface);
 
 G_DEFINE_TYPE_WITH_CODE (BuilderModule, builder_module, G_TYPE_OBJECT,
@@ -1611,34 +1623,17 @@ find_defined_license_files (GStrv       license_files,
   return TRUE;
 }
 
-static const char *default_licence_file_patterns[] = {
-  "COPYING",
-  "COPYRIGHT",
-  "Copyright",
-  "copyright",
-  "LICEN",
-  "Licen",
-  "licen",
-  NULL
-};
-
 static gboolean
-find_default_license_files (BuilderModule  *self,
-                            GFile          *source_dir,
-                            GPtrArray      *files,
-                            GError        **error)
+scan_license_dir (int              dirfd,
+                  LicenseScanCb    cb,
+                  gpointer         user_data,
+                  GError         **error)
 {
-  glnx_autofd int source_dfd = -1;
   g_auto(GLnxDirFdIterator) dfd_iter = { 0, };
   struct dirent *dent;
   struct stat dir_st;
 
-  if (!glnx_opendirat (AT_FDCWD,
-                       flatpak_file_get_path_cached (source_dir),
-                       TRUE, &source_dfd, error))
-    return FALSE;
-
-  if (!glnx_dirfd_iterator_init_at (source_dfd, ".", FALSE, &dfd_iter, error))
+  if (!glnx_dirfd_iterator_init_at (dirfd, ".", FALSE, &dfd_iter, error))
     return FALSE;
 
   if (fstat (dfd_iter.fd, &dir_st) < 0)
@@ -1652,48 +1647,171 @@ find_default_license_files (BuilderModule  *self,
       if (dent == NULL)
         break;
 
-      for (size_t i = 0; default_licence_file_patterns[i] != NULL; i++)
+      glnx_autofd int opath_fd = -1;
+      glnx_autofd int fd = -1;
+      struct stat st;
+
+      opath_fd = openat (dfd_iter.fd, dent->d_name,
+                         O_PATH | O_NOFOLLOW | O_CLOEXEC);
+      if (opath_fd < 0)
         {
-          if (!g_str_has_prefix (dent->d_name, default_licence_file_patterns[i]))
+          if (G_IN_SET (errno, ENOENT, EACCES))
             continue;
-
-          glnx_autofd int opath_fd = -1;
-          glnx_autofd int fd = -1;
-          struct stat st;
-
-          opath_fd = openat (dfd_iter.fd, dent->d_name,
-                             O_PATH | O_NOFOLLOW | O_CLOEXEC);
-          if (opath_fd < 0)
-            {
-              if (G_IN_SET (errno, ENOENT, EACCES))
-                continue;
-
-              return glnx_throw_errno_prefix (error, "openat %s", dent->d_name);
-            }
-
-          if (fstat (opath_fd, &st) < 0)
-            return glnx_throw_errno_prefix (error, "fstat %s", dent->d_name);
-
-          if (dent->d_ino != 0 &&
-              (dent->d_ino != st.st_ino || st.st_dev != dir_st.st_dev))
-            continue;
-
-          if (!S_ISREG (st.st_mode))
-            continue;
-
-          fd = glnx_fd_reopen (opath_fd, O_RDONLY, error);
-          if (fd < 0)
-            return FALSE;
-
-          if (!collect_license_file (fd,
-                                     dent->d_name,
-                                     dent->d_name,
-                                     files,
-                                     error))
-            return FALSE;
-
-          break;
+          return glnx_throw_errno_prefix (error, "openat %s", dent->d_name);
         }
+
+      if (fstat (opath_fd, &st) < 0)
+        return glnx_throw_errno_prefix (error, "fstat %s", dent->d_name);
+
+      if (dent->d_ino != 0 &&
+          (dent->d_ino != st.st_ino || st.st_dev != dir_st.st_dev))
+        continue;
+
+      if (!S_ISREG (st.st_mode))
+        continue;
+
+      fd = glnx_fd_reopen (opath_fd, O_RDONLY, error);
+      if (fd < 0)
+        return FALSE;
+
+      if (!cb (fd, dent->d_name, user_data, error))
+        return FALSE;
+    }
+
+  return TRUE;
+}
+
+static gboolean
+license_scan_cb (int         fd,
+                 const char *name,
+                 gpointer    user_data,
+                 GError    **error)
+{
+  LicenseScanData *data = user_data;
+  g_autofree char *src_path = NULL;
+  g_autofree char *dst_name = NULL;
+
+  if (data->patterns)
+    {
+      gboolean match = FALSE;
+
+      for (size_t i = 0; data->patterns[i] != NULL; i++)
+        {
+          if (g_str_has_prefix (name, data->patterns[i]))
+            {
+              match = TRUE;
+              break;
+            }
+        }
+
+      if (!match)
+        return TRUE;
+    }
+
+  if (data->prefix)
+    {
+      src_path = g_build_filename (data->prefix, name, NULL);
+      dst_name = g_strdup_printf ("%s_%s", data->prefix, name);
+    }
+  else
+    {
+      src_path = g_strdup (name);
+      dst_name = g_strdup (name);
+    }
+
+  return collect_license_file (fd,
+                               src_path,
+                               dst_name,
+                               data->files,
+                               error);
+}
+
+static gboolean
+scan_license_subdir (int               parent_dfd,
+                     const char       *subdir,
+                     LicenseScanData  *data,
+                     GError          **error)
+{
+  glnx_autofd int sub_dfd = -1;
+  g_autoptr(GError) local_error = NULL;
+
+  if (!glnx_opendirat (parent_dfd,
+                       subdir,
+                       FALSE,
+                       &sub_dfd,
+                       &local_error))
+    {
+      if (g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND) ||
+          g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
+        return TRUE;
+
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      return FALSE;
+    }
+
+  return scan_license_dir (sub_dfd,
+                           license_scan_cb,
+                           data,
+                           error);
+}
+
+static const char *default_licence_file_patterns[] = {
+  "COPYING",
+  "COPYRIGHT",
+  "Copyright",
+  "copyright",
+  "LICEN",
+  "Licen",
+  "licen",
+  NULL
+};
+
+static const char *license_dir_names[] = {
+  "LICENCES",
+  "LICENSES",
+  "licences",
+  "licenses",
+  NULL
+};
+
+static gboolean
+find_default_license_files (BuilderModule  *self,
+                            GFile          *source_dir,
+                            GPtrArray      *files,
+                            GError        **error)
+{
+  glnx_autofd int source_dfd = -1;
+
+  LicenseScanData toplevel_data = {
+    .patterns = default_licence_file_patterns,
+    .prefix = NULL,
+    .files = files
+  };
+
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (source_dir),
+                       TRUE, &source_dfd, error))
+    return FALSE;
+
+  if (!scan_license_dir (source_dfd,
+                         license_scan_cb,
+                         &toplevel_data,
+                         error))
+    return FALSE;
+
+  for (size_t i = 0; license_dir_names[i] != NULL; i++)
+    {
+      LicenseScanData subdir_data = {
+        .patterns = NULL,
+        .prefix = license_dir_names[i],
+        .files = files
+      };
+
+      if (!scan_license_subdir (source_dfd,
+                                license_dir_names[i],
+                                &subdir_data,
+                                error))
+        return FALSE;
     }
 
   return TRUE;
