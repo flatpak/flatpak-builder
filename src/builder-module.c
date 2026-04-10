@@ -1726,6 +1726,35 @@ license_scan_cb (int         fd,
                                error);
 }
 
+static gboolean
+scan_license_subdir (int               parent_dfd,
+                     const char       *subdir,
+                     LicenseScanData  *data,
+                     GError          **error)
+{
+  glnx_autofd int sub_dfd = -1;
+  g_autoptr(GError) local_error = NULL;
+
+  if (!glnx_opendirat (parent_dfd,
+                       subdir,
+                       FALSE,
+                       &sub_dfd,
+                       &local_error))
+    {
+      if (g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND) ||
+          g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
+        return TRUE;
+
+      g_propagate_error (error, g_steal_pointer (&local_error));
+      return FALSE;
+    }
+
+  return scan_license_dir (sub_dfd,
+                           license_scan_cb,
+                           data,
+                           error);
+}
+
 static const char *default_licence_file_patterns[] = {
   "COPYING",
   "COPYRIGHT",
@@ -1734,6 +1763,14 @@ static const char *default_licence_file_patterns[] = {
   "LICEN",
   "Licen",
   "licen",
+  NULL
+};
+
+static const char *license_dir_names[] = {
+  "LICENCES",
+  "LICENSES",
+  "licences",
+  "licenses",
   NULL
 };
 
@@ -1756,10 +1793,28 @@ find_default_license_files (BuilderModule  *self,
                        TRUE, &source_dfd, error))
     return FALSE;
 
-  return scan_license_dir (source_dfd,
-                           license_scan_cb,
-                           &toplevel_data,
-                           error);
+  if (!scan_license_dir (source_dfd,
+                         license_scan_cb,
+                         &toplevel_data,
+                         error))
+    return FALSE;
+
+  for (size_t i = 0; license_dir_names[i] != NULL; i++)
+    {
+      LicenseScanData subdir_data = {
+        .patterns = NULL,
+        .prefix = license_dir_names[i],
+        .files = files
+      };
+
+      if (!scan_license_subdir (source_dfd,
+                                license_dir_names[i],
+                                &subdir_data,
+                                error))
+        return FALSE;
+    }
+
+  return TRUE;
 }
 
 static gboolean
