@@ -1183,18 +1183,34 @@ builder_context_load_sdk_config (BuilderContext   *self,
                                  const char       *sdk_path,
                                  GError          **error)
 {
-  g_autoptr(GFile) root = g_file_new_for_path (sdk_path);
-  g_autoptr(GFile) config_file = g_file_resolve_relative_path (root, "files/etc/flatpak-builder/defaults.json");
-  g_autoptr(GError) local_error = NULL;
+  glnx_autofd int root_dfd = -1;
   g_autoptr(BuilderSdkConfig) sdk_config = NULL;
+  g_autoptr(GError) local_error = NULL;
+  int fd;
 
-  sdk_config = builder_sdk_config_from_file (config_file, &local_error);
-  if (sdk_config == NULL &&
-      !g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+  if (!glnx_opendirat (AT_FDCWD, sdk_path, TRUE, &root_dfd, error))
+    return FALSE;
+
+  fd = glnx_chaseat (root_dfd,
+                     "files/etc/flatpak-builder/defaults.json",
+                     GLNX_CHASE_RESOLVE_BENEATH |
+                     GLNX_CHASE_MUST_BE_REGULAR,
+                     &local_error);
+  if (fd < 0)
     {
+      if (g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+        {
+          g_set_object (&self->sdk_config, NULL);
+          return TRUE;
+        }
+
       g_propagate_error (error, g_steal_pointer (&local_error));
       return FALSE;
     }
+
+  sdk_config = builder_sdk_config_from_fd (fd, error);
+  if (sdk_config == NULL)
+    return FALSE;
 
   g_set_object (&self->sdk_config, sdk_config);
   return TRUE;
