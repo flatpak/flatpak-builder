@@ -82,6 +82,10 @@ GObject * builder_gobject_from_data (GType       gtype,
                                      const char *contents,
                                      GError    **error);
 
+GBytes * builder_read_fd (int       fd,
+                          gboolean  null_terminate,
+                          GError  **error);
+
 gboolean builder_host_spawnv (GFile                *dir,
                               char                **output,
                               GSubprocessFlags      flags,
