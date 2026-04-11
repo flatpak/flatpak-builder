@@ -21,6 +21,23 @@ cat > ${DIR}/metadata <<EOF
 name=${ID}
 EOF
 
+if [ "x${CREATE_SDK_CONFIG-}" = "x1" ]; then
+    mkdir -p "${DIR}/usr/etc/flatpak-builder"
+    cat > "${DIR}/usr/etc/flatpak-builder/defaults.json" <<EOF
+{
+  "libdir": "/usr/lib",
+  "cflags": "-O2 -g -fstack-protector-strong",
+  "cxxflags": "-O2 -g -fstack-protector-strong",
+  "cppflags": "",
+  "ldflags": "-Wl,-z,relro,-z,now",
+  "rustflags": "-C opt-level=2 -C debuginfo=2",
+  "cgo_cflags": "-O2 -g -fstack-protector-strong",
+  "cgo_cxxflags": "-O2 -g -fstack-protector-strong",
+  "cgo_ldflags": "-Wl,-z,relro,-z,now"
+}
+EOF
+fi
+
 # On Debian derivatives, /usr/sbin and /sbin aren't in ordinary users'
 # PATHs, but ldconfig is kept in /sbin
 PATH="$PATH:/usr/sbin:/sbin"
