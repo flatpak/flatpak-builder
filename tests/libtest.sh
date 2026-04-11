@@ -252,8 +252,10 @@ make_updated_app () {
 
 setup_sdk_repo () {
     REPONAME=${1:-test}
+    SDK_ID=${2:-org.test.Sdk}
+
     if [ x${USE_COLLECTIONS_IN_SERVER-} == xyes ] ; then
-        COLLECTION_ID=${2:-org.test.Collection.${REPONAME}}
+        COLLECTION_ID=${3:-org.test.Collection.${REPONAME}}
     else
         COLLECTION_ID=""
     fi
@@ -266,7 +268,7 @@ setup_sdk_repo () {
 
     GPGARGS="${GPGARGS:-${FL_GPGARGS}}" CREATE_SDK_CONFIG=${create_sdk_config_arg} \
     . $(dirname $0)/make-test-runtime.sh \
-        ${REPONAME} org.test.Sdk "${COLLECTION_ID}" \
+        ${REPONAME} ${SDK_ID} "${COLLECTION_ID}" \
         bash ls cat echo readlink make mkdir cp touch > /dev/null
 
     update_repo $REPONAME "${COLLECTION_ID}"
@@ -293,7 +295,8 @@ install_repo () {
 
 install_sdk_repo () {
     REPONAME=${1:-test}
-    ${FLATPAK} ${U} install -y ${REPONAME}-repo org.test.Sdk master >&2
+    SDK_ID=${2:-org.test.Sdk}
+    ${FLATPAK} ${U} install -y ${REPONAME}-repo ${SDK_ID} master >&2
 }
 
 install_python2_repo () {
