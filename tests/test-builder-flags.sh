@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..7"
+echo "1..8"
 
 setup_repo
 install_repo
@@ -230,3 +230,44 @@ run_build test-rustflags-only-override.json
 assert_file_has_content appdir/files/rustflags_out '^unset$'
 
 echo "ok only rustflags-override clears rustflags"
+
+CREATE_SDK_CONFIG=1
+setup_repo testconfig
+setup_sdk_repo testconfig org.test.SdkConfig
+install_sdk_repo testconfig org.test.SdkConfig
+unset CREATE_SDK_CONFIG
+
+cat > test-sdk-config.json <<'EOF'
+{
+    "app-id": "org.test.SdkConfigApp",
+    "runtime": "org.test.Platform",
+    "sdk": "org.test.SdkConfig",
+    "modules": [{
+        "name": "test",
+        "buildsystem": "simple",
+        "build-commands": [
+            "echo $CFLAGS > /app/cflags",
+            "echo $CXXFLAGS > /app/cxxflags",
+            "echo $LDFLAGS > /app/ldflags",
+            "echo ${CPPFLAGS:-unset} > /app/cppflags",
+            "echo $RUSTFLAGS > /app/rustflags",
+            "echo $CGO_CFLAGS > /app/cgo_cflags",
+            "echo $CGO_CXXFLAGS > /app/cgo_cxxflags",
+            "echo $CGO_LDFLAGS > /app/cgo_ldflags"
+        ]
+    }]
+}
+EOF
+
+run_build test-sdk-config.json
+
+assert_file_has_content appdir/files/cflags '^\-O2 \-g \-fstack-protector-strong$'
+assert_file_has_content appdir/files/cxxflags '^\-O2 \-g \-fstack-protector-strong$'
+assert_file_has_content appdir/files/ldflags '^\-Wl,-z,relro,-z,now$'
+assert_file_has_content appdir/files/cppflags '^unset$'
+assert_file_has_content appdir/files/rustflags '^\-C opt-level=2 \-C debuginfo=2$'
+assert_file_has_content appdir/files/cgo_cflags '^\-O2 \-g \-fstack-protector-strong$'
+assert_file_has_content appdir/files/cgo_cxxflags '^\-O2 \-g \-fstack-protector-strong$'
+assert_file_has_content appdir/files/cgo_ldflags '^\-Wl,-z,relro,-z,now$'
+
+echo "ok sdk flags config from is loaded and flags are set correctly"
