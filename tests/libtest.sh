@@ -258,7 +258,17 @@ setup_sdk_repo () {
         COLLECTION_ID=""
     fi
 
-    GPGARGS="${GPGARGS:-${FL_GPGARGS}}" . $(dirname $0)/make-test-runtime.sh ${REPONAME} org.test.Sdk "${COLLECTION_ID}" bash ls cat echo readlink make mkdir cp touch > /dev/null
+    if [ "x${CREATE_SDK_CONFIG-}" = "x1" ]; then
+        create_sdk_config_arg=1
+    else
+        create_sdk_config_arg=
+    fi
+
+    GPGARGS="${GPGARGS:-${FL_GPGARGS}}" CREATE_SDK_CONFIG=${create_sdk_config_arg} \
+    . $(dirname $0)/make-test-runtime.sh \
+        ${REPONAME} org.test.Sdk "${COLLECTION_ID}" \
+        bash ls cat echo readlink make mkdir cp touch > /dev/null
+
     update_repo $REPONAME "${COLLECTION_ID}"
 }
 
