@@ -583,6 +583,42 @@ builder_gobject_from_data (GType       gtype,
   return json_gobject_deserialize (gtype, json);
 }
 
+GBytes *
+builder_read_fd (int       fd,
+                 gboolean  null_terminate,
+                 GError  **error)
+{
+  g_autoptr(GInputStream) stream = NULL;
+  glnx_autofd int rd_fd = -1;
+  int fd_flags;
+
+  g_return_val_if_fail (fd >= 0, NULL);
+  g_return_val_if_fail (error == NULL || *error == NULL, NULL);
+
+  fd_flags = fcntl (fd, F_GETFL);
+  if (fd_flags < 0)
+    {
+      glnx_throw_errno_prefix (error, "fcntl(F_GETFL)");
+      return NULL;
+    }
+
+  if ((fd_flags & O_PATH) != 0 ||
+      (fd_flags & O_ACCMODE) == O_WRONLY)
+    {
+      rd_fd = glnx_fd_reopen (fd, O_RDONLY, error);
+      if (rd_fd < 0)
+        return NULL;
+
+      stream = g_unix_input_stream_new (rd_fd, TRUE);
+    }
+  else
+    {
+      stream = g_unix_input_stream_new (fd, FALSE);
+    }
+
+  return flatpak_read_stream (stream, null_terminate, error);
+}
+
 char **
 builder_get_debuginfo_file_references (const char *filename, GError **error)
 {
