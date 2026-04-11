@@ -284,75 +284,122 @@ directory_is_empty (const char *path)
 }
 
 static gboolean
-migrate_locale_dir (GFile      *source_dir,
-                    GFile      *separate_dir,
+migrate_locale_dir (int         root_dfd,
+                    const char *source_rel,
+                    int         separate_dfd,
                     const char *subdir,
                     GError    **error)
 {
-  g_autoptr(GFileEnumerator) dir_enum = NULL;
-  GFileInfo *next;
-  GError *temp_error = NULL;
+  glnx_autofd int source_dfd = -1;
+  g_auto(GLnxDirFdIterator) dfd_iter = { 0, };
+  struct dirent *dent;
 
-  dir_enum = g_file_enumerate_children (source_dir, "standard::name,standard::type",
-                                        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                        NULL, NULL);
-  if (!dir_enum)
-    return TRUE;
-
-  while ((next = g_file_enumerator_next_file (dir_enum, NULL, &temp_error)))
+  if (!glnx_opendirat (root_dfd, source_rel, FALSE, &source_dfd, error))
     {
-      g_autoptr(GFileInfo) child_info = next;
-      g_autoptr(GFile) locale_subdir = NULL;
-
-      if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
+      if (g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND) ||
+          g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
         {
-          g_autoptr(GFile) child = NULL;
-          const char *name = g_file_info_get_name (child_info);
-          g_autofree char *language = g_strdup (name);
-          g_autofree char *relative = NULL;
-          g_autofree char *target = NULL;
-          char *c;
-
-          c = strchr (language, '@');
-          if (c != NULL)
-            *c = 0;
-          c = strchr (language, '_');
-          if (c != NULL)
-            *c = 0;
-          c = strchr (language, '.');
-          if (c != NULL)
-            *c = 0;
-
-          /* We ship english and C locales always */
-          if (strcmp (language, "C") == 0 ||
-              strcmp (language, "en") == 0)
-            continue;
-
-          child = g_file_get_child (source_dir, g_file_info_get_name (child_info));
-
-          relative = g_build_filename (language, subdir, name, NULL);
-          locale_subdir = g_file_resolve_relative_path (separate_dir, relative);
-          if (!flatpak_mkdir_p (locale_subdir, NULL, error))
-            return FALSE;
-
-          if (!flatpak_cp_a (child, locale_subdir, NULL,
-                             FLATPAK_CP_FLAGS_MERGE | FLATPAK_CP_FLAGS_MOVE,
-                             NULL, NULL, error))
-            return FALSE;
-
-          target = g_build_filename ("../../share/runtime/locale", relative, NULL);
-
-          if (!g_file_make_symbolic_link (child, target,
-                                          NULL, error))
-            return FALSE;
-
+          g_clear_error (error);
+          return TRUE;
         }
+      return FALSE;
     }
 
-  if (temp_error != NULL)
+  if (!glnx_dirfd_iterator_init_at (source_dfd, ".", FALSE, &dfd_iter, error))
+    return FALSE;
+
+  while (TRUE)
     {
-      g_propagate_error (error, temp_error);
-      return FALSE;
+      glnx_autofd int child_dfd = -1;
+      glnx_autofd int locale_subdir_dfd = -1;
+      g_autofree char *language = NULL;
+      g_autofree char *target = NULL;
+      struct stat st;
+      char *c;
+
+      if (!glnx_dirfd_iterator_next_dent_ensure_dtype (&dfd_iter, &dent, NULL, error))
+        return FALSE;
+
+      if (dent == NULL)
+        break;
+
+      if (dent->d_type != DT_DIR)
+        continue;
+
+      if (fstatat (dfd_iter.fd, dent->d_name, &st, AT_SYMLINK_NOFOLLOW) < 0)
+        return glnx_throw_errno_prefix (error, "fstatat %s", dent->d_name);
+
+      if (!S_ISDIR (st.st_mode))
+        continue;
+
+      language = g_strdup (dent->d_name);
+      c = strchr (language, '@');
+      if (c != NULL)
+        *c = 0;
+      c = strchr (language, '_');
+      if (c != NULL)
+        *c = 0;
+      c = strchr (language, '.');
+      if (c != NULL)
+        *c = 0;
+
+      /* We ship english and C locales always */
+      if (strcmp (language, "C") == 0 ||
+          strcmp (language, "en") == 0)
+        continue;
+
+      const char *components[] = { language, subdir, dent->d_name, NULL };
+
+      if (!builder_ensure_dirs_at (separate_dfd, components, &locale_subdir_dfd, error))
+        return FALSE;
+
+      if (!glnx_opendirat (dfd_iter.fd, dent->d_name, FALSE, &child_dfd, error))
+        return FALSE;
+
+      {
+        g_auto(GLnxDirFdIterator) child_iter = { 0, };
+        struct dirent *child_dent;
+
+        if (!glnx_dirfd_iterator_init_at (child_dfd, ".", FALSE, &child_iter, error))
+          return FALSE;
+
+        while (TRUE)
+          {
+            glnx_autofd int src_fd = -1;
+            glnx_autofd int dst_fd = -1;
+
+            if (!glnx_dirfd_iterator_next_dent (&child_iter, &child_dent, NULL, error))
+              return FALSE;
+
+            if (child_dent == NULL)
+              break;
+
+            src_fd = openat (child_dfd, child_dent->d_name,
+                             O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+            if (src_fd < 0)
+              return glnx_throw_errno_prefix (error, "openat %s", child_dent->d_name);
+
+            dst_fd = openat (locale_subdir_dfd, child_dent->d_name,
+                             O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW | O_CLOEXEC, 0644);
+            if (dst_fd < 0)
+              return glnx_throw_errno_prefix (error, "openat dest %s", child_dent->d_name);
+
+            if (glnx_regfile_copy_bytes (src_fd, dst_fd, -1) < 0)
+              return glnx_throw_errno_prefix (error, "copying locale file");
+
+            if (unlinkat (child_dfd, child_dent->d_name, 0) < 0)
+              return glnx_throw_errno_prefix (error, "unlinkat %s", child_dent->d_name);
+          }
+      }
+
+      target = g_build_filename ("../../share/runtime/locale",
+                                 language, subdir, dent->d_name, NULL);
+
+      if (unlinkat (dfd_iter.fd, dent->d_name, AT_REMOVEDIR) < 0)
+        return glnx_throw_errno_prefix (error, "unlinkat dir %s", dent->d_name);
+
+      if (symlinkat (target, dfd_iter.fd, dent->d_name) < 0)
+        return glnx_throw_errno_prefix (error, "symlinkat %s", dent->d_name);
     }
 
   return TRUE;
@@ -395,18 +442,22 @@ gboolean
 builder_migrate_locale_dirs (GFile   *root_dir,
                              GError **error)
 {
-  g_autoptr(GFile) separate_dir = NULL;
-  g_autoptr(GFile) lib_locale_dir = NULL;
-  g_autoptr(GFile) share_locale_dir = NULL;
+  glnx_autofd int root_dfd = -1;
+  glnx_autofd int separate_dfd = -1;
+  const char *separate_components[] = { "share", "runtime", "locale", NULL };
 
-  lib_locale_dir = g_file_resolve_relative_path (root_dir, "lib/locale");
-  share_locale_dir = g_file_resolve_relative_path (root_dir, "share/locale");
-  separate_dir = g_file_resolve_relative_path (root_dir, "share/runtime/locale");
-
-  if (!migrate_locale_dir (lib_locale_dir, separate_dir, "lib", error))
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (root_dir),
+                       FALSE, &root_dfd, error))
     return FALSE;
 
-  if (!migrate_locale_dir (share_locale_dir, separate_dir, "share", error))
+  if (!builder_ensure_dirs_at (root_dfd, separate_components, &separate_dfd, error))
+    return FALSE;
+
+  if (!migrate_locale_dir (root_dfd, "lib/locale", separate_dfd, "lib", error))
+    return FALSE;
+
+  if (!migrate_locale_dir (root_dfd, "share/locale", separate_dfd, "share", error))
     return FALSE;
 
   return TRUE;
