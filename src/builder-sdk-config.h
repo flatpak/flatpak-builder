@@ -40,7 +40,7 @@ const char *      builder_sdk_config_get_cxxflags (BuilderSdkConfig  *self);
 const char *      builder_sdk_config_get_ldflags  (BuilderSdkConfig  *self);
 const char *      builder_sdk_config_get_rustflags  (BuilderSdkConfig  *self);
 
-BuilderSdkConfig *builder_sdk_config_from_file    (GFile             *file,
+BuilderSdkConfig *builder_sdk_config_from_fd      (int                fd,
                                                    GError           **error);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderSdkConfig, g_object_unref)

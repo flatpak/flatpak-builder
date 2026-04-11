@@ -19,6 +19,7 @@
  */
 
 #include "builder-sdk-config.h"
+#include "builder-utils.h"
 
 #include <json-glib/json-glib.h>
 
@@ -245,17 +246,20 @@ builder_sdk_config_get_rustflags (BuilderSdkConfig *self)
 }
 
 BuilderSdkConfig *
-builder_sdk_config_from_file (GFile    *file,
-                              GError  **error)
+builder_sdk_config_from_fd (int      fd,
+                            GError **error)
 {
-  g_autofree gchar     *config_contents = NULL;
-  gsize                 config_size;
+  g_autoptr(GBytes) bytes = NULL;
+  gsize size;
+  const char *data;
 
-  if (!g_file_load_contents (file, NULL, &config_contents, &config_size, NULL, error))
+  bytes = builder_read_fd (fd, FALSE, error);
+  if (bytes == NULL)
     return NULL;
 
-  return (BuilderSdkConfig*) json_gobject_from_data (BUILDER_TYPE_SDK_CONFIG,
-                                                     config_contents,
-                                                     config_size,
-                                                     error);
+  data = g_bytes_get_data (bytes, &size);
+  return (BuilderSdkConfig *) json_gobject_from_data (BUILDER_TYPE_SDK_CONFIG,
+                                                      data,
+                                                      size,
+                                                      error);
 }
