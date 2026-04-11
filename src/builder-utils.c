@@ -283,76 +283,226 @@ directory_is_empty (const char *path)
   return empty;
 }
 
+static char *
+locale_name_to_language (const char *name)
+{
+  char *language = g_strdup (name);
+  char *c;
+
+  if ((c = strchr (language, '@'))) *c = '\0';
+  if ((c = strchr (language, '_'))) *c = '\0';
+  if ((c = strchr (language, '.'))) *c = '\0';
+
+  return language;
+}
+
 static gboolean
-migrate_locale_dir (GFile      *source_dir,
-                    GFile      *separate_dir,
+migrate_locale_dir_contents (int      src_dfd,
+                             int      dst_dfd,
+                             GError **error)
+{
+  g_auto(GLnxDirFdIterator) iter = { 0, };
+  struct dirent *dent;
+
+  if (!glnx_dirfd_iterator_init_at (src_dfd, ".", FALSE, &iter, error))
+    return FALSE;
+
+  while (TRUE)
+    {
+      glnx_autofd int chase_fd = -1;
+      struct glnx_statx stx;
+      char tmp_name[] = ".locale-XXXXXX";
+
+      if (!glnx_dirfd_iterator_next_dent (&iter, &dent, NULL, error))
+        return FALSE;
+
+      if (dent == NULL)
+        break;
+
+      chase_fd = glnx_chase_and_statxat (src_dfd, dent->d_name,
+                                         GLNX_CHASE_NOFOLLOW |
+                                         GLNX_CHASE_RESOLVE_BENEATH,
+                                         GLNX_STATX_TYPE,
+                                         &stx,
+                                         error);
+      if (chase_fd < 0)
+        return FALSE;
+
+      glnx_gen_temp_name (tmp_name);
+
+      if (!glnx_renameat (src_dfd, dent->d_name, src_dfd, tmp_name, error))
+        return FALSE;
+
+      if (S_ISREG (stx.stx_mode) || S_ISLNK (stx.stx_mode))
+        {
+          if (!glnx_file_copy_at (src_dfd, tmp_name, NULL,
+                                  dst_dfd, dent->d_name,
+                                  GLNX_FILE_COPY_OVERWRITE |
+                                  GLNX_FILE_COPY_NOCHOWN |
+                                  GLNX_FILE_COPY_NOXATTRS,
+                                  NULL, error))
+            return FALSE;
+
+          if (unlinkat (src_dfd, tmp_name, 0) < 0)
+            return glnx_throw_errno_prefix (error, "unlinkat %s", tmp_name);
+        }
+      else if (S_ISDIR (stx.stx_mode))
+        {
+          glnx_autofd int src_child_dfd = -1;
+          glnx_autofd int child_dst_dfd = -1;
+
+          src_child_dfd = glnx_fd_reopen (chase_fd, O_RDONLY | O_DIRECTORY, error);
+          if (src_child_dfd < 0)
+            return FALSE;
+
+          if (!glnx_ensure_dir (dst_dfd, dent->d_name, 0755, error))
+            return FALSE;
+
+          if (!glnx_opendirat (dst_dfd, dent->d_name, FALSE,
+                               &child_dst_dfd, error))
+            return FALSE;
+
+          if (!migrate_locale_dir_contents (src_child_dfd, child_dst_dfd, error))
+            return FALSE;
+
+          if (unlinkat (src_dfd, tmp_name, AT_REMOVEDIR) < 0)
+            return glnx_throw_errno_prefix (error, "unlinkat %s", tmp_name);
+        }
+      else
+        return glnx_throw (error, "unexpected entry type %s", dent->d_name);
+    }
+  return TRUE;
+}
+
+static gboolean
+migrate_lang_dir (int         source_dfd,
+                  const char *lang_name,
+                  const char *src_tmp_name,
+                  int         lang_dfd,
+                  int         separate_dfd,
+                  const char *subdir,
+                  GError    **error)
+{
+  glnx_autofd int locale_subdir_dfd = -1;
+  g_autofree char *language = locale_name_to_language (lang_name);
+  g_autofree char *target = NULL;
+
+  const char *components[] = { language, subdir, lang_name, NULL };
+
+  if (!builder_ensure_dirs_at (separate_dfd, components, &locale_subdir_dfd, error))
+    return FALSE;
+
+  if (!migrate_locale_dir_contents (lang_dfd, locale_subdir_dfd, error))
+    return FALSE;
+
+  target = g_build_filename ("../../share/runtime/locale",
+                             language, subdir, lang_name, NULL);
+
+  if (unlinkat (source_dfd, src_tmp_name, AT_REMOVEDIR) < 0)
+    return glnx_throw_errno_prefix (error, "unlinkat %s", src_tmp_name);
+
+  if (symlinkat (target, source_dfd, lang_name) < 0)
+    return glnx_throw_errno_prefix (error, "symlinkat %s", lang_name);
+
+  return TRUE;
+}
+
+static gboolean
+migrate_locale_dir (int         root_dfd,
+                    const char *source_rel,
+                    int         root_dfd_separate,
                     const char *subdir,
                     GError    **error)
 {
-  g_autoptr(GFileEnumerator) dir_enum = NULL;
-  GFileInfo *next;
-  GError *temp_error = NULL;
+  glnx_autofd int chase_fd = -1;
+  glnx_autofd int source_dfd = -1;
+  glnx_autofd int separate_dfd = -1;
+  g_auto(GLnxDirFdIterator) iter = { 0, };
+  struct dirent *dent;
+  const char *separate_components[] = { "share", "runtime", "locale", NULL };
+  g_autoptr(GPtrArray) names = g_ptr_array_new_with_free_func (g_free);
 
-  dir_enum = g_file_enumerate_children (source_dir, "standard::name,standard::type",
-                                        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                        NULL, NULL);
-  if (!dir_enum)
-    return TRUE;
-
-  while ((next = g_file_enumerator_next_file (dir_enum, NULL, &temp_error)))
+  chase_fd = glnx_chaseat (root_dfd, source_rel,
+                           GLNX_CHASE_RESOLVE_BENEATH |
+                           GLNX_CHASE_MUST_BE_DIRECTORY,
+                           error);
+  if (chase_fd < 0)
     {
-      g_autoptr(GFileInfo) child_info = next;
-      g_autoptr(GFile) locale_subdir = NULL;
-
-      if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
+      if (g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
         {
-          g_autoptr(GFile) child = NULL;
-          const char *name = g_file_info_get_name (child_info);
-          g_autofree char *language = g_strdup (name);
-          g_autofree char *relative = NULL;
-          g_autofree char *target = NULL;
-          char *c;
-
-          c = strchr (language, '@');
-          if (c != NULL)
-            *c = 0;
-          c = strchr (language, '_');
-          if (c != NULL)
-            *c = 0;
-          c = strchr (language, '.');
-          if (c != NULL)
-            *c = 0;
-
-          /* We ship english and C locales always */
-          if (strcmp (language, "C") == 0 ||
-              strcmp (language, "en") == 0)
-            continue;
-
-          child = g_file_get_child (source_dir, g_file_info_get_name (child_info));
-
-          relative = g_build_filename (language, subdir, name, NULL);
-          locale_subdir = g_file_resolve_relative_path (separate_dir, relative);
-          if (!flatpak_mkdir_p (locale_subdir, NULL, error))
-            return FALSE;
-
-          if (!flatpak_cp_a (child, locale_subdir, NULL,
-                             FLATPAK_CP_FLAGS_MERGE | FLATPAK_CP_FLAGS_MOVE,
-                             NULL, NULL, error))
-            return FALSE;
-
-          target = g_build_filename ("../../share/runtime/locale", relative, NULL);
-
-          if (!g_file_make_symbolic_link (child, target,
-                                          NULL, error))
-            return FALSE;
-
+          g_clear_error (error);
+          return TRUE;
         }
+      return FALSE;
     }
 
-  if (temp_error != NULL)
+  source_dfd = glnx_fd_reopen (chase_fd, O_RDONLY | O_DIRECTORY, error);
+  if (source_dfd < 0)
+    return glnx_prefix_error (error, "failed to reopen %s", source_rel);
+
+  if (!glnx_dirfd_iterator_init_at (source_dfd, ".", FALSE, &iter, error))
+    return FALSE;
+
+  while (TRUE)
     {
-      g_propagate_error (error, temp_error);
-      return FALSE;
+      if (!glnx_dirfd_iterator_next_dent (&iter, &dent, NULL, error))
+        return FALSE;
+
+      if (dent == NULL)
+        break;
+
+      {
+        g_autofree char *language = locale_name_to_language (dent->d_name);
+
+        /* We ship english and C locales always */
+        if (strcmp (language, "C") == 0 ||
+            strcmp (language, "en") == 0)
+          continue;
+      }
+
+      g_ptr_array_add (names, g_strdup (dent->d_name));
+    }
+
+  if (names->len == 0)
+    return TRUE;
+
+  if (!builder_ensure_dirs_at (root_dfd_separate, separate_components,
+                               &separate_dfd, error))
+    return FALSE;
+
+  for (size_t i = 0; i < names->len; i++)
+    {
+      const char *name = names->pdata[i];
+      glnx_autofd int lang_dfd = -1;
+      glnx_autofd int reopened_lang_dfd = -1;
+      char tmp_name[] = ".locale-XXXXXX";
+
+      lang_dfd = glnx_chaseat (source_dfd, name,
+                               GLNX_CHASE_RESOLVE_BENEATH |
+                               GLNX_CHASE_MUST_BE_DIRECTORY,
+                               error);
+      if (lang_dfd < 0)
+        {
+          if (g_error_matches (*error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY))
+            {
+              g_clear_error (error);
+              continue;
+            }
+          return FALSE;
+        }
+
+      reopened_lang_dfd = glnx_fd_reopen (lang_dfd, O_RDONLY | O_DIRECTORY, error);
+      if (reopened_lang_dfd < 0)
+        return glnx_prefix_error (error, "failed to reopen %s", name);
+
+      glnx_gen_temp_name (tmp_name);
+
+      if (!glnx_renameat (source_dfd, name, source_dfd, tmp_name, error))
+        return FALSE;
+
+      if (!migrate_lang_dir (source_dfd, name, tmp_name, reopened_lang_dfd,
+                             separate_dfd, subdir, error))
+        return FALSE;
     }
 
   return TRUE;
@@ -395,18 +545,17 @@ gboolean
 builder_migrate_locale_dirs (GFile   *root_dir,
                              GError **error)
 {
-  g_autoptr(GFile) separate_dir = NULL;
-  g_autoptr(GFile) lib_locale_dir = NULL;
-  g_autoptr(GFile) share_locale_dir = NULL;
+  glnx_autofd int root_dfd = -1;
 
-  lib_locale_dir = g_file_resolve_relative_path (root_dir, "lib/locale");
-  share_locale_dir = g_file_resolve_relative_path (root_dir, "share/locale");
-  separate_dir = g_file_resolve_relative_path (root_dir, "share/runtime/locale");
-
-  if (!migrate_locale_dir (lib_locale_dir, separate_dir, "lib", error))
+  if (!glnx_opendirat (AT_FDCWD,
+                       flatpak_file_get_path_cached (root_dir),
+                       FALSE, &root_dfd, error))
     return FALSE;
 
-  if (!migrate_locale_dir (share_locale_dir, separate_dir, "share", error))
+  if (!migrate_locale_dir (root_dfd, "lib/locale", root_dfd, "lib", error))
+    return FALSE;
+
+  if (!migrate_locale_dir (root_dfd, "share/locale", root_dfd, "share", error))
     return FALSE;
 
   return TRUE;
