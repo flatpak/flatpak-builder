@@ -90,6 +90,7 @@ static gboolean opt_log_system_bus;
 static gboolean opt_yes;
 static gint64 opt_source_date_epoch = -1;
 static gchar *opt_as_url_policy = NULL;
+static gchar *opt_as_allow_custom = NULL;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -146,6 +147,7 @@ static GOptionEntry entries[] = {
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
   { "compose-url-policy", 0, 0, G_OPTION_ARG_STRING, &opt_as_url_policy, "Set the AppStream compose URL policy to either 'partial' (default) or 'full'", "POLICY" },
+  { "compose-allow-custom", 0, 0, G_OPTION_ARG_STRING, &opt_as_allow_custom, "Set the AppStream compose custom keys that should be propagated to the output data.", "ENTRIES" },
   { NULL }
 };
 
@@ -615,6 +617,7 @@ main (int    argc,
   builder_context_set_bundle_sources (build_context, opt_bundle_sources);
   builder_context_set_opt_export_only (build_context, opt_export_only);
   builder_context_set_opt_mirror_screenshots_url (build_context, opt_mirror_screenshots_url);
+  builder_context_set_as_allow_custom (build_context, opt_as_allow_custom);
 
   if (opt_mirror_screenshots_url)
     {

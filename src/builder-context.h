@@ -185,6 +185,11 @@ void            builder_context_set_opt_mirror_screenshots_url (BuilderContext *
 
 const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *self);
 
+void            builder_context_set_as_allow_custom (BuilderContext *self,
+                                                     const char *as_allow_custom);
+
+const char *    builder_context_get_as_allow_custom (BuilderContext *self);
+
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 gboolean        builder_context_create_state_dir (BuilderContext *self,

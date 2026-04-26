@@ -89,7 +89,8 @@ struct BuilderContext
 
   BuilderSdkConfig *sdk_config;
 
-  BuilderAsUrlPolicy as_url_policy;
+  BuilderAsUrlPolicy  as_url_policy;
+  char               *as_allow_custom;
 };
 
 typedef struct
@@ -130,6 +131,7 @@ builder_context_finalize (GObject *object)
   g_free (self->default_branch);
   g_free (self->state_subdir);
   g_free (self->stop_at);
+  g_free (self->as_allow_custom);
   g_strfreev (self->cleanup);
   g_strfreev (self->cleanup_platform);
   glnx_release_lock_file(&self->rofiles_file_lock);
@@ -376,6 +378,20 @@ const char *
 builder_context_get_opt_mirror_screenshots_url (BuilderContext *self)
 {
   return self->opt_mirror_screenshots_url;
+}
+
+void
+builder_context_set_as_allow_custom (BuilderContext *self,
+                                     const char *as_allow_custom)
+{
+  g_free (self->as_allow_custom);
+  self->as_allow_custom = g_strdup (as_allow_custom);
+}
+
+const char *
+builder_context_get_as_allow_custom (BuilderContext *self)
+{
+  return self->as_allow_custom;
 }
 
 GFile *
