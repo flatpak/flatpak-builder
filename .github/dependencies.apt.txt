@@ -9,6 +9,7 @@ gettext
 git
 git-lfs
 libappstream-compose-dev
+libappstream-dev
 libarchive-tools
 libcurl4-openssl-dev
 libelf-dev
