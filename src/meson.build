@@ -66,6 +66,7 @@ flatpak_builder_deps = [
 flatpak_builder = executable(
   'flatpak-builder',
   flatpak_builder_sources,
+  include_directories: include_directories('.'),
   dependencies: flatpak_builder_deps,
   install: true,
 )
