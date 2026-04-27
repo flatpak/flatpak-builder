@@ -630,12 +630,6 @@ main (int    argc,
           return 1;
         }
 
-      if (policy == BUILDER_AS_URL_POLICY_FULL && !appstream_has_version (0, 16, 3))
-        {
-          g_printerr ("AppStream version >= 0.16.3 required for 'full' compose URL policy\n");
-          return 1;
-        }
-
       builder_context_set_as_url_policy (build_context, policy);
     }
 
