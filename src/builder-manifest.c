@@ -2430,6 +2430,7 @@ builder_appstreamcli_compose (const gchar *origin,
                               const gchar *result_root,
                               const gchar *data_dir,
                               const gchar *icon_dir,
+                              const gchar *hint_dir,
                               const gchar *media_dir,
                               const gchar *media_baseurl,
                               BuilderAsUrlPolicy as_url_policy,
@@ -2444,6 +2445,7 @@ builder_appstreamcli_compose (const gchar *origin,
   g_return_val_if_fail (result_root != NULL, FALSE);
   g_return_val_if_fail (data_dir != NULL, FALSE);
   g_return_val_if_fail (icon_dir != NULL, FALSE);
+  g_return_val_if_fail (hint_dir != NULL, FALSE);
 
   compose = asc_compose_new ();
 
@@ -2462,6 +2464,7 @@ builder_appstreamcli_compose (const gchar *origin,
   asc_compose_set_icons_result_dir (compose, icon_dir);
   asc_compose_set_media_baseurl (compose, media_baseurl);
   asc_compose_set_media_result_dir (compose, media_dir);
+  asc_compose_set_hints_result_dir (compose, hint_dir);
 
 #if AS_CHECK_VERSION(0, 16, 3)
   if (as_url_policy == BUILDER_AS_URL_POLICY_FULL)
@@ -3120,10 +3123,12 @@ builder_manifest_cleanup (BuilderManifest *self,
           g_autoptr(GFile) data_out = flatpak_build_file (app_root, "share/app-info/xmls", NULL);
           g_autoptr(GFile) icon_out = flatpak_build_file (app_root, "share/app-info/icons/flatpak", NULL);
           g_autoptr(GFile) media_out = flatpak_build_file (app_root, "share/app-info/media", NULL);
+          g_autoptr(GFile) hint_out = flatpak_build_file (app_root, "appstream", NULL);
 
           const char *data_dir = flatpak_file_get_path_cached (data_out);
           const char *icon_dir = flatpak_file_get_path_cached (icon_out);
           const char *media_dir = flatpak_file_get_path_cached (media_out);
+          const char *hint_dir = flatpak_file_get_path_cached (hint_out);
           const char *opt_mirror_screenshots_url = builder_context_get_opt_mirror_screenshots_url (context);
 
           gboolean opt_export_only = builder_context_get_opt_export_only (context);
@@ -3141,6 +3146,7 @@ builder_manifest_cleanup (BuilderManifest *self,
                                                  app_root_path,
                                                  data_dir,
                                                  icon_dir,
+                                                 hint_dir,
                                                  media_dir,
                                                  url,
                                                  as_url_policy,
@@ -3155,6 +3161,7 @@ builder_manifest_cleanup (BuilderManifest *self,
                                                  app_root_path,
                                                  data_dir,
                                                  icon_dir,
+                                                 hint_dir,
                                                  NULL,
                                                  NULL,
                                                  as_url_policy,
