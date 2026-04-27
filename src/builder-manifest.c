@@ -2476,6 +2476,8 @@ builder_appstreamcli_compose (const gchar *origin,
     }
 #endif
 
+  asc_compose_remove_flags (compose, ASC_COMPOSE_FLAG_ALLOW_SCREENCASTS);
+
   g_autoptr(GPtrArray) results = asc_compose_run (compose, NULL, error);
   if (results == NULL)
     {
