@@ -1,17 +1,22 @@
 Changes in 1.5.0
 ================
 
-TBD
+TBD (last: 5b0efc0)
 
-* Drop libglnx submodule and convert it to a subtree
-* Drop autotools, the project now only supports building with meson
-* Prevent writing duplicate groups to metadata file
-* Disable all filesystem access in flatpak-builder --run sandbox
-* Add ability to set custom fusermount path
-* Support setting state-dir for run
-* Default to builddir true for cmake and cmake-ninja buildsystems
-* Handle case-insensitive YAML boolean and null scalars
+* Record licence files in common licence directories
+* Abort on invalid module names
+* Run locale migration after cleanup
 * Support setting CGO buildflags and RUSTFLAGS in builder environment
+* Prevent setting empty buildflag in environment when override is set in manifest and SDK flags are present
+* Run shell before configure step
+* Default to builddir true for cmake and cmake-ninja
+* Add ability to set custom fusermount path
+* Drop libglnx submodule and use subtree for it
+* Drop debugedit submodule and use system debugedit
+* Drop autotools build system for the project
+* Prevent writing duplicate groups to metadata file and try to merge them instead
+* Disable all filesystem access in flatpak-builder --run sandbox
+* Various improvements to CI, tests and docs
 
 Changes in 1.4.6
 ================
