@@ -1163,11 +1163,11 @@ flatpak_create_curl_session (const char *user_agent)
   if (curl_session == NULL)
     return NULL;
 
-  curl_easy_setopt (curl_session, CURLOPT_CONNECTTIMEOUT, 60);
-  curl_easy_setopt (curl_session, CURLOPT_FAILONERROR, 1);
-  curl_easy_setopt (curl_session, CURLOPT_FOLLOWLOCATION, 1);
-  curl_easy_setopt (curl_session, CURLOPT_MAXREDIRS, 50);
-  curl_easy_setopt (curl_session, CURLOPT_NOPROGRESS, 0);
+  curl_easy_setopt (curl_session, CURLOPT_CONNECTTIMEOUT, 60L);
+  curl_easy_setopt (curl_session, CURLOPT_FAILONERROR, 1L);
+  curl_easy_setopt (curl_session, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt (curl_session, CURLOPT_MAXREDIRS, 50L);
+  curl_easy_setopt (curl_session, CURLOPT_NOPROGRESS, 0L);
   curl_easy_setopt (curl_session, CURLOPT_LOW_SPEED_TIME, 60L);
   curl_easy_setopt (curl_session, CURLOPT_LOW_SPEED_LIMIT, 10000L);
   curl_easy_setopt (curl_session, CURLOPT_USERAGENT, user_agent);
