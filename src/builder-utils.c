@@ -1151,10 +1151,10 @@ typedef struct {
 } CURLWriteData;
 
 static gsize
-builder_curl_write_cb (gpointer *buffer,
+builder_curl_write_cb (char     *buffer,
                        gsize     size,
                        gsize     nmemb,
-                       gpointer *userdata)
+                       void     *userdata)
 {
   gsize bytes_written;
   CURLWriteData *write_data = (CURLWriteData *) userdata;
