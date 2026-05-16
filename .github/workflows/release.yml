@@ -13,20 +13,30 @@ jobs:
   release:
     name: Build and publish release
     runs-on: ubuntu-24.04
+    container: ubuntu:26.04
     permissions:
       contents: write
     steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          apt-get install -y git findutils
+
+      - name: Set git safe directory
+        run: |
+          git config --global safe.directory "*"
+
       - name: Checkout repository
         # 6.0.2
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           persist-credentials: false
 
-      - name: Install Dependencies
+      - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y findutils
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y findutils
+          apt-get install -y \
             gcc \
             perl \
             jq \
