@@ -46,7 +46,7 @@ jobs:
           $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
-      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
+      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} -Dwerror=true ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
