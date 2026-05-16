@@ -37,6 +37,17 @@ foreach arg : project_c_args
   endif
 endforeach
 
+if cc.get_id() == 'clang'
+  clang_args = [
+    '-Wno-typedef-redefinition',
+  ]
+  foreach arg : clang_args
+    if cc.has_argument(arg)
+      add_project_arguments(arg, language: 'c')
+    endif
+  endforeach
+endif
+
 # The debugedit program is a hard dependency
 debugedit = find_program('debugedit', version: '>= 5.0')
 
