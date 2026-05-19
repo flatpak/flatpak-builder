@@ -2502,6 +2502,7 @@ builder_appstreamcli_compose (const char     *app_id,
     asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_NO_PARTIAL_URLS);
 
   asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_PROPAGATE_CUSTOM);
+  asc_compose_remove_flags (compose, ASC_COMPOSE_FLAG_ALLOW_SCREENCASTS);
 
   g_print ("Running appstreamcli compose\n");
 
