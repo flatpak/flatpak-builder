@@ -35,7 +35,7 @@ jobs:
     - name: configure
       run: ./autogen.sh
       env:
-        CFLAGS: -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2
+        CFLAGS: -fsanitize=undefined -fsanitize-undefined-trap-on-error -fsanitize=address -O2 -Wp,-D_FORTIFY_SOURCE=2 -Werror
     - name: Build flatpak
       run: make -j $(getconf _NPROCESSORS_ONLN)
     - name: Run tests
@@ -96,7 +96,7 @@ jobs:
         sudo apt-get install -y $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
-      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} ${BUILDDIR} .
+      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} -Dwerror=true ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
