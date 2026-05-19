@@ -2501,6 +2501,8 @@ builder_appstreamcli_compose (const char     *app_id,
   if (as_url_policy == BUILDER_AS_URL_POLICY_FULL)
     asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_NO_PARTIAL_URLS);
 
+  asc_compose_add_flags (compose, ASC_COMPOSE_FLAG_PROPAGATE_CUSTOM);
+
   g_print ("Running appstreamcli compose\n");
 
   g_autoptr(GPtrArray) results = asc_compose_run (compose, NULL, error);
