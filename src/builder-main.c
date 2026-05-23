@@ -35,6 +35,9 @@
 #include "builder-utils.h"
 #include "builder-git.h"
 
+#define SOURCE_DATE_EPOCH_DISABLE   G_GINT64_CONSTANT (0)   /* Disable setting SOURCE_DATE_EPOCH entirely */
+#define SOURCE_DATE_EPOCH_DEFAULT   G_GINT64_CONSTANT (-1)  /* Default when --override-source-date-epoch is not passed */
+
 static gboolean opt_verbose;
 static gboolean opt_version;
 static gboolean opt_run;
@@ -88,7 +91,7 @@ static char *opt_installation;
 static gboolean opt_log_session_bus;
 static gboolean opt_log_system_bus;
 static gboolean opt_yes;
-static gint64 opt_source_date_epoch = -1;
+static gint64 opt_source_date_epoch = SOURCE_DATE_EPOCH_DEFAULT;
 static gchar *opt_as_url_policy = NULL;
 
 static GOptionEntry entries[] = {
@@ -487,7 +490,6 @@ main (int    argc,
   int i, first_non_arg, orig_argc;
   int argnr;
   char *p;
-  struct stat statbuf;
   gsize manifest_length;
 
   setlocale (LC_ALL, "");
@@ -764,10 +766,12 @@ main (int    argc,
       return 1;
     }
 
-  if (opt_source_date_epoch > -1)
-    builder_context_set_source_date_epoch (build_context, opt_source_date_epoch);
-  else if (stat (flatpak_file_get_path_cached (manifest_file), &statbuf) == 0)
-    builder_context_set_source_date_epoch (build_context, (gint64)statbuf.st_mtime);
+  if (opt_source_date_epoch == SOURCE_DATE_EPOCH_DISABLE)
+    builder_context_set_source_date_epoch (build_context, BUILDER_SOURCE_DATE_EPOCH_UNSET, 0);
+  else if (opt_source_date_epoch == SOURCE_DATE_EPOCH_DEFAULT)
+    builder_context_set_source_date_epoch (build_context, BUILDER_SOURCE_DATE_EPOCH_DEFAULT, 0);
+  else
+    builder_context_set_source_date_epoch (build_context, BUILDER_SOURCE_DATE_EPOCH_OVERRIDE, opt_source_date_epoch);
 
   manifest_sha256 = g_compute_checksum_for_string (G_CHECKSUM_SHA256, manifest_contents, -1);
 

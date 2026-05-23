@@ -34,6 +34,13 @@ typedef enum {
   BUILDER_AS_URL_POLICY_FULL,
 } BuilderAsUrlPolicy;
 
+typedef enum {
+  BUILDER_SOURCE_DATE_EPOCH_DEFAULT,
+  BUILDER_SOURCE_DATE_EPOCH_OVERRIDE,
+  BUILDER_SOURCE_DATE_EPOCH_UNSET,
+} BuilderSourceDateEpochMode;
+
+
 /* Same as SOUP_HTTP_URI_FLAGS, means all possible flags for http uris */
 
 #if GLIB_CHECK_VERSION (2, 68, 0)
@@ -92,8 +99,9 @@ const char *    builder_context_get_default_branch (BuilderContext *self);
 void            builder_context_set_default_branch (BuilderContext *self,
                                                     const char     *default_branch);
 gint64          builder_context_get_source_date_epoch (BuilderContext *self);
-void            builder_context_set_source_date_epoch (BuilderContext *self,
-                                                       gint64 source_date_epoch);
+void            builder_context_set_source_date_epoch (BuilderContext             *self,
+                                                       BuilderSourceDateEpochMode  mode,
+                                                       gint64                      value);
 const char *    builder_context_get_stop_at (BuilderContext *self);
 void            builder_context_set_stop_at (BuilderContext *self,
                                              const char     *module);
