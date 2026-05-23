@@ -150,7 +150,7 @@ static GOptionEntry entries[] = {
   { "assumeyes", 'y', 0, G_OPTION_ARG_NONE, &opt_yes, N_("Automatically answer yes for all questions"), NULL },
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
-  { "compose-url-policy", 0, 0, G_OPTION_ARG_STRING, &opt_as_url_policy, "Set the AppStream compose URL policy to either 'partial' (default) or 'full'", "POLICY" },
+  { "compose-url-policy", 0, 0, G_OPTION_ARG_STRING, &opt_as_url_policy, "Set the AppStream compose URL policy to either 'full' (default) or 'partial'", "POLICY" },
   { NULL }
 };
 
@@ -620,7 +620,7 @@ main (int    argc,
 
   if (opt_mirror_screenshots_url)
     {
-      BuilderAsUrlPolicy policy = BUILDER_AS_URL_POLICY_PARTIAL;
+      BuilderAsUrlPolicy policy = BUILDER_AS_URL_POLICY_FULL;
 
       if (g_strcmp0 (opt_as_url_policy, "full") == 0)
         policy = BUILDER_AS_URL_POLICY_FULL;
