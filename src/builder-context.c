@@ -1229,6 +1229,38 @@ builder_context_get_sdk_config (BuilderContext *self)
 }
 
 gboolean
+builder_context_ccache_available_in_sdk (BuilderContext *self,
+                                         const char     *sdk_path)
+{
+  static const char ccache_path[] = "files/bin/ccache";
+
+  glnx_autofd int root_dfd = -1;
+  glnx_autofd int fd = -1;
+  struct stat st;
+
+  if (!glnx_opendirat (AT_FDCWD, sdk_path, TRUE, &root_dfd, NULL))
+    return FALSE;
+
+  fd = glnx_chaseat (root_dfd,
+                     ccache_path,
+                     GLNX_CHASE_RESOLVE_BENEATH |
+                     GLNX_CHASE_MUST_BE_REGULAR,
+                     NULL);
+  if (fd < 0)
+    return FALSE;
+
+  if (fstat (fd, &st) < 0)
+    return FALSE;
+
+  if ((st.st_mode & (S_IXUSR | S_IXGRP | S_IXOTH)) == 0)
+    return FALSE;
+
+  g_print ("Found ccache at %s/%s\n", sdk_path, ccache_path);
+
+  return TRUE;
+}
+
+gboolean
 builder_context_create_state_dir (BuilderContext *self,
                                   GError        **error)
 {

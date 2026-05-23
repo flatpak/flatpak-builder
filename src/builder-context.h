@@ -195,6 +195,9 @@ const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *
 
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
+gboolean builder_context_ccache_available_in_sdk (BuilderContext *self,
+                                                  const char     *sdk_path);
+
 gboolean        builder_context_create_state_dir (BuilderContext *self,
                                                   GError        **error);
 
