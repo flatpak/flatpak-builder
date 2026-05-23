@@ -51,7 +51,8 @@ static gboolean opt_show_deps;
 static gboolean opt_show_manifest;
 static gboolean opt_disable_download;
 static gboolean opt_disable_updates;
-static gboolean opt_ccache;
+static gboolean opt_ccache; /* deprecated, kept for compat */
+static gboolean opt_no_ccache;
 static gboolean opt_require_changes;
 static gboolean opt_keep_build_dirs;
 static gboolean opt_delete_build_dirs;
@@ -99,7 +100,8 @@ static GOptionEntry entries[] = {
   { "add-tag", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_add_tags, "Add a tag to the build", "TAG"},
   { "remove-tag", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_remove_tags, "Remove a tag from the build", "TAG"},
   { "run", 0, 0, G_OPTION_ARG_NONE, &opt_run, "Run a command in the build directory (see --run --help)", NULL },
-  { "ccache", 0, 0, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache", NULL },
+  { "ccache", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache (deprecated as it is auto-enabled when available in SDK)", NULL },
+  { "no-ccache", 0, 0, G_OPTION_ARG_NONE, &opt_no_ccache, "Disable ccache use", NULL },
   { "disable-cache", 0, 0, G_OPTION_ARG_NONE, &opt_disable_cache, "Disable cache lookups", NULL },
   { "disable-tests", 0, 0, G_OPTION_ARG_NONE, &opt_disable_tests, "Don't run tests", NULL },
   { "disable-rofiles-fuse", 0, 0, G_OPTION_ARG_NONE, &opt_disable_rofiles, "Disable rofiles-fuse use", NULL },
@@ -155,7 +157,8 @@ static GOptionEntry run_entries[] = {
   { "run", 0, 0, G_OPTION_ARG_NONE, &opt_run, "Run a command in the build directory", NULL },
   { "log-session-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_session_bus, N_("Log session bus calls"), NULL },
   { "log-system-bus", 0, 0, G_OPTION_ARG_NONE, &opt_log_system_bus, N_("Log system bus calls"), NULL },
-  { "ccache", 0, 0, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache", NULL },
+  { "ccache", 0, G_OPTION_FLAG_HIDDEN, G_OPTION_ARG_NONE, &opt_ccache, "Use ccache (deprecated as it is auto-enabled when available in SDK)", NULL },
+  { "no-ccache", 0, 0, G_OPTION_ARG_NONE, &opt_no_ccache, "Disable ccache use", NULL },
   { "state-dir", 0, 0, G_OPTION_ARG_FILENAME, &opt_state_dir, "Use this directory for state instead of .flatpak-builder", "PATH" },
   { NULL }
 };
@@ -688,12 +691,6 @@ main (int    argc,
       builder_context_set_stop_at (build_context, opt_stop_at);
     }
 
-  if (!builder_context_set_enable_ccache (build_context, opt_ccache, &error))
-    {
-      g_printerr ("Can't initialize ccache use: %s\n", error->message);
-      return 1;
-  }
-
   if (opt_from_git)
     {
       g_autofree char *manifest_dirname = g_path_get_dirname (manifest_rel_path);
@@ -948,6 +945,25 @@ main (int    argc,
     {
       g_printerr ("Failed to init: %s\n", error->message);
       return 1;
+    }
+
+  if (!opt_no_ccache)
+    {
+      gboolean want_ccache = FALSE;
+      const char *sdk_path = builder_manifest_get_sdk_path (manifest);
+
+      if (sdk_path != NULL)
+        want_ccache = builder_context_ccache_available_in_sdk (build_context, sdk_path);
+
+      if (!want_ccache && opt_ccache)
+        g_printerr ("Warning: --ccache passed but ccache not found in SDK, ignoring\n");
+
+      if (want_ccache &&
+          !builder_context_set_enable_ccache (build_context, TRUE, &error))
+        {
+          g_printerr ("Can't initialize ccache use: %s\n", error->message);
+          return 1;
+        }
     }
 
   if (!opt_finish_only &&

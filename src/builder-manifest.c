@@ -73,6 +73,7 @@ struct BuilderManifest
   char           *runtime_version;
   char           *sdk;
   char           *sdk_commit;
+  char           *sdk_path;
   char           *var;
   char           *base;
   char           *base_commit;
@@ -196,6 +197,7 @@ builder_manifest_finalize (GObject *object)
   g_free (self->runtime_version);
   g_free (self->sdk);
   g_free (self->sdk_commit);
+  g_free (self->sdk_path);
   g_free (self->base);
   g_free (self->base_commit);
   g_free (self->base_version);
@@ -1482,6 +1484,12 @@ builder_manifest_get_runtime_version (BuilderManifest *self)
 }
 
 const char *
+builder_manifest_get_sdk_path (BuilderManifest *self)
+{
+  return self->sdk_path;
+}
+
+const char *
 builder_manifest_get_branch (BuilderManifest *self,
                              BuilderContext  *context)
 {
@@ -1691,7 +1699,6 @@ builder_manifest_start (BuilderManifest *self,
 {
   g_autofree char *arch_option = NULL;
   g_autoptr(GHashTable) names = g_hash_table_new (g_str_hash, g_str_equal);
-  g_autofree char *sdk_path = NULL;
   const char *stop_at;
 
   self->source_date_epoch = builder_context_get_source_date_epoch (context);
@@ -1718,9 +1725,10 @@ builder_manifest_start (BuilderManifest *self,
              builder_manifest_get_runtime_version (self),
              self->sdk_commit);
 
-  sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_runtime_version (self), context);
-  if (sdk_path != NULL &&
-      !builder_context_load_sdk_config (context, sdk_path, error))
+  g_clear_pointer (&self->sdk_path, g_free);
+  self->sdk_path = flatpak_info_show_path (self->sdk, builder_manifest_get_runtime_version (self), context);
+  if (self->sdk_path != NULL &&
+      !builder_context_load_sdk_config (context, self->sdk_path, error))
     return FALSE;
 
   self->runtime_commit = flatpak (NULL, "info", arch_option, "--show-commit", self->runtime,
