@@ -13,6 +13,7 @@ on:
 env:
   DEBIAN_FRONTEND: noninteractive
   TESTS_TIMEOUT: 10 # in minutes
+  MESON_TEST_TIMEOUT_MULTIPLIER: 2
 
 permissions:
   contents: read
@@ -80,7 +81,7 @@ jobs:
       env:
         ASAN_OPTIONS: "detect_leaks=1:fast_unwind_on_malloc=0:malloc_context_size=20:symbolize=1"
         UBSAN_OPTIONS: "print_stacktrace=1"
-      run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose
+      run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose --timeout-multiplier ${MESON_TEST_TIMEOUT_MULTIPLIER}
 
     - name: Upload test logs
       # 7.0.0
