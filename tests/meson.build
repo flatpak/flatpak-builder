@@ -129,6 +129,7 @@ if get_option('installed_tests')
     'org.flatpak.install_test.json',
     'test-locale-cleanup.json',
     'test-runtime-platform.json',
+    'lsan.supp',
 
     install_dir: installed_testdir,
     install_mode: 'rw-r--r--',

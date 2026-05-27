@@ -1,0 +1,8 @@
+# external
+
+leak:g_source_attach
+leak:g_thread_pool_spawn_thread
+leak:g_main_context_iteration
+leak:sysprof_collector_get
+
+# flatpak-builder
