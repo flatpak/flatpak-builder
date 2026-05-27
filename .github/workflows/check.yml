@@ -57,7 +57,11 @@ jobs:
           $(xargs < .github/dependencies.apt.txt)
 
     - name: Configure flatpak-builder
-      run: meson setup --wrap-mode nodownload ${CONFIG_OPTS} -Dwerror=true ${BUILDDIR} .
+      run: |
+        meson setup --wrap-mode nodownload ${CONFIG_OPTS} \
+          -Dwerror=true \
+          -Db_sanitize=address,undefined \
+          ${BUILDDIR} .
 
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
@@ -73,6 +77,9 @@ jobs:
           builddir/doc/
 
     - name: Run tests with Meson
+      env:
+        ASAN_OPTIONS: "detect_leaks=1:fast_unwind_on_malloc=0:malloc_context_size=20:symbolize=1"
+        UBSAN_OPTIONS: "print_stacktrace=1"
       run: timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose
 
     - name: Upload test logs
