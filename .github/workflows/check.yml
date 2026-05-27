@@ -60,10 +60,6 @@ jobs:
     - name: Build flatpak-builder with Meson
       run: meson compile -C ${BUILDDIR}
 
-    - name: Create dist tarball
-      run: |
-        meson dist --include-subprojects -C ${BUILDDIR}
-
     - name: Upload docs
       # 7.0.0
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
@@ -86,6 +82,10 @@ jobs:
         path: |
           builddir/meson-logs/testlog.txt
           installed-test-logs/
+
+    - name: Create dist tarball
+      run: |
+        meson dist --include-subprojects -C ${BUILDDIR}
 
     - name: Configure flatpak-builder with Meson wraps
       run: meson setup --wrap-mode=forcefallback ${CONFIG_OPTS} ${BUILDDIR}_wrap .
