@@ -216,12 +216,12 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->inherit_extensions);
   g_strfreev (self->inherit_sdk_extensions);
   g_strfreev (self->tags);
+  g_strfreev (self->rename_mime_icons);
   g_free (self->rename_desktop_file);
   g_free (self->rename_appdata_file);
   g_free (self->rename_mime_file);
   g_free (self->appdata_license);
   g_free (self->rename_icon);
-  g_free (self->rename_mime_icons);
   g_free (self->desktop_file_name_prefix);
   g_free (self->desktop_file_name_suffix);
 
