@@ -130,6 +130,7 @@ builder_context_finalize (GObject *object)
   g_free (self->default_branch);
   g_free (self->state_subdir);
   g_free (self->stop_at);
+  g_free (self->opt_mirror_screenshots_url);
   g_strfreev (self->cleanup);
   g_strfreev (self->cleanup_platform);
   glnx_release_lock_file(&self->rofiles_file_lock);
