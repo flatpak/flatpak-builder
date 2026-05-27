@@ -2891,7 +2891,8 @@ builder_manifest_cleanup (BuilderManifest *self,
                       flatpak_xml_add (n_root, n_provides);
                     }
                   n_provides_id = flatpak_xml_new ("id");
-                  id_text = flatpak_xml_new_text (g_steal_pointer (&old_id));
+                  id_text = flatpak_xml_new_text (old_id);
+                  g_clear_pointer (&old_id, g_free);
                   flatpak_xml_add (n_provides_id, id_text);
                   flatpak_xml_add (n_provides, n_provides_id);
                 }
