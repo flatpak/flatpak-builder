@@ -29,7 +29,6 @@ jobs:
 
     env:
       CC: ${{ matrix.compiler }}
-      BASE_CFLAGS: -Wp,-D_FORTIFY_SOURCE=2
       BUILDDIR: builddir
       CONFIG_OPTS: -Dinstalled_tests=true
 
