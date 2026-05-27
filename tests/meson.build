@@ -43,6 +43,7 @@ foreach test_name : test_names
     depends: flatpak_builder,
     protocol: 'tap',
     workdir: meson.current_build_dir(),
+    timeout: 60
   )
 
   if get_option('installed_tests')
