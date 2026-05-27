@@ -350,8 +350,6 @@ do_install (BuilderContext *build_context,
             const gchar    *branch,
             GError        **error)
 {
-  g_autofree char *ref = NULL;
-
   g_autoptr(GPtrArray) args = NULL;
 
   args = g_ptr_array_new_with_free_func (g_free);
@@ -375,9 +373,8 @@ do_install (BuilderContext *build_context,
   for (size_t i = 0; i < manifest_ids->len; i++)
     {
       const gchar *id = g_ptr_array_index (manifest_ids, i);
-      ref = flatpak_build_untyped_ref (id, branch,
-                                       builder_context_get_arch (build_context));
-      g_ptr_array_add (args, g_strdup (ref));
+      g_ptr_array_add (args, flatpak_build_untyped_ref (id, branch,
+                                                        builder_context_get_arch (build_context)));
     }
 
   g_ptr_array_add (args, NULL);
