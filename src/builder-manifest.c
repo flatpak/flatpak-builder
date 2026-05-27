@@ -186,6 +186,7 @@ builder_manifest_finalize (GObject *object)
   BuilderManifest *self = (BuilderManifest *) object;
 
   g_free (self->id);
+  g_free (self->id_platform);
   g_free (self->branch);
   g_free (self->default_branch);
   g_free (self->collection_id);
@@ -217,6 +218,9 @@ builder_manifest_finalize (GObject *object)
   g_strfreev (self->inherit_sdk_extensions);
   g_strfreev (self->tags);
   g_strfreev (self->rename_mime_icons);
+  g_strfreev (self->base_extensions);
+  g_strfreev (self->sdk_extensions);
+  g_strfreev (self->platform_extensions);
   g_free (self->rename_desktop_file);
   g_free (self->rename_appdata_file);
   g_free (self->rename_mime_file);
