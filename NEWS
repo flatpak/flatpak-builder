@@ -1,3 +1,9 @@
+Changes in 1.4.9
+================
+
+* Fix various leaks found by ASAN
+* Fix various build warnings and fix the build with GCC 15 and GLIBC 2.43
+
 Changes in 1.4.8
 ================
 
