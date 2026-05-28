@@ -99,9 +99,3 @@ jobs:
       run: |
         meson setup --wrap-mode nodownload --reconfigure ${CONFIG_OPTS} ${BUILDDIR}_dist .
         meson dist --include-subprojects -C ${BUILDDIR}_dist
-
-    - name: Configure flatpak-builder with Meson wraps
-      run: meson setup --wrap-mode=forcefallback ${CONFIG_OPTS} ${BUILDDIR}_wrap .
-
-    - name: Build flatpak-builder with Meson wraps
-      run: meson compile -C ${BUILDDIR}_wrap

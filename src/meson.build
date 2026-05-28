@@ -47,6 +47,12 @@ config_h = configure_file(
   output: 'config.h',
 )
 
+libglnx = subproject(
+  'libglnx',
+  default_options: ['tests=false'],
+)
+libglnx_dep = libglnx.get_variable('libglnx_dep')
+
 glib_req = '>= 2.66'
 flatpak_builder_deps = [
   dependency('glib-2.0', version: glib_req),
@@ -55,10 +61,10 @@ flatpak_builder_deps = [
   dependency('json-glib-1.0'),
   dependency('libcurl'),
   dependency('libelf', version: '>= 0.8.12'),
-  dependency('libglnx', default_options: ['tests=false']),
   dependency('libxml-2.0', version: '>= 2.4'),
   dependency('ostree-1', version: '>= 2017.14'),
   yaml_dep,
+  libglnx_dep,
 ]
 
 flatpak_builder = executable(
