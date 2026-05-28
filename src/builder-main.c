@@ -1096,6 +1096,9 @@ main (int    argc,
       g_print ("Exporting %s to repo\n", builder_manifest_get_id (manifest));
       builder_set_term_title (_("Exporting to repository"));
 
+      if (opt_subject == NULL)
+        opt_subject = get_default_build_subject ();
+
       if (!do_export (build_context, &error,
                       FALSE,
                       flatpak_file_get_path_cached (export_repo),
