@@ -2122,3 +2122,23 @@ appstream_has_version (int major,
          (as_major == major && as_minor > minor) ||
          (as_major == major && as_minor == minor && as_micro >= micro);
 }
+
+char *
+get_default_build_subject (void)
+{
+  g_autofree char *output = NULL;
+  const char *argv[] = { "git", "log", "-1",
+                         "--pretty=format:%s (%h)",
+                         "--abbrev=12", NULL };
+
+  if (!flatpak_spawnv (NULL, &output, G_SUBPROCESS_FLAGS_STDERR_SILENCE,
+                       NULL, argv, NULL))
+    return NULL;
+
+  if (output == NULL || output[0] == '\0')
+    return NULL;
+
+  /* Prevent non-ASCII characters from git commit subject in the
+     build subject */
+  return g_str_to_ascii (output, NULL);
+}

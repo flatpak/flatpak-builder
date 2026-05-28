@@ -228,6 +228,8 @@ gboolean appstream_has_version (int major,
                                 int minor,
                                 int micro);
 
+char *get_default_build_subject (void);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
 G_END_DECLS
