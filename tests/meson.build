@@ -25,6 +25,7 @@ test_names = [
   'test-builder-licence-paths',
   'test-builder-src-date-epoch',
   'test-builder-locale-migration',
+  'test-build-subj',
 ]
 
 tap_test = find_program(
