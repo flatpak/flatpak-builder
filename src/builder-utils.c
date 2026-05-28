@@ -2142,3 +2142,9 @@ get_default_build_subject (void)
      build subject */
   return g_str_to_ascii (output, NULL);
 }
+
+char *
+get_default_build_body (const char *sha)
+{
+  return g_strdup_printf ("Manifest checksum: %s", sha);
+}

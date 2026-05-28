@@ -1099,6 +1099,9 @@ main (int    argc,
       if (opt_subject == NULL)
         opt_subject = get_default_build_subject ();
 
+      if (opt_body == NULL)
+        opt_body = get_default_build_body (manifest_sha256);
+
       if (!do_export (build_context, &error,
                       FALSE,
                       flatpak_file_get_path_cached (export_repo),

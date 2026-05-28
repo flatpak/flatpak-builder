@@ -229,6 +229,7 @@ gboolean appstream_has_version (int major,
                                 int micro);
 
 char *get_default_build_subject (void);
+char *get_default_build_body (const char *sha);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
