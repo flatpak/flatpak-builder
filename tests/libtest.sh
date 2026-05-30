@@ -123,6 +123,12 @@ assert_has_dir () {
     test -d "$1" || (echo 1>&2 "Couldn't find '$1'"; exit 1)
 }
 
+assert_not_has_symlink () {
+    if test -L "$1"; then
+        echo 1>&2 "Symlink '$1' exists"; exit 1
+    fi
+}
+
 assert_not_has_file () {
     if test -f "$1"; then
         sed -e 's/^/# /' < "$1" >&2
