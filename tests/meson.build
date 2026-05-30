@@ -13,6 +13,7 @@ test_names = [
   'test-builder-python',
   'test-builder-cleanup',
   'test-builder-licence-paths',
+  'test-builder-locale-migration',
 ]
 
 tap_test = find_program(
