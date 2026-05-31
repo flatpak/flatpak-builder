@@ -8,6 +8,14 @@ test_env.set('G_TEST_BUILDDIR', meson.current_build_dir())
 test_env.prepend('PATH', meson.current_build_dir() / '..' / 'src', separator: ':')
 test_env.set('FUSERMOUNT', fusermount_program.full_path())
 
+if get_option('b_sanitize').contains('address')
+  test_env.prepend(
+    'LSAN_OPTIONS',
+    'suppressions=' + meson.current_source_dir() / 'lsan.supp',
+    separator: ':'
+  )
+endif
+
 test_names = [
   'test-builder',
   'test-builder-deprecated',
