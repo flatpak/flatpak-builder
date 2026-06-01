@@ -34,19 +34,6 @@ cd "$TEST_DATA_DIR"
 
 REPO="$(pwd)/repos/test"
 
-run_build () {
-    local manifest=$1
-    ${FLATPAK_BUILDER} --force-clean appdir "$manifest" >&2
-}
-
-run_build_fail () {
-    local manifest=$1
-    if ${FLATPAK_BUILDER} --force-clean appdir "$manifest" >&2; then
-        echo "build of $manifest unexpectedly succeeded" >&2
-        exit 1
-    fi
-}
-
 mkdir -p source_licence_1
 ln -s /proc/self source_licence_1/licenses
 tar czf source_licence_1.tar.gz source_licence_1/
