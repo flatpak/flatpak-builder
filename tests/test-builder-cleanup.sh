@@ -32,11 +32,6 @@ install_sdk_repo
 
 cd "$TEST_DATA_DIR"
 
-run_build () {
-    local manifest=$1
-    ${FLATPAK_BUILDER} --force-clean appdir "$manifest" >&2
-}
-
 cat > test-cleanup-toplevel.json <<'EOF'
 {
   "app-id": "org.test.CleanupToplevel",

@@ -293,6 +293,37 @@ run_sh () {
     ${CMD_PREFIX} flatpak run --command=bash ${ARGS-} org.test.Hello -c "$*"
 }
 
+: "${FORCE_CLEAN:=1}"
+
+builder_run_app () {
+    local appdir="${APPDIR:-appdir}"
+
+    ${FLATPAK_BUILDER} --run "$appdir" "$@"
+}
+
+_run_build () {
+    local appdir="${APPDIR:-appdir}"
+
+    if [ -n "${BUILD_LOG:-}" ]; then
+        ${FLATPAK_BUILDER} ${FORCE_CLEAN:+--force-clean} \
+            "$appdir" "$@" >&2 2>"$BUILD_LOG"
+    else
+        ${FLATPAK_BUILDER} ${FORCE_CLEAN:+--force-clean} \
+            "$appdir" "$@" >&2
+    fi
+}
+
+run_build () {
+    _run_build "$@"
+}
+
+run_build_fail () {
+    if _run_build "$@"; then
+        echo "build of ${!#} unexpectedly succeeded" >&2
+        exit 1
+    fi
+}
+
 # fuse support is needed (and the kernel module needs to be loaded) for several
 # flatpak-builder tests
 skip_without_fuse () {
