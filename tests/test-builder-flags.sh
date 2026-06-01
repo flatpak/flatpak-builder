@@ -32,11 +32,6 @@ install_sdk_repo
 
 cd "$TEST_DATA_DIR"
 
-run_build () {
-    local manifest=$1
-    ${FLATPAK_BUILDER} --force-clean appdir "$manifest" >&2
-}
-
 # Default: CGO_CFLAGS=$CFLAGS (inherited from SDK or set explicitly)
 # The test SDK does not ship with defaults so it is set here
 # via cflags explicitly.

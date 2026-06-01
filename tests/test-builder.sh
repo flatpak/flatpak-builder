@@ -74,7 +74,8 @@ echo "MY LICENSE" > ./LICENSE
 
 for MANIFEST in test.json test.yaml test-rename.json test-rename-appdata.json ; do
     echo "building manifest $MANIFEST" >&2
-    ${FLATPAK_BUILDER} --repo=$REPO $FL_GPGARGS --force-clean appdir $MANIFEST >&2
+
+    run_build --repo="$REPO" $FL_GPGARGS "$MANIFEST"
 
     assert_file_has_content appdir/files/share/app-data version1
     assert_file_has_content appdir/metadata shared=network;
@@ -121,9 +122,9 @@ assert_file_has_content app_data_1 version1
 echo "ok install+run"
 
 echo "version2" > app-data
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.json >&2
+run_build $FL_GPGARGS --repo="$REPO" test.json
 assert_file_has_content appdir/files/share/app-data version2
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean appdir test.yaml >&2
+run_build $FL_GPGARGS --repo="$REPO" test.yaml
 assert_file_has_content appdir/files/share/app-data version2
 
 ${FLATPAK} ${U} update -y org.test.Hello2 master >&2
@@ -135,13 +136,11 @@ echo "ok update"
 
 # The build-args of --help should prevent the faulty cleanup and
 # platform-cleanup commands from executing
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
-    test-runtime.json >&2
+APPDIR=runtimedir run_build $FL_GPGARGS --repo="$REPO" test-runtime.json
 
 echo "ok runtime build cleanup with build-args"
 
-${FLATPAK_BUILDER} $FL_GPGARGS --repo=$REPO --force-clean runtimedir \
-    test-runtime-platform.json >&2
+APPDIR=runtimedir run_build $FL_GPGARGS --repo="$REPO" test-runtime-platform.json
 
 BUILD_GROUP_COUNT=$(grep -c '^\[Build\]' runtimedir/metadata.platform)
 if [ "$BUILD_GROUP_COUNT" -gt 1 ]; then
@@ -158,9 +157,11 @@ fi
 echo "ok no duplicate [Build] groups in platform metadata"
 
 # test screenshot ref commit
-${FLATPAK_BUILDER} --repo=$REPO/repo_sc --force-clean builddir_sc \
+APPDIR=builddir_sc \
+run_build \
+    --repo="$REPO/repo_sc" \
     --mirror-screenshots-url=https://example.org/media \
-    org.flatpak_builder.gui.json >&2
+    org.flatpak_builder.gui.json
 ostree --repo=$REPO/repo_sc refs|grep -Eq "^screenshots/$(flatpak --default-arch)$"
 ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) outdir_sc
 find outdir_sc -path "*/icons/64x64/org.test.Hello.png" -type f | grep -q .
@@ -168,11 +169,12 @@ find outdir_sc -path "*/icons/64x64/org.test.Hello.png" -type f | grep -q .
 echo "ok screenshot ref commit"
 
 # test compose partial url policy
-${FLATPAK_BUILDER} --force-clean builddir_sc \
+APPDIR=builddir_sc \
+run_build \
     --mirror-screenshots-url=https://example.org/media \
     --state-dir .fp-compose-url-policy-partial \
     --compose-url-policy=partial \
-    org.flatpak.appstream_media.json >&2
+    org.flatpak.appstream_media.json
 # we test for the icon tag instead of screenshot
 # the former works offline the latter does not
 gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
@@ -181,11 +183,12 @@ echo "ok compose partial url policy"
 
 # test compose full url policy
 if appstream_has_version 0 16 3; then
-    ${FLATPAK_BUILDER} --force-clean builddir_sc \
+    APPDIR=builddir_sc \
+    run_build \
         --mirror-screenshots-url=https://example.org/media \
         --state-dir .fp-compose-url-policy-full \
         --compose-url-policy=full \
-        org.flatpak.appstream_media.json >&2
+        org.flatpak.appstream_media.json
 
     gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
@@ -195,8 +198,8 @@ else
 fi
 
 # test install
-${FLATPAK_BUILDER} --user --install \
-    --force-clean builddir org.flatpak.install_test.json >&2
+APPDIR=builddir run_build --user --install org.flatpak.install_test.json
+
 REFS=$(flatpak list --all --columns=ref 2>/dev/null)
 echo "$REFS" | grep -q "org\.flatpak\.install_test"
 echo "$REFS" | grep -q "org\.flatpak\.install_test\.Debug"
@@ -204,7 +207,7 @@ echo "$REFS" | grep -q "org\.flatpak\.install_test\.Locale"
 
 echo "ok install"
 
-${FLATPAK_BUILDER} --repo=$REPO --force-clean appdir test-locale-cleanup.json >&2
+run_build --repo="$REPO" test-locale-cleanup.json
 
 assert_not_has_file appdir/files/share/runtime/locale/es/share/es/testA.mo
 assert_has_file appdir/files/share/runtime/locale/es/share/es/testB.mo

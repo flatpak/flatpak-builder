@@ -32,11 +32,6 @@ install_sdk_repo
 
 cd "$TEST_DATA_DIR"
 
-run_build () {
-    local manifest=$1
-    ${FLATPAK_BUILDER} --force-clean appdir "$manifest" >&2
-}
-
 cat > test-src-date-epoch-default.json <<'EOF'
 {
     "app-id": "org.test.src_date_epoch_default",
@@ -73,7 +68,7 @@ cat > test-src-date-epoch-override.json <<'EOF'
 }
 EOF
 
-${FLATPAK_BUILDER} --force-clean --override-source-date-epoch=1234567890 appdir test-src-date-epoch-override.json >&2
+run_build --override-source-date-epoch=1234567890 test-src-date-epoch-override.json
 
 assert_file_has_content appdir/files/sde_out '^1234567890$'
 
@@ -94,7 +89,7 @@ cat > test-src-date-epoch-disable.json <<'EOF'
 }
 EOF
 
-${FLATPAK_BUILDER} --force-clean --override-source-date-epoch=0 appdir test-src-date-epoch-disable.json >&2
+run_build --override-source-date-epoch=0 test-src-date-epoch-disable.json
 
 assert_file_has_content appdir/files/sde_out '^unset$'
 
