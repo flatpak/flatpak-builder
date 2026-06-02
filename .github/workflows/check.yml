@@ -84,6 +84,11 @@ jobs:
       run: |
         timeout --signal=KILL -v ${TESTS_TIMEOUT}m meson test -C ${BUILDDIR} --verbose --timeout-multiplier ${MESON_TEST_TIMEOUT_MULTIPLIER}
 
+    - name: Create dist tarball
+      run: |
+        meson setup --wrap-mode nodownload --reconfigure ${CONFIG_OPTS} ${BUILDDIR}_dist .
+        meson dist --include-subprojects -C ${BUILDDIR}_dist
+
     - name: Upload test logs
       # 7.0.0
       uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
@@ -93,8 +98,4 @@ jobs:
         path: |
           builddir/meson-logs/testlog.txt
           installed-test-logs/
-
-    - name: Create dist tarball
-      run: |
-        meson setup --wrap-mode nodownload --reconfigure ${CONFIG_OPTS} ${BUILDDIR}_dist .
-        meson dist --include-subprojects -C ${BUILDDIR}_dist
+          builddir_dist/meson-private/dist-build/meson-logs/testlog.txt
