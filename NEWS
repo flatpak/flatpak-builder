@@ -1,8 +1,11 @@
 Changes in 1.5.0
 ================
 
-TBD (last: 5b0efc0)
+TBD (last: 1b4e45d)
 
+* Enable ccache by default if it exists in SDK
+* Set SOURCE_DATE_EPOCH to a fixed timestamp and allow to unset it
+* Ensure sdk config path resolution stays beneath the sdk path
 * Record licence files in common licence directories
 * Abort on invalid module names
 * Run locale migration after cleanup
@@ -11,6 +14,7 @@ TBD (last: 5b0efc0)
 * Run shell before configure step
 * Default to builddir true for cmake and cmake-ninja
 * Add ability to set custom fusermount path
+* Drop meson wraps from the project
 * Drop libglnx submodule and use subtree for it
 * Drop debugedit submodule and use system debugedit
 * Drop autotools build system for the project
