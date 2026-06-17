@@ -1,3 +1,9 @@
+Changes in 1.4.10
+=================
+
+* Rewrite locale migration to use fd-based traversal
+* Various improvements to tests
+
 Changes in 1.4.9
 ================
 
