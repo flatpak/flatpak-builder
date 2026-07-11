@@ -11,7 +11,7 @@ on:
     - 'flatpak-builder-1.*.x'
 
 env:
-  DEBIAN_FRONTEND: noninteractive
+  #DEBIAN_FRONTEND: noninteractive
   TESTS_TIMEOUT: 10 # in minutes
   MESON_TEST_TIMEOUT_MULTIPLIER: 2
 
@@ -23,7 +23,7 @@ jobs:
     name: Ubuntu meson build
     runs-on: ${{ matrix.os }}
     container:
-      image: ubuntu:26.04
+      image: fedora:44
       options: --privileged
     strategy:
       matrix:
@@ -38,8 +38,8 @@ jobs:
     steps:
     - name: Install dependencies
       run: |
-        apt-get update
-        apt-get install -y git findutils
+        dnf upgrade --refresh -y
+        dnf install -y git findutils
 
     - name: Set git safe directory
       run: |
@@ -53,9 +53,9 @@ jobs:
 
     - name: Install build dependencies
       run: |
-        apt-get install -y \
+        dnf install -y \
           ${{ matrix.compiler }} \
-          $(xargs < .github/dependencies.apt.txt)
+          $(xargs < .github/dependencies.dnf.txt)
 
     - name: Configure flatpak-builder
       run: |
