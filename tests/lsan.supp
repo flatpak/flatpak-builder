@@ -5,9 +5,4 @@ leak:g_thread_pool_spawn_thread
 leak:g_main_context_iteration
 leak:sysprof_collector_get
 
-# Fix in https://github.com/ximion/appstream/pull/752
-leak:asc_compose_init
-leak:asc_icon_policy_init
-leak:asc_compose_process_task_cb
-
 # flatpak-builder
