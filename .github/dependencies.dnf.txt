@@ -18,7 +18,9 @@ git
 git-lfs
 glib2-devel
 json-glib-devel
+libasan
 libcurl-devel
+libubsan
 libxml2-devel
 libxslt
 libyaml-devel
@@ -27,3 +29,4 @@ ostree
 ostree-devel
 patch
 xmlto
+which
