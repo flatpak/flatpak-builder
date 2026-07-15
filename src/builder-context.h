@@ -201,6 +201,14 @@ gboolean builder_context_ccache_available_in_sdk (BuilderContext *self,
 gboolean        builder_context_create_state_dir (BuilderContext *self,
                                                   GError        **error);
 
+gboolean        builder_context_resolve_source_uri (BuilderContext *self,
+                                                    const char     *url,
+                                                    GFile         **out_file,
+                                                    GError        **error);
+char *          builder_context_resolve_repo_location (BuilderContext *self,
+                                                       const char     *url,
+                                                       GError        **error);
+
 void             builder_context_set_as_url_policy (BuilderContext      *self,
                                                     BuilderAsUrlPolicy  policy);
 BuilderAsUrlPolicy builder_context_get_as_url_policy (BuilderContext   *self);

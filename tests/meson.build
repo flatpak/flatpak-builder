@@ -26,6 +26,7 @@ test_names = [
   'test-builder-src-date-epoch',
   'test-builder-locale-migration',
   'test-build-subj',
+  'test-sandboxed-mode-source-resolution',
 ]
 
 tap_test = find_program(

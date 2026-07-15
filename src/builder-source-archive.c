@@ -406,14 +406,35 @@ get_source_file (BuilderSourceArchive *self,
 
   if (self->url != NULL && self->url[0] != 0)
     {
+      g_autoptr(GFile) local_file = NULL;
+
+      if (!builder_context_resolve_source_uri (context, self->url, &local_file, error))
+        return NULL;
+
+      if (local_file != NULL)
+        {
+          *is_local = TRUE;
+          return g_steal_pointer (&local_file);
+        }
+
       *is_local = FALSE;
       return get_download_location (self, context, is_local, error);
     }
 
   if (self->path != NULL && self->path[0] != 0)
     {
+      g_autoptr(GFile) file = NULL;
+
       *is_local = TRUE;
-      return g_file_resolve_relative_path (base_dir, self->path);
+      file = g_file_resolve_relative_path (base_dir, self->path);
+
+      if (!builder_context_ensure_parent_dir_sandboxed (context, file, error))
+        {
+          g_prefix_error (error, "Unable to get source file '%s': ", self->path);
+          return NULL;
+        }
+
+      return g_steal_pointer (&file);
     }
 
   g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "source file path or url not specified");
@@ -470,6 +491,20 @@ builder_source_archive_download (BuilderSource  *source,
     {
       g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "Can't find file at %s", self->path);
       return FALSE;
+    }
+
+  if (self->mirror_urls != NULL)
+    {
+      for (size_t i = 0; self->mirror_urls[i] != NULL; i++)
+        {
+          g_autoptr(GFile) mirror_local_file = NULL;
+
+          if (!builder_context_resolve_source_uri (context, self->mirror_urls[i], &mirror_local_file, error))
+            {
+              g_prefix_error (error, "Invalid mirror-urls entry '%s': ", self->mirror_urls[i]);
+              return FALSE;
+            }
+        }
     }
 
   if (!builder_context_download_uri (context,

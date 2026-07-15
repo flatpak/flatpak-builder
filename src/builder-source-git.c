@@ -235,7 +235,24 @@ get_url_or_path (BuilderSourceGit *self,
       if (scheme == NULL)
         {
           repo = g_file_resolve_relative_path (base_dir, self->url);
+
+          if (!builder_context_ensure_parent_dir_sandboxed (context, repo, error))
+            {
+              g_prefix_error (error, "Unable to get source for git url '%s': ", self->url);
+              return NULL;
+            }
+
           return g_file_get_uri (repo);
+        }
+
+      if (g_strcmp0 (scheme, "file") == 0)
+        {
+          g_autoptr(GFile) local_file = NULL;
+
+          if (!builder_context_resolve_source_uri (context, self->url, &local_file, error))
+            return NULL;
+
+          return g_file_get_uri (local_file);
         }
 
       return g_strdup (self->url);
@@ -243,6 +260,13 @@ get_url_or_path (BuilderSourceGit *self,
 
   repo = g_file_resolve_relative_path (base_dir,
                                        self->path);
+
+  if (!builder_context_ensure_parent_dir_sandboxed (context, repo, error))
+    {
+      g_prefix_error (error, "Unable to get source file '%s': ", self->path);
+      return NULL;
+    }
+
   return g_file_get_path (repo);
 }
 
