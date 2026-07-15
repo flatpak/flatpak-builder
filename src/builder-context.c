@@ -1257,6 +1257,59 @@ builder_context_get_as_url_policy (BuilderContext *self)
   return self->as_url_policy;
 }
 
+gboolean
+builder_context_resolve_source_uri (BuilderContext *self,
+                                    const char     *url,
+                                    GFile         **out_file,
+                                    GError        **error)
+{
+  const char *scheme;
+
+  *out_file = NULL;
+
+  scheme = g_uri_peek_scheme (url);
+  if (scheme == NULL)
+    return flatpak_fail (error, "Failed to get scheme from URL: '%s'", url);
+
+  if (g_strcmp0 (scheme, "file") == 0)
+    {
+      g_autoptr(GFile) file = g_file_new_for_uri (url);
+
+      if (!builder_context_ensure_file_sandboxed (self, file, error))
+        {
+          g_prefix_error (error, "Unable to use local URL '%s': ", url);
+          return FALSE;
+        }
+
+      *out_file = g_steal_pointer (&file);
+    }
+
+  return TRUE;
+}
+
+char *
+builder_context_resolve_repo_location (BuilderContext *self,
+                                       const char     *url,
+                                       GError        **error)
+{
+
+  g_autoptr(GFile) local_file = NULL;
+
+  if (url == NULL)
+    {
+      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "URL not specified");
+      return NULL;
+    }
+
+  if (!builder_context_resolve_source_uri (self, url, &local_file, error))
+    return NULL;
+
+  if (local_file != NULL)
+    return g_file_get_path (local_file);
+
+  return g_strdup (url);
+}
+
 BuilderContext *
 builder_context_new (GFile *run_dir,
                      GFile *app_dir,

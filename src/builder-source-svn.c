@@ -208,14 +208,14 @@ builder_source_svn_download (BuilderSource  *source,
   BuilderSourceSvn *self = BUILDER_SOURCE_SVN (source);
   g_autoptr(GFile) parent = NULL;
   g_autofree char *filename = NULL;
+  g_autofree char *repo_location = NULL;
 
   g_autoptr(GFile) mirror_dir = NULL;
 
-  if (self->url == NULL)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "URL not specified");
-      return FALSE;
-    }
+  repo_location = builder_context_resolve_repo_location (context, self->url, error);
+
+  if (repo_location == NULL)
+    return FALSE;
 
   mirror_dir = get_mirror_dir (self, context, self->revision);
   parent = g_file_get_parent (mirror_dir);
@@ -259,7 +259,7 @@ builder_source_svn_download (BuilderSource  *source,
           if (!svn (parent, NULL, error,
                     "checkout", "--non-interactive",
                     "-r", self->revision ? self->revision : "HEAD",
-                    self->url,  filename_tmp, NULL))
+                    repo_location,  filename_tmp, NULL))
             return FALSE;
         }
 

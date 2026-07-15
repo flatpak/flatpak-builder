@@ -14,6 +14,7 @@ test_names = [
   'test-builder-cleanup',
   'test-builder-licence-paths',
   'test-builder-locale-migration',
+  'test-sandboxed-mode-source-resolution',
 ]
 
 tap_test = find_program(

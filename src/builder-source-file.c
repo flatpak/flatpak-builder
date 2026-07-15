@@ -321,6 +321,18 @@ get_source_file (BuilderSourceFile *self,
 
   if (self->url != NULL && self->url[0] != 0)
     {
+      g_autoptr(GFile) local_file = NULL;
+
+      if (!builder_context_resolve_source_uri (context, self->url, &local_file, error))
+        return NULL;
+
+      if (local_file != NULL)
+        {
+          *is_local = TRUE;
+          *is_inline = FALSE;
+          return g_steal_pointer (&local_file);
+        }
+
       *is_local = FALSE;
       return get_download_location (self, is_inline, context, error);
     }

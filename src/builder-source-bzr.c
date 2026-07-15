@@ -174,12 +174,12 @@ builder_source_bzr_download (BuilderSource  *source,
   BuilderSourceBzr *self = BUILDER_SOURCE_BZR (source);
 
   g_autoptr(GFile) mirror_dir = NULL;
+  g_autofree char *repo_location = NULL;
 
-  if (self->url == NULL)
-    {
-      g_set_error (error, G_IO_ERROR, G_IO_ERROR_FAILED, "URL not specified");
-      return FALSE;
-    }
+  repo_location = builder_context_resolve_repo_location (context, self->url, error);
+
+  if (repo_location == NULL)
+    return FALSE;
 
   mirror_dir = get_mirror_dir (self, context);
 
@@ -205,7 +205,7 @@ builder_source_bzr_download (BuilderSource  *source,
       mirror_dir_tmp = g_file_new_for_path (path_tmp);
       filename_tmp = g_file_get_basename (mirror_dir_tmp);
 
-      branch_source = self->url;
+      branch_source = repo_location;
 
       cached_bzr_dir = builder_context_find_in_sources_dirs (context, "bzr", filename, NULL);
       if (cached_bzr_dir != NULL)
