@@ -208,6 +208,8 @@ builder_context_constructed (GObject *object)
 {
   BuilderContext *self = BUILDER_CONTEXT (object);
 
+  G_OBJECT_CLASS (builder_context_parent_class)->constructed (object);
+
   self->state_dir = g_file_resolve_relative_path (self->run_dir, self->state_subdir ? self->state_subdir : ".flatpak-builder");
   self->download_dir = g_file_get_child (self->state_dir, "downloads");
   self->build_dir = g_file_get_child (self->state_dir, "build");
