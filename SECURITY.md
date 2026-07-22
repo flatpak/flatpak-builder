@@ -18,7 +18,9 @@ Once a security issue is reported, the reporter(s) and the maintainer(s) will wo
 
 Once a fix is ready, the maintainer(s) may ask for a CVE to be assigned (usually through GitHub as the CNA) for noteworthy vulnerabilities. Otherwise a GHSA ID will be used for tracking. Please do not request CVE IDs bypassing this process.
 
-Thereafter, the maintainer(s) shall coordinate the public disclosure and the relevant release(s) fixing the issue(s) with the parties involved. This involves sending an email to [flatpak@lists.freedesktop.org](mailto:flatpak@lists.freedesktop.org) coordinating the release(s).
+Thereafter, the maintainer(s) shall coordinate the public disclosure and the relevant release(s) fixing the issue(s) with the parties involved. This involves sending an email to
+[flatpak-security@lists.freedesktop.org](mailto:flatpak-security@lists.freedesktop.org)
+coordinating the release(s).
 
 Reports must remain confidential throughout this process and until the fix has been committed publicly.
 
