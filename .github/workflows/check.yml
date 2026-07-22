@@ -5,10 +5,26 @@ on:
     branches:
     - main
     - 'flatpak-builder-1.*.x'
+    paths-ignore:
+    - '.gitignore'
+    - 'COPYING'
+    - 'MAINT.md'
+    - 'NEWS'
+    - 'README.md'
+    - 'SECURITY.md'
+    - 'flatpak.png'
   pull_request:
     branches:
     - main
     - 'flatpak-builder-1.*.x'
+    paths-ignore:
+    - '.gitignore'
+    - 'COPYING'
+    - 'MAINT.md'
+    - 'NEWS'
+    - 'README.md'
+    - 'SECURITY.md'
+    - 'flatpak.png'
 
 env:
   DEBIAN_FRONTEND: noninteractive
