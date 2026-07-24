@@ -182,20 +182,15 @@ gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.
 echo "ok compose partial url policy"
 
 # test compose full url policy
-if appstream_has_version 0 16 3; then
-    APPDIR=builddir_sc \
-    run_build \
-        --mirror-screenshots-url=https://example.org/media \
-        --state-dir .fp-compose-url-policy-full \
-        --compose-url-policy=full \
-        org.flatpak.appstream_media.json
+APPDIR=builddir_sc run_build \
+    --mirror-screenshots-url=https://example.org/media \
+    --state-dir .fp-compose-url-policy-full \
+    --compose-url-policy=full \
+    org.flatpak.appstream_media.json
 
-    gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
+gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
-    echo "ok compose full url policy"
-else
-    echo "ok # Skip AppStream < 0.16.3"
-fi
+echo "ok compose full url policy"
 
 # test install
 APPDIR=builddir run_build --user --install org.flatpak.install_test.json

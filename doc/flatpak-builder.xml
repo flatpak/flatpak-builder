@@ -633,7 +633,9 @@
                   Set the AppStream compose URL policy. Accepted values
                   are <literal>partial</literal> and <literal>full</literal>.
                   <literal>full</literal> requires AppStream version >= 0.16.3.
-                  Defaults to <literal>partial</literal> if unspecified.
+                  Defaults to <literal>full</literal> since
+                  1.5.0 but <literal>partial</literal> for earlier
+                  versions, if unspecified.
                   This policy only takes effect when used in conjunction
                   with <option>--mirror-screenshots-url=URL</option>;
                   otherwise the Appstream catalogue will preserve
