@@ -365,6 +365,18 @@ builder_source_bzr_update (BuilderSource  *source,
   return TRUE;
 }
 
+static gboolean
+builder_source_bzr_validate (BuilderSource  *source,
+                             GError        **error)
+{
+  BuilderSourceBzr *self = BUILDER_SOURCE_BZR (source);
+
+  if (self->url == NULL)
+    return flatpak_fail (error, "URL not specified for bzr source");
+
+  return TRUE;
+}
+
 static void
 builder_source_bzr_class_init (BuilderSourceBzrClass *klass)
 {
@@ -380,6 +392,7 @@ builder_source_bzr_class_init (BuilderSourceBzrClass *klass)
   source_class->bundle = builder_source_bzr_bundle;
   source_class->update = builder_source_bzr_update;
   source_class->checksum = builder_source_bzr_checksum;
+  source_class->validate = builder_source_bzr_validate;
 
   g_object_class_install_property (object_class,
                                    PROP_URL,

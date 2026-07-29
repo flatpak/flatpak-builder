@@ -390,6 +390,18 @@ builder_source_svn_update (BuilderSource  *source,
   return TRUE;
 }
 
+static gboolean
+builder_source_svn_validate (BuilderSource  *source,
+                             GError        **error)
+{
+  BuilderSourceSvn *self = BUILDER_SOURCE_SVN (source);
+
+  if (self->url == NULL)
+    return flatpak_fail (error, "URL not specified for svn source");
+
+  return TRUE;
+}
+
 static void
 builder_source_svn_class_init (BuilderSourceSvnClass *klass)
 {
@@ -405,6 +417,7 @@ builder_source_svn_class_init (BuilderSourceSvnClass *klass)
   source_class->bundle = builder_source_svn_bundle;
   source_class->update = builder_source_svn_update;
   source_class->checksum = builder_source_svn_checksum;
+  source_class->validate = builder_source_svn_validate;
 
   g_object_class_install_property (object_class,
                                    PROP_URL,
