@@ -193,6 +193,11 @@ void            builder_context_set_opt_mirror_screenshots_url (BuilderContext *
 
 const char *    builder_context_get_opt_mirror_screenshots_url (BuilderContext *self);
 
+void            builder_context_set_opt_appstream_compose_icon_policy (BuilderContext *self,
+                                                                        const char     *policy);
+
+const char *    builder_context_get_opt_appstream_compose_icon_policy (BuilderContext *self);
+
 BuilderSdkConfig * builder_context_get_sdk_config (BuilderContext *self);
 
 gboolean builder_context_ccache_available_in_sdk (BuilderContext *self,

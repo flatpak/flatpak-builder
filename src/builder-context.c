@@ -88,6 +88,7 @@ struct BuilderContext
   gboolean        no_shallow_clone;
   gboolean        opt_export_only;
   char           *opt_mirror_screenshots_url;
+  char           *opt_appstream_compose_icon_policy;
 
   BuilderSdkConfig *sdk_config;
 
@@ -134,6 +135,7 @@ builder_context_finalize (GObject *object)
   g_free (self->state_subdir);
   g_free (self->stop_at);
   g_free (self->opt_mirror_screenshots_url);
+  g_free (self->opt_appstream_compose_icon_policy);
   g_strfreev (self->cleanup);
   g_strfreev (self->cleanup_platform);
   glnx_release_lock_file(&self->rofiles_file_lock);
@@ -382,6 +384,20 @@ const char *
 builder_context_get_opt_mirror_screenshots_url (BuilderContext *self)
 {
   return self->opt_mirror_screenshots_url;
+}
+
+void
+builder_context_set_opt_appstream_compose_icon_policy (BuilderContext *self,
+                                                       const char     *policy)
+{
+  g_free (self->opt_appstream_compose_icon_policy);
+  self->opt_appstream_compose_icon_policy = g_strdup (policy);
+}
+
+const char *
+builder_context_get_opt_appstream_compose_icon_policy (BuilderContext *self)
+{
+  return self->opt_appstream_compose_icon_policy;
 }
 
 GFile *

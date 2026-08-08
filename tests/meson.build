@@ -137,6 +137,7 @@ if get_option('installed_tests')
     'org.flatpak_builder.gui.metainfo.xml',
     'org.flatpak.appstream_media.json',
     'org.test.Hello-256.png',
+    'org.test.Hello-512.png',
     'org.flatpak.install_test.json',
     'test-locale-cleanup.json',
     'test-runtime-platform.json',

@@ -642,6 +642,19 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--appstream-compose-icon-policy=POLICY</option></term>
+
+                <listitem><para>
+                  Pass <literal>POLICY</literal> to
+                  <command>appstreamcli compose</command> as its icon policy.
+                  If this option is omitted, the default AppStream icon policy
+                  is preserved. This option requires an
+                  <command>appstreamcli</command> version that supports
+                  <option>--icon-policy</option>.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--add-tag=TAG</option></term>
 
                 <listitem><para>

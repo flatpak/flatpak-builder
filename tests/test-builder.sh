@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..13"
+echo "1..14"
 
 setup_repo
 install_repo
@@ -55,6 +55,7 @@ cp $(dirname $0)/org.flatpak_builder.gui.json .
 cp $(dirname $0)/org.flatpak_builder.gui.metainfo.xml .
 cp $(dirname $0)/org.test.Hello.png .
 cp $(dirname $0)/org.test.Hello-256.png .
+cp $(dirname $0)/org.test.Hello-512.png .
 cp $(dirname $0)/org.flatpak.appstream_media.json .
 cp $(dirname $0)/org.flatpak.install_test.json .
 cp $(dirname $0)/test-locale-cleanup.json .
@@ -195,6 +196,32 @@ if appstream_has_version 0 16 3; then
     echo "ok compose full url policy"
 else
     echo "ok # Skip AppStream < 0.16.3"
+fi
+
+# test compose icon policy
+if appstream_has_version 1 0 2; then
+    # Prime the cleanup cache with a non-retina remote icon policy.
+    APPDIR=builddir_icon_policy \
+    run_build \
+        --mirror-screenshots-url=https://example.org/media \
+        --state-dir .fp-compose-icon-policy \
+        --appstream-compose-icon-policy=64x64=cached,128x128=remote \
+        org.flatpak.appstream_media.json
+
+    # Changing only the policy must invalidate cleanup and emit the retina icon.
+    APPDIR=builddir_icon_policy \
+    run_build \
+        --mirror-screenshots-url=https://example.org/media \
+        --state-dir .fp-compose-icon-policy \
+        --appstream-compose-icon-policy=64x64=cached,256x256@2=remote \
+        org.flatpak.appstream_media.json
+
+    find builddir_icon_policy/files/share/app-info/media -path "*/icons/256x256@2/org.flatpak.appstream_media.png" -type f | grep -q .
+    gzip -cdq builddir_icon_policy/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz | grep -Eq '<icon type="remote" width="256" height="256" scale="2">'
+
+    echo "ok appstream compose icon policy"
+else
+    echo "ok # Skip AppStream < 1.0.2"
 fi
 
 # test install
