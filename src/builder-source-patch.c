@@ -250,10 +250,14 @@ patch (GFile      *dir,
   args = g_ptr_array_new ();
   if (use_git) {
     g_ptr_array_add (args, "git");
+    g_ptr_array_add (args, "-c");
+    g_ptr_array_add (args, "core.hooksPath=/dev/null");
     g_ptr_array_add (args, "apply");
     g_ptr_array_add (args, "-v");
   } else if (use_git_am) {
     g_ptr_array_add (args, "git");
+    g_ptr_array_add (args, "-c");
+    g_ptr_array_add (args, "core.hooksPath=/dev/null");
     g_ptr_array_add (args, "am");
     g_ptr_array_add (args, "--keep-cr");
     g_ptr_array_add (args, "--no-gpg-sign");
