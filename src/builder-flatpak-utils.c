@@ -42,6 +42,11 @@
 #include <gio/gunixoutputstream.h>
 #include <gio/gunixinputstream.h>
 
+typedef struct {
+  dev_t dev;
+  ino_t ino;
+} CpSkipFilesInode;
+
 
 GFile *
 flatpak_file_new_tmp_in (GFile *dir,
@@ -760,158 +765,232 @@ flatpak_file_is_in (GFile *file,
     g_file_has_prefix (canonical_file, canonical_toplevel);
 }
 
-gboolean
-flatpak_cp_a (GFile         *src,
-              GFile         *dest,
-              GFile         *keep_in_toplevel,
-              FlatpakCpFlags flags,
-              GPtrArray     *skip_files,
-              GCancellable  *cancellable,
-              GError       **error)
+static gboolean
+flatpak_cp_a_at (int             src_dir_fd,
+                 int             dst_dir_fd,
+                 gboolean        dst_created,
+                 const GArray   *skip_inodes,
+                 FlatpakCpFlags  flags,
+                 GCancellable   *cancellable,
+                 GError        **error)
 {
-  gboolean ret = FALSE;
-  GFileEnumerator *enumerator = NULL;
-  GFileInfo *src_info = NULL;
-  GFile *dest_child = NULL;
-  int dest_dfd = -1;
-  gboolean merge = (flags & FLATPAK_CP_FLAGS_MERGE) != 0;
-  gboolean no_chown = (flags & FLATPAK_CP_FLAGS_NO_CHOWN) != 0;
-  gboolean move = (flags & FLATPAK_CP_FLAGS_MOVE) != 0;
-  g_autoptr(GFileInfo) child_info = NULL;
-  GError *temp_error = NULL;
-  int r;
+  const gboolean merge = (flags & FLATPAK_CP_FLAGS_MERGE) != 0;
 
-  enumerator = g_file_enumerate_children (src, "standard::type,standard::name,unix::uid,unix::gid,unix::mode",
-                                          G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                          cancellable, error);
-  if (!enumerator)
-    goto out;
+  struct stat src_stat;
+  g_auto(GLnxDirFdIterator) dir_iter = { 0, };
 
-  src_info = g_file_query_info (src, "standard::name,unix::mode,unix::uid,unix::gid," \
-                                     "time::modified,time::modified-usec,time::access,time::access-usec",
-                                G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
-                                cancellable, error);
-  if (!src_info)
-    goto out;
+  if (fstat (src_dir_fd, &src_stat) != 0)
+    return glnx_throw_errno_prefix (error, "fstat");
 
-  do
-    r = mkdir (flatpak_file_get_path_cached (dest), 0755);
-  while (G_UNLIKELY (r == -1 && errno == EINTR));
-  if (r == -1)
+  if (!glnx_dirfd_iterator_init_at (src_dir_fd, ".", FALSE, &dir_iter, error))
+    return FALSE;
+
+  while (TRUE)
     {
-      if (!merge || errno != EEXIST)
+      struct dirent *dir_entry;
+      const char *entry_name;
+
+      if (!glnx_dirfd_iterator_next_dent_ensure_dtype (&dir_iter, &dir_entry,
+                                                       cancellable, error))
+        return FALSE;
+
+      if (dir_entry == NULL)
+        break;
+
+      entry_name = dir_entry->d_name;
+
+      if (skip_inodes != NULL && skip_inodes->len > 0)
         {
-          glnx_set_error_from_errno (error);
-          goto out;
-        }
+          struct stat st;
+          gboolean should_skip = FALSE;
 
-      /* When merging, ensure the new dir is inside the toplevel instead of a symlink outside */
-      if (keep_in_toplevel != NULL && !flatpak_file_is_in (dest, keep_in_toplevel))
-        {
-          flatpak_fail (error, "Recursive copy outside destination bounds");
-          goto out;
-        }
-    }
+          if (!glnx_fstatat (dir_iter.fd, entry_name, &st,
+                             AT_SYMLINK_NOFOLLOW, error))
+            return FALSE;
 
-  if (!glnx_opendirat (AT_FDCWD, flatpak_file_get_path_cached (dest), TRUE,
-                       &dest_dfd, error))
-    goto out;
-
-  if (!no_chown)
-    {
-      do
-        r = fchown (dest_dfd,
-                    g_file_info_get_attribute_uint32 (src_info, "unix::uid"),
-                    g_file_info_get_attribute_uint32 (src_info, "unix::gid"));
-      while (G_UNLIKELY (r == -1 && errno == EINTR));
-      if (r == -1)
-        {
-          glnx_set_error_from_errno (error);
-          goto out;
-        }
-    }
-
-  do
-    r = fchmod (dest_dfd, g_file_info_get_attribute_uint32 (src_info, "unix::mode"));
-  while (G_UNLIKELY (r == -1 && errno == EINTR));
-
-  if (dest_dfd != -1)
-    {
-      (void) close (dest_dfd);
-      dest_dfd = -1;
-    }
-
-  while ((child_info = g_file_enumerator_next_file (enumerator, cancellable, &temp_error)))
-    {
-      const char *name = g_file_info_get_name (child_info);
-      g_autoptr(GFile) src_child = g_file_get_child (src, name);
-      gboolean skip = FALSE;
-      int i;
-
-      for (i = 0; skip_files != NULL && i < skip_files->len; i++)
-        {
-          if (g_file_equal (src_child, g_ptr_array_index (skip_files, i)))
+          for (size_t i = 0; i < skip_inodes->len; i++)
             {
-              skip = TRUE;
-              break;
+              const CpSkipFilesInode *skip = &g_array_index (skip_inodes, CpSkipFilesInode, i);
+
+              if (st.st_ino == skip->ino && st.st_dev == skip->dev)
+                {
+                  should_skip = TRUE;
+                  break;
+                }
             }
+
+          if (should_skip)
+            continue;
         }
 
-      if (dest_child)
-        g_object_unref (dest_child);
-      dest_child = g_file_get_child (dest, name);
+      if (dir_entry->d_type == DT_DIR)
+        {
+          glnx_autofd int src_child_fd = -1;
+          glnx_autofd int dst_child_fd = -1;
+          gboolean child_created = TRUE;
 
-      if (skip)
-        {
-          /* skip src */
-        }
-      else if (g_file_info_get_file_type (child_info) == G_FILE_TYPE_DIRECTORY)
-        {
-          if (!flatpak_cp_a (src_child, dest_child, keep_in_toplevel, flags, skip_files,
-                             cancellable, error))
-            goto out;
+          if (!glnx_opendirat (dir_iter.fd, entry_name, FALSE, &src_child_fd, error))
+            return FALSE;
+
+          if (TEMP_FAILURE_RETRY (mkdirat (dst_dir_fd, entry_name, 0755)) < 0)
+            {
+              if (!(merge && errno == EEXIST))
+                return glnx_throw_errno_prefix (error, "mkdirat(%s)", entry_name);
+              child_created = FALSE;
+            }
+
+          if (!glnx_opendirat (dst_dir_fd, entry_name, FALSE, &dst_child_fd, error))
+            return FALSE;
+
+          if (!flatpak_cp_a_at (src_child_fd, dst_child_fd, child_created,
+                                skip_inodes, flags, cancellable, error))
+            return FALSE;
         }
       else
         {
-          (void) unlink (flatpak_file_get_path_cached (dest_child));
-          GFileCopyFlags copyflags = G_FILE_COPY_OVERWRITE | G_FILE_COPY_NOFOLLOW_SYMLINKS;
-          if (!no_chown)
-            copyflags |= G_FILE_COPY_ALL_METADATA;
-          if (move)
-            {
-              if (!g_file_move (src_child, dest_child, copyflags,
-                                cancellable, NULL, NULL, error))
-                goto out;
-            }
-          else
-            {
-              if (!g_file_copy (src_child, dest_child, copyflags,
-                                cancellable, NULL, NULL, error))
-                goto out;
-            }
+          GLnxFileCopyFlags cp_flags = GLNX_FILE_COPY_OVERWRITE |
+                                       GLNX_FILE_COPY_NOCHOWN |
+                                       GLNX_FILE_COPY_NOXATTRS;
+
+          (void) unlinkat (dst_dir_fd, entry_name, 0);
+
+          if (!glnx_file_copy_at (dir_iter.fd, entry_name, NULL,
+                                  dst_dir_fd, entry_name, cp_flags,
+                                  cancellable, error))
+            return FALSE;
+        }
+    }
+
+  if (TEMP_FAILURE_RETRY (fchmod (dst_dir_fd, src_stat.st_mode & 07777)) != 0)
+    {
+      if (dst_created || errno != EPERM)
+        return glnx_throw_errno_prefix (error, "fchmod");
+    }
+
+  return TRUE;
+}
+
+gboolean
+flatpak_cp_a (GFile          *src,
+              GFile          *dest,
+              GFile          *keep_in_toplevel,
+              FlatpakCpFlags  flags,
+              GPtrArray      *skip_files,
+              GCancellable   *cancellable,
+              GError        **error)
+{
+  const gboolean merge = (flags & FLATPAK_CP_FLAGS_MERGE) != 0;
+  glnx_autofd int src_dfd = -1;
+  glnx_autofd int root_fd = -1;
+  glnx_autofd int dest_parent_fd = -1;
+  glnx_autofd int dest_fd = -1;
+  const char *src_path;
+  const char *dest_path;
+  g_autofree char *rel_dest = NULL;
+  g_autofree char *dest_dirname = NULL;
+  g_autofree char *dest_basename = NULL;
+  g_autoptr(GArray) skip_inodes = NULL;
+  gboolean dest_created = TRUE;
+
+  src_path = flatpak_file_get_path_cached (src);
+  dest_path = flatpak_file_get_path_cached (dest);
+
+  if (src_path == NULL || dest_path == NULL)
+    return glnx_throw (error, "Copy source and destination must be local paths");
+
+  if (!glnx_opendirat (AT_FDCWD, src_path, TRUE, &src_dfd, error))
+    return FALSE;
+
+  if (keep_in_toplevel != NULL)
+    {
+      const char *top_path = flatpak_file_get_path_cached (keep_in_toplevel);
+
+      if (top_path == NULL)
+        return glnx_throw (error, "Toplevel must be a local path");
+
+      if (g_file_equal (dest, keep_in_toplevel))
+        rel_dest = g_strdup (".");
+      else
+        rel_dest = g_file_get_relative_path (keep_in_toplevel, dest);
+
+      if (rel_dest == NULL)
+        {
+          g_set_error (error, G_IO_ERROR, G_IO_ERROR_PERMISSION_DENIED,
+                       "Recursive copy outside destination");
+          return FALSE;
         }
 
-      g_clear_object (&child_info);
-    }
+      if (!glnx_opendirat (AT_FDCWD, top_path, TRUE, &root_fd, error))
+        return FALSE;
 
-  if (temp_error != NULL)
+      dest_dirname = g_path_get_dirname (rel_dest);
+      dest_basename = g_path_get_basename (rel_dest);
+
+      dest_parent_fd = glnx_chaseat (root_fd, dest_dirname,
+                                     GLNX_CHASE_RESOLVE_BENEATH |
+                                     GLNX_CHASE_MUST_BE_DIRECTORY,
+                                     error);
+    }
+  else
     {
-      g_propagate_error (error, temp_error);
-      goto out;
+      dest_dirname = g_path_get_dirname (dest_path);
+      dest_basename = g_path_get_basename (dest_path);
+
+      dest_parent_fd = glnx_chaseat (AT_FDCWD, dest_dirname,
+                                     GLNX_CHASE_MUST_BE_DIRECTORY, error);
     }
 
-  if (move &&
-      !g_file_delete (src, NULL, error))
-    goto out;
+  if (dest_parent_fd < 0)
+    return FALSE;
 
-  ret = TRUE;
-out:
-  if (dest_dfd != -1)
-    (void) close (dest_dfd);
-  g_clear_object (&src_info);
-  g_clear_object (&enumerator);
-  g_clear_object (&dest_child);
-  return ret;
+  if (skip_files != NULL && skip_files->len > 0)
+    {
+      skip_inodes = g_array_sized_new (FALSE, FALSE, sizeof (CpSkipFilesInode), skip_files->len);
+
+      for (size_t i = 0; i < skip_files->len; i++)
+        {
+          GFile *skip_file = g_ptr_array_index (skip_files, i);
+          const char *skip_path = flatpak_file_get_path_cached (skip_file);
+          struct stat st;
+
+          if (skip_path != NULL && lstat (skip_path, &st) == 0)
+            {
+              CpSkipFilesInode si = { .dev = st.st_dev, .ino = st.st_ino };
+              g_array_append_val (skip_inodes, si);
+            }
+        }
+    }
+
+  if (TEMP_FAILURE_RETRY (mkdirat (dest_parent_fd, dest_basename, 0755)) < 0)
+    {
+      if (!(merge && errno == EEXIST))
+        return glnx_throw_errno_prefix (error, "mkdirat(%s)", dest_basename);
+      dest_created = FALSE;
+    }
+
+  if (keep_in_toplevel != NULL)
+    {
+      glnx_autofd int dest_opath = -1;
+
+      dest_opath = glnx_chaseat (root_fd, rel_dest,
+                                 GLNX_CHASE_RESOLVE_BENEATH |
+                                 GLNX_CHASE_MUST_BE_DIRECTORY,
+                                 error);
+      if (dest_opath < 0)
+        return FALSE;
+
+      dest_fd = glnx_fd_reopen (dest_opath, O_RDONLY | O_DIRECTORY, error);
+      if (dest_fd < 0)
+        return FALSE;
+    }
+  else
+    {
+      if (!glnx_opendirat (dest_parent_fd, dest_basename, TRUE, &dest_fd, error))
+        return FALSE;
+    }
+
+  return flatpak_cp_a_at (src_dfd, dest_fd, dest_created,
+                          skip_inodes, flags, cancellable, error);
 }
 
 gboolean
