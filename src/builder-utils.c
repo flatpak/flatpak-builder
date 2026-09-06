@@ -445,20 +445,46 @@ migrate_locale_dir (int         root_dfd,
 
   while (TRUE)
     {
+      g_autofree char *language = NULL;
+      struct stat st;
+
       if (!glnx_dirfd_iterator_next_dent (&iter, &dent, NULL, error))
         return FALSE;
 
       if (dent == NULL)
         break;
 
-      {
-        g_autofree char *language = locale_name_to_language (dent->d_name);
+      if (!glnx_fstatat (source_dfd, dent->d_name, &st, AT_SYMLINK_NOFOLLOW, error))
+        return FALSE;
 
-        /* We ship english and C locales always */
-        if (strcmp (language, "C") == 0 ||
-            strcmp (language, "en") == 0)
-          continue;
-      }
+      language = locale_name_to_language (dent->d_name);
+
+      if (S_ISLNK (st.st_mode))
+        {
+          const char *expected_target_prefix;
+          g_autofree char *expected_target = NULL;
+          g_autofree char *actual_target = NULL;
+
+          if (g_strcmp0 (source_rel, "share/locale") == 0)
+            expected_target_prefix = "../runtime/locale";
+          else
+            expected_target_prefix = "../../share/runtime/locale";
+
+          expected_target = g_build_filename (expected_target_prefix,
+                                              language, subdir, dent->d_name, NULL);
+          actual_target = glnx_readlinkat_malloc (source_dfd, dent->d_name, NULL, error);
+
+          if (actual_target == NULL)
+            return FALSE;
+
+          if (g_strcmp0 (actual_target, expected_target) == 0)
+            continue;
+        }
+
+      /* We ship english and C locales always */
+      if (strcmp (language, "C") == 0 ||
+          strcmp (language, "en") == 0)
+        continue;
 
       g_ptr_array_add (names, g_strdup (dent->d_name));
     }
