@@ -1,7 +1,11 @@
 Changes in 1.4.11
 =================
 
-TBD
+* Skip pre-migrated entry during locale migration
+* Abort on invalid checksum strings in archive and file sources early
+* Ensure no source can escape base_dir in sandboxed mode (GHSA-484h-v688-jq5j)
+* Validate existence of URL during parsing early in bzr, svn sources
+* Disable git hooks completely when applying patches (CVE-2026-86320)
 
 Changes in 1.4.10
 =================
