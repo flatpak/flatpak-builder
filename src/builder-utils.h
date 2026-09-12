@@ -224,6 +224,15 @@ gboolean appstream_has_version (int major,
                                 int minor,
                                 int micro);
 
+gboolean builder_validate_checksum_string (const char *arg,
+                                           gsize       len);
+
+gboolean builder_validate_source_checksums (const char *md5,
+                                            const char *sha1,
+                                            const char *sha256,
+                                            const char *sha512,
+                                            GError    **error);
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (FlatpakXml, flatpak_xml_free);
 
 G_END_DECLS
