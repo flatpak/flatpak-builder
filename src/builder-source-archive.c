@@ -320,7 +320,7 @@ builder_source_archive_validate (BuilderSource  *source,
       strchr (self->dest_filename, '/') != NULL)
     return flatpak_fail (error, "No slashes allowed in dest-filename, use dest property for directory");
 
-  return TRUE;
+  return builder_validate_source_checksums (self->md5, self->sha1, self->sha256, self->sha512, error);
 }
 
 static GUri *

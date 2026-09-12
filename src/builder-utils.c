@@ -2174,3 +2174,46 @@ get_default_build_body (const char *sha)
 {
   return g_strdup_printf ("Manifest checksum: %s", sha);
 }
+
+gboolean
+builder_validate_checksum_string (const char *arg,
+                                  gsize       len)
+{
+  if (arg == NULL || strlen (arg) != len)
+    return FALSE;
+
+  while (*arg != '\0')
+    {
+      if (!g_ascii_isxdigit (*arg))
+        return FALSE;
+      arg++;
+    }
+
+  return TRUE;
+}
+
+gboolean
+builder_validate_source_checksums (const char *md5,
+                                   const char *sha1,
+                                   const char *sha256,
+                                   const char *sha512,
+                                   GError    **error)
+{
+  if (md5 != NULL && md5[0] != '\0' &&
+      !builder_validate_checksum_string (md5, 32))
+    return flatpak_fail (error, "Invalid md5 checksum string");
+
+  if (sha1 != NULL && sha1[0] != '\0' &&
+      !builder_validate_checksum_string (sha1, 40))
+    return flatpak_fail (error, "Invalid sha1 checksum string");
+
+  if (sha256 != NULL && sha256[0] != '\0' &&
+      !builder_validate_checksum_string (sha256, 64))
+    return flatpak_fail (error, "Invalid sha256 checksum string");
+
+  if (sha512 != NULL && sha512[0] != '\0' &&
+      !builder_validate_checksum_string (sha512, 128))
+    return flatpak_fail (error, "Invalid sha512 checksum string");
+
+  return TRUE;
+}
