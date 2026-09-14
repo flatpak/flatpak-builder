@@ -159,6 +159,14 @@ assert_file_has_content () {
     fi
 }
 
+assert_file_has_content_extended () {
+    if ! grep -q -E -e "$2" "$1"; then
+        sed -e 's/^/# /' < "$1" >&2
+        echo 1>&2 "File '$1' doesn't match extended regexp '$2'"
+        exit 1
+    fi
+}
+
 assert_symlink_has_content () {
     if ! readlink "$1" | grep -q -e "$2"; then
         readlink "$1" |sed -e 's/^/# /' >&2
