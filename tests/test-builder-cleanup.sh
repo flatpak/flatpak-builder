@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..9"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -65,7 +63,7 @@ assert_not_has_file appdir/files/share/doc/file1
 assert_not_has_file appdir/files/share/doc/file2
 assert_not_has_dir  appdir/files/share/doc
 
-echo "ok toplevel cleanup applies to all modules"
+ok "toplevel cleanup applies to all modules"
 
 cat > test-cleanup-module-scope.json <<'EOF'
 {
@@ -99,7 +97,7 @@ run_build test-cleanup-module-scope.json
 assert_not_has_file appdir/files/share/doc/file1
 assert_has_file appdir/files/share/doc/file2
 
-echo "ok module cleanup does not affect other modules"
+ok "module cleanup does not affect other modules"
 
 cat > test-cleanup-basename.json <<'EOF'
 {
@@ -124,7 +122,7 @@ run_build test-cleanup-basename.json
 assert_not_has_file appdir/files/share/a.txt
 assert_has_file appdir/files/share/b.log
 
-echo "ok basename pattern works"
+ok "basename pattern works"
 
 cat > test-cleanup-star.json <<'EOF'
 {
@@ -150,7 +148,7 @@ run_build test-cleanup-star.json
 assert_not_has_file appdir/files/a/file.txt
 assert_has_file appdir/files/b/file.log
 
-echo "ok wildcard matching works"
+ok "wildcard matching works"
 
 cat > test-cleanup-module-star-scope.json <<'EOF'
 {
@@ -186,7 +184,7 @@ assert_has_file appdir/files/share/file1.txt
 assert_not_has_file appdir/files/share/file2.txt
 assert_has_file appdir/files/share/file2.log
 
-echo "ok wildcard matching works and is scoped to module"
+ok "wildcard matching works and is scoped to module"
 
 cat > test-cleanup-question.json <<'EOF'
 {
@@ -224,7 +222,7 @@ assert_not_has_file appdir/files/share/a2.txt
 assert_has_file appdir/files/share/a22.txt
 assert_not_has_file appdir/files/share/ab.txt
 
-echo "ok '?' matches exactly one char and is module-scoped"
+ok "'?' matches exactly one char and is module-scoped"
 
 cat > test-cleanup-question-slash.json <<'EOF'
 {
@@ -250,7 +248,7 @@ run_build test-cleanup-question-slash.json
 assert_not_has_file appdir/files/a1/file.txt
 assert_has_file appdir/files/a/b/file.txt
 
-echo "ok '?' does not match '/'"
+ok "'?' does not match '/'"
 
 cat > test-invalid-pattern1.json <<'EOF'
 {
@@ -274,7 +272,7 @@ run_build test-invalid-pattern1.json
 # share/doc is not a valid pattern, no cleanup should happen
 assert_has_file appdir/files/share/doc/file
 
-echo "ok invalid pattern 1 did not cleanup"
+ok "invalid pattern 1 did not cleanup"
 
 cat > test-cleanup-trailing-slash.json <<'EOF'
 {
@@ -298,4 +296,6 @@ run_build test-cleanup-trailing-slash.json
 assert_not_has_file appdir/files/share/doc/file
 assert_not_has_dir  appdir/files/share/doc
 
-echo "ok trailing slash works"
+ok "trailing slash works"
+
+done_testing

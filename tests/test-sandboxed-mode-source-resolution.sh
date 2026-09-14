@@ -24,8 +24,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..15"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -66,7 +64,7 @@ run_build --sandbox test-path-inside.json
 assert_has_file appdir/files/test.txt
 assert_file_has_content appdir/files/test.txt 'test'
 
-echo "ok path source inside manifest tree works for file type in sandboxed mode"
+ok "path source inside manifest tree works for file type in sandboxed mode"
 
 cat > test-file-url-inside.json <<EOF
 {
@@ -92,7 +90,7 @@ run_build --sandbox test-file-url-inside.json
 assert_has_file appdir/files/test.txt
 assert_file_has_content appdir/files/test.txt 'test'
 
-echo "ok file URI source inside manifest tree works for file type in sandboxed mode"
+ok "file URI source inside manifest tree works for file type in sandboxed mode"
 
 mkdir tmp_1
 cd tmp_1
@@ -118,7 +116,7 @@ BUILD_LOG=build-log-file-path-outside run_build_fail --sandbox \
     test-path-outside.json
 assert_file_has_content build-log-file-path-outside 'not inside manifest directory'
 
-echo "ok path source outside manifest tree is rejected for file type in sandboxed mode"
+ok "path source outside manifest tree is rejected for file type in sandboxed mode"
 
 cat > test-file-url-outside.json <<EOF
 {
@@ -142,7 +140,7 @@ BUILD_LOG=build-log-file-url-outside run_build_fail --sandbox \
     test-file-url-outside.json
 assert_file_has_content build-log-file-url-outside 'not inside manifest directory'
 
-echo "ok file URI source outside manifest tree is rejected for file type in sandboxed mode"
+ok "file URI source outside manifest tree is rejected for file type in sandboxed mode"
 
 cd "$TEST_DATA_DIR"
 mkdir archive-workdir
@@ -179,7 +177,7 @@ run_build --sandbox test-archive-path-inside.json
 assert_has_file appdir/files/file.txt
 assert_file_has_content appdir/files/file.txt 'archived content'
 
-echo "ok path source inside manifest tree works for archive type in sandboxed mode"
+ok "path source inside manifest tree works for archive type in sandboxed mode"
 
 cat > test-archive-file_uri-inside.json <<EOF
 {
@@ -205,7 +203,7 @@ run_build --sandbox test-archive-file_uri-inside.json
 assert_has_file appdir/files/file.txt
 assert_file_has_content appdir/files/file.txt 'archived content'
 
-echo "ok file URI source inside manifest tree works for archive type in sandboxed mode"
+ok "file URI source inside manifest tree works for archive type in sandboxed mode"
 
 mkdir tmp_1
 cd tmp_1
@@ -231,7 +229,7 @@ BUILD_LOG=build-log-archive-path-outside run_build_fail --sandbox \
     test-archive-path-outside.json
 assert_file_has_content build-log-archive-path-outside 'not inside manifest directory'
 
-echo "ok path source outside manifest tree is rejected for archive type in sandboxed mode"
+ok "path source outside manifest tree is rejected for archive type in sandboxed mode"
 
 cat > test-archive-file_uri-outside.json <<EOF
 {
@@ -255,7 +253,7 @@ BUILD_LOG=build-log-archive-file_uri-outside run_build_fail --sandbox \
      test-archive-file_uri-outside.json
 assert_file_has_content build-log-archive-file_uri-outside 'not inside manifest directory'
 
-echo "ok file URI source outside manifest tree is rejected for archive type in sandboxed mode"
+ok "file URI source outside manifest tree is rejected for archive type in sandboxed mode"
 
 cp ../archive-src.tar.gz .
 
@@ -282,7 +280,7 @@ BUILD_LOG=build-log-archive-mirror_uri-outside run_build_fail --sandbox \
      test-archive-mirror_uri-outside.json
 assert_file_has_content build-log-archive-mirror_uri-outside 'not inside manifest directory'
 
-echo "ok mirror URI source outside manifest tree is rejected for archive type in sandboxed mode"
+ok "mirror URI source outside manifest tree is rejected for archive type in sandboxed mode"
 
 cd "$TEST_DATA_DIR"
 mkdir patch-workdir
@@ -329,7 +327,7 @@ run_build --sandbox test-patch-path-inside.json
 assert_has_file appdir/files/file.txt
 assert_file_has_content appdir/files/file.txt 'patched content'
 
-echo "ok path source inside manifest tree works for patch type in sandboxed mode"
+ok "path source inside manifest tree works for patch type in sandboxed mode"
 
 mkdir tmp_1
 cp archive-src.tar.gz tmp_1/
@@ -362,7 +360,7 @@ BUILD_LOG=build-log-patch-path-outside run_build_fail --sandbox \
     test-patch-path-outside.json
 assert_file_has_content build-log-patch-path-outside 'not inside manifest directory'
 
-echo "ok path source outside manifest tree is rejected for patch type in sandboxed mode"
+ok "path source outside manifest tree is rejected for patch type in sandboxed mode"
 
 cd "$TEST_DATA_DIR"
 mkdir git-workdir
@@ -404,7 +402,7 @@ run_build --sandbox test-git-path-inside.json
 assert_has_file appdir/files/file.txt
 assert_file_has_content appdir/files/file.txt 'git content'
 
-echo "ok path source inside manifest tree works for git type in sandboxed mode"
+ok "path source inside manifest tree works for git type in sandboxed mode"
 
 cat > test-git-file_uri-inside.json <<EOF
 {
@@ -430,7 +428,7 @@ run_build --sandbox test-git-file_uri-inside.json
 assert_has_file appdir/files/file.txt
 assert_file_has_content appdir/files/file.txt 'git content'
 
-echo "ok file URI source inside manifest tree works for git type in sandboxed mode"
+ok "file URI source inside manifest tree works for git type in sandboxed mode"
 
 mkdir tmp_1
 cd tmp_1
@@ -457,7 +455,7 @@ BUILD_LOG=build-log-git-path-outside run_build_fail --sandbox \
     test-git-path-outside.json
 assert_file_has_content build-log-git-path-outside 'not inside manifest directory'
 
-echo "ok path source outside manifest tree is rejected for git type in sandboxed mode"
+ok "path source outside manifest tree is rejected for git type in sandboxed mode"
 
 cat > test-git-file_uri-outside.json <<EOF
 {
@@ -481,5 +479,6 @@ BUILD_LOG=build-log-git-file_uri-outside run_build_fail --sandbox \
     test-git-file_uri-outside.json
 assert_file_has_content build-log-git-file_uri-outside 'not inside manifest directory'
 
-echo "ok file URI source outside manifest tree is rejected for git type in sandboxed mode"
+ok "file URI source outside manifest tree is rejected for git type in sandboxed mode"
 
+done_testing

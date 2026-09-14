@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..4"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -61,7 +59,7 @@ run_build_fail test-licence_interm_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_interm_symlink/test/environ
 
-echo "ok intermediate path symlink is rejected"
+ok "intermediate path symlink is rejected"
 
 mkdir -p source_licence_2
 ln -s /etc/hostname source_licence_2/LICENSE
@@ -90,7 +88,7 @@ run_build_fail test-licence_abs_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_abs_symlink/test/LICENSE
 
-echo "ok absolute path symlink is rejected"
+ok "absolute path symlink is rejected"
 
 mkdir -p source_licence_3
 echo "MY LICENSE TEXT" > source_licence_3/LICENSE
@@ -122,7 +120,7 @@ assert_file_has_content \
     appdir/files/share/licenses/org.test.licence_working_1/test/LICENSE \
     '^MY LICENSE TEXT$'
 
-echo "ok license file is recorded with license-files key"
+ok "license file is recorded with license-files key"
 
 mkdir -p source_licence_4
 echo "MY DEFAULT LICENSE TEXT" > source_licence_4/LICENSE
@@ -153,4 +151,6 @@ assert_file_has_content \
     appdir/files/share/licenses/org.test.licence_working_2/test/LICENSE \
     '^MY DEFAULT LICENSE TEXT$'
 
-echo "ok license file is recorded by default"
+ok "license file is recorded by default"
+
+done_testing

@@ -24,8 +24,6 @@ set -euo pipefail
 skip_without_fuse
 skip_without_python2
 
-echo "1..2"
-
 setup_repo
 install_repo
 setup_python2_repo
@@ -51,7 +49,7 @@ builder_run_app org.test.Python.json testpython.py > testpython.out
 
 assert_file_has_content testpython.out ^modified$
 
-echo "ok handled pyc rewriting multiple times"
+ok "handled pyc rewriting multiple times"
 
 run_build org.test.Python2.json
 
@@ -62,4 +60,6 @@ builder_run_app org.test.Python2.json testpython.py > testpython.out
 
 assert_file_has_content testpython.out "^first   $"
 
-echo "ok handled .pyc without .py"
+ok "handled .pyc without .py"
+
+done_testing
