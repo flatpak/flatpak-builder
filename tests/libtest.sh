@@ -103,6 +103,23 @@ export U="--user"
 export FLATPAK="${CMD_PREFIX} flatpak"
 export FLATPAK_BUILDER="${CMD_PREFIX} flatpak-builder"
 
+test_number=0
+
+ok () {
+    { { local BASH_XTRACEFD=3; } 2> /dev/null
+        test_number=$(( test_number + 1 ))
+        echo "ok $test_number - $*";
+        echo "================ $(basename ${BASH_SOURCE[1]}):${BASH_LINENO[0]} - $@ ================" >&2;
+    } 3> /dev/null
+}
+
+done_testing () {
+    { { local BASH_XTRACEFD=3; } 2> /dev/null
+    echo "1..$test_number"
+    echo "# Done testing"
+    } 3> /dev/null
+}
+
 assert_streq () {
     test "$1" = "$2" || (echo 1>&2 "$1 != $2"; exit 1)
 }

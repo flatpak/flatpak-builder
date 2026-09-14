@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..8"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -59,7 +57,7 @@ run_build test-cgo-default.json
 assert_file_has_content appdir/files/cflags_out '\-O2 \-g'
 assert_file_has_content appdir/files/cgo_cflags_out '\-O2 \-g'
 
-echo "ok cgo-cflags defaults to cflags"
+ok "cgo-cflags defaults to cflags"
 
 # Explicit cgo-cflags set and no cgo-cflags-override: CGO_CFLAGS=$CFLAGS+explicit
 cat > test-cgo-set.json <<'EOF'
@@ -85,7 +83,7 @@ run_build test-cgo-set.json
 
 assert_file_has_content appdir/files/cgo_cflags_out '\-O2 \-g \-O0'
 
-echo "ok explicit cgo-cflags is additive to cflags"
+ok "explicit cgo-cflags is additive to cflags"
 
 # Explicit cgo-cflags set and `cgo-cflags-override: true`: CGO_CFLAGS=explicit
 cat > test-cgo-set-with-override.json <<'EOF'
@@ -113,7 +111,7 @@ run_build test-cgo-set-with-override.json
 
 assert_file_has_content appdir/files/cgo_cflags_out '\-O0'
 
-echo "ok cgo-cflags with override has only explicit flags"
+ok "cgo-cflags with override has only explicit flags"
 
 # Only `cgo-cflags-override: true`: CGO_CFLAGS is unset
 cat > test-cgo-only-override.json <<'EOF'
@@ -139,7 +137,7 @@ run_build test-cgo-only-override.json
 
 assert_file_has_content appdir/files/cgo_cflags_out '^unset$'
 
-echo "ok only cgo-cflags-override clears CGO_CFLAGS"
+ok "only cgo-cflags-override clears CGO_CFLAGS"
 
 # Default: RUSTFLAGS should be passed. The test SDK does not ship with
 # defaults so it is set here via rustflags explicitly.
@@ -165,7 +163,7 @@ run_build test-rustflags-set.json
 
 assert_file_has_content appdir/files/rustflags_out '\-C opt\-level=2'
 
-echo "ok rustflags is passed by default"
+ok "rustflags is passed by default"
 
 # rustflags-override at module level clears manifest-level rustflags
 # or equivalently clears SDK rustflags
@@ -196,7 +194,7 @@ run_build test-rustflags-override.json
 assert_file_has_content appdir/files/rustflags_out '\-C opt\-level=3'
 assert_not_file_has_content appdir/files/rustflags_out 'debuginfo'
 
-echo "ok rustflags-override at module level clears manifest-level rustflags"
+ok "rustflags-override at module level clears manifest-level rustflags"
 
 # Only rustflags-override is set, rustflags should be cleared
 cat > test-rustflags-only-override.json <<'EOF'
@@ -224,7 +222,7 @@ run_build test-rustflags-only-override.json
 
 assert_file_has_content appdir/files/rustflags_out '^unset$'
 
-echo "ok only rustflags-override clears rustflags"
+ok "only rustflags-override clears rustflags"
 
 CREATE_SDK_CONFIG=1
 setup_repo testconfig
@@ -265,4 +263,6 @@ assert_file_has_content appdir/files/cgo_cflags '^\-O2 \-g \-fstack-protector-st
 assert_file_has_content appdir/files/cgo_cxxflags '^\-O2 \-g \-fstack-protector-strong$'
 assert_file_has_content appdir/files/cgo_ldflags '^\-Wl,-z,relro,-z,now$'
 
-echo "ok sdk flags config from is loaded and flags are set correctly"
+ok "sdk flags config from is loaded and flags are set correctly"
+
+done_testing

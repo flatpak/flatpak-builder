@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..3"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -50,7 +48,7 @@ gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.
     > appstream.xml
 assert_file_has_content_extended appstream.xml '>org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
-echo "ok compose partial url policy"
+ok "compose partial url policy"
 
 # test compose full url policy
 if appstream_has_version 0 16 3; then
@@ -65,9 +63,9 @@ if appstream_has_version 0 16 3; then
         > appstream.xml
     assert_file_has_content_extended appstream.xml '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
-    echo "ok compose full url policy"
+    ok "compose full url policy"
 else
-    echo "ok # Skip AppStream < 0.16.3"
+    ok "# Skip AppStream < 0.16.3"
 fi
 
 # test compose jxl image format
@@ -84,7 +82,9 @@ if appstream_has_version 1 2 0; then
             > appstream.xml
         assert_file_has_content_extended appstream.xml '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.jxl</icon>'
 
-    echo "ok compose jxl image format"
+    ok "compose jxl image format"
 else
-    echo "ok # Skip AppStream < 1.2.0"
+    ok "# Skip AppStream < 1.2.0"
 fi
+
+done_testing
