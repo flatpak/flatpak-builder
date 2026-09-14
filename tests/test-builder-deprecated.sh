@@ -22,8 +22,6 @@ srcdir=$(dirname "$0")
 
 skip_without_fuse
 
-echo "1..8"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -46,46 +44,48 @@ BUILD_LOG=build-error-log run_build org.test.Deprecated.MD5.archive.json
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated MD5 hash for archive in JSON"
+ok "deprecated MD5 hash for archive in JSON"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.MD5.archive.yaml
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated MD5 hash for archive in YAML"
+ok "deprecated MD5 hash for archive in YAML"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.MD5.file.json
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated MD5 hash for file in JSON"
+ok "deprecated MD5 hash for file in JSON"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.MD5.file.yaml
 assert_file_has_content build-error-log 'The "md5" source property is deprecated due to the weakness of MD5 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated MD5 hash for file in YAML"
+ok "deprecated MD5 hash for file in YAML"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.SHA1.archive.json
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated SHA1 hash for archive in JSON"
+ok "deprecated SHA1 hash for archive in JSON"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.SHA1.archive.yaml
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated SHA1 hash for archive in YAML"
+ok "deprecated SHA1 hash for archive in YAML"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.SHA1.file.json
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated SHA1 hash for file in JSON"
+ok "deprecated SHA1 hash for file in JSON"
 
 BUILD_LOG=build-error-log run_build org.test.Deprecated.SHA1.file.yaml
 assert_file_has_content build-error-log 'The "sha1" source property is deprecated due to the weakness of SHA1 hashes.'
 assert_file_has_content build-error-log 'Use the "sha256" property for the more secure SHA256 hash.'
 
-echo "ok deprecated SHA1 hash for file in YAML"
+ok "deprecated SHA1 hash for file in YAML"
+
+done_testing

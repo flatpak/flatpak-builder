@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..7"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -61,7 +59,7 @@ run_build_fail test-licence_interm_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_interm_symlink/test/environ
 
-echo "ok intermediate path symlink is rejected"
+ok "intermediate path symlink is rejected"
 
 mkdir -p source_licence_2
 ln -s /etc/hostname source_licence_2/LICENSE
@@ -90,7 +88,7 @@ run_build_fail test-licence_abs_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_abs_symlink/test/LICENSE
 
-echo "ok absolute path symlink is rejected"
+ok "absolute path symlink is rejected"
 
 mkdir -p source_licence_3
 echo "MY LICENSE TEXT" > source_licence_3/LICENSE
@@ -122,7 +120,7 @@ assert_file_has_content \
     appdir/files/share/licenses/org.test.licence_working_1/test/LICENSE \
     '^MY LICENSE TEXT$'
 
-echo "ok license file is recorded with license-files key"
+ok "license file is recorded with license-files key"
 
 mkdir -p source_licence_4
 echo "MY DEFAULT LICENSE TEXT" > source_licence_4/LICENSE
@@ -153,7 +151,7 @@ assert_file_has_content \
     appdir/files/share/licenses/org.test.licence_working_2/test/LICENSE \
     '^MY DEFAULT LICENSE TEXT$'
 
-echo "ok license file is recorded by default"
+ok "license file is recorded by default"
 
 mkdir -p source_licence_5/LICENSES mkdir -p source_licence_5/licenses
 echo "MIT LICENSE TEXT" > source_licence_5/LICENSES/MIT.txt
@@ -189,7 +187,7 @@ assert_file_has_content \
     appdir/files/share/licenses/org.test.licence_subdir/test/licenses_Apache-2.0.txt \
     '^APACHE LICENSE TEXT$'
 
-echo "ok licence subdir files are collected automatically"
+ok "licence subdir files are collected automatically"
 
 mkdir -p source_licence_6/LICENSES
 ln -s /etc/hostname source_licence_6/LICENSES/MIT.txt
@@ -217,7 +215,7 @@ run_build test-licence_subdir_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_subdir_symlink/test/LICENSES_MIT.txt
 
-echo "ok symlink inside licence subdir is skipped"
+ok "symlink inside licence subdir is skipped"
 
 mkdir -p source_licence_7
 ln -s /proc/self source_licence_7/LICENSES
@@ -245,4 +243,6 @@ run_build test-licence_subdir_itself_symlink.json
 
 assert_not_has_file appdir/files/share/licenses/org.test.licence_subdir_itself_symlink/test/LICENSES_environ
 
-echo "ok licence dir symlink is skipped"
+ok "licence dir symlink is skipped"
+
+done_testing

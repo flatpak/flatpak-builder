@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..3"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -51,7 +49,7 @@ run_build test-src-date-epoch-default.json
 
 assert_file_has_content appdir/files/sde_out '^1321009871$'
 
-echo "ok source-date-epoch default fixed epoch is set"
+ok "source-date-epoch default fixed epoch is set"
 
 cat > test-src-date-epoch-override.json <<'EOF'
 {
@@ -72,7 +70,7 @@ run_build --override-source-date-epoch=1234567890 test-src-date-epoch-override.j
 
 assert_file_has_content appdir/files/sde_out '^1234567890$'
 
-echo "ok source-date-epoch override value is used"
+ok "source-date-epoch override value is used"
 
 cat > test-src-date-epoch-disable.json <<'EOF'
 {
@@ -93,4 +91,6 @@ run_build --override-source-date-epoch=0 test-src-date-epoch-disable.json
 
 assert_file_has_content appdir/files/sde_out '^unset$'
 
-echo "ok source-date-epoch is unset when disabled with 0"
+ok "source-date-epoch is unset when disabled with 0"
+
+done_testing

@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..3"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -99,7 +97,7 @@ BODY="$(ostree_get_body "$REPO"_1 "$REF")"
 assert_streq "$SUBJECT" "$EXPECTED_SUBJECT"
 assert_streq "$BODY" "$EXPECTED_BODY"
 
-echo "ok default subject and body are set from git"
+ok "default subject and body are set from git"
 
 ${FLATPAK_BUILDER} --force-clean --repo="$REPO"_2 \
     --subject="Custom subject" --body="Custom body" appdir "$MANIFEST_NAME" >&2
@@ -111,7 +109,7 @@ BODY="$(ostree_get_body "$REPO"_2 "$REF")"
 assert_streq "$SUBJECT" "Custom subject"
 assert_streq "$BODY" "Custom body"
 
-echo "ok explicit subject and body override defaults"
+ok "explicit subject and body override defaults"
 
 rm -rf "$TEST_GIT_DIR/.git"
 
@@ -124,4 +122,6 @@ BODY="$(ostree_get_body "$REPO"_3 "$REF")"
 assert_streq "$SUBJECT" "Export $APP_ID"
 assert_streq "$BODY" "$EXPECTED_BODY"
 
-echo "ok default export subject is used outside git dir"
+ok "default export subject is used outside git dir"
+
+done_testing
