@@ -23,8 +23,6 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..4"
-
 setup_repo
 install_repo
 setup_sdk_repo
@@ -136,7 +134,7 @@ assert_has_dir appdir/files/share/runtime/locale/sv
 assert_has_file appdir/files/share/locale/plain-file
 assert_not_has_symlink appdir/files/share/locale/plain-file
 
-echo "ok locale dirs migrated"
+ok "locale dirs migrated"
 
 cat > test-locale-disabled.json <<'EOF'
 {
@@ -162,7 +160,7 @@ assert_has_file appdir/files/share/locale/de/LC_MESSAGES/test.mo
 assert_file_has_content appdir/files/share/locale/de/LC_MESSAGES/test.mo 'de translation'
 assert_not_has_dir appdir/files/share/runtime/locale
 
-echo "ok locale dirs migration is disabled on separate-locales false"
+ok "locale dirs migration is disabled on separate-locales false"
 
 cat > test-locale-migration-runtime.json <<'EOF'
 {
@@ -194,7 +192,7 @@ assert_has_symlink appdir/usr/lib/locale/cs
 assert_has_file appdir/usr/share/runtime/locale/cs/lib/cs/LC_MESSAGES/test.mo
 assert_file_has_content appdir/usr/share/runtime/locale/cs/lib/cs/LC_MESSAGES/test.mo 'cs translation'
 
-echo "ok locale dirs migration works with runtime"
+ok "locale dirs migration works with runtime"
 
 cat > test-locale-no-dirs.json <<'EOF'
 {
@@ -217,4 +215,6 @@ run_build test-locale-no-dirs.json
 assert_has_file appdir/files/bin/test
 assert_not_has_dir appdir/files/share/runtime/locale
 
-echo "ok locale migration handles missing locale dirs"
+ok "locale migration handles missing locale dirs"
+
+done_testing
