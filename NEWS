@@ -1,6 +1,9 @@
 Changes in 1.4.12
 =================
 
+* Allow specifying appstream-compose image format and fix tests with appstream >=1.2.0
+* Various improvements to tests to ensure enough debug information is available when they fail
+
 Changes in 1.4.11
 =================
 
