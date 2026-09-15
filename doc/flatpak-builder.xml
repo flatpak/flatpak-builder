@@ -625,6 +625,18 @@
             </varlistentry>
 
             <varlistentry>
+                <term><option>--compose-image-format=FORMAT</option></term>
+
+                <listitem><para>
+                  Set the AppStream compose image format used for
+                  generated icons and screenshots. Accepted values
+                  are <literal>png</literal> and <literal>jxl</literal>.
+                  <literal>jxl</literal> requires AppStream version >= 1.2.0.
+                  Defaults to <literal>png</literal> if unspecified.
+                </para></listitem>
+            </varlistentry>
+
+            <varlistentry>
                 <term><option>--add-tag=TAG</option></term>
 
                 <listitem><para>

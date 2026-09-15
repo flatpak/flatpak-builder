@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..2"
+echo "1..3"
 
 setup_repo
 install_repo
@@ -64,4 +64,21 @@ if appstream_has_version 0 16 3; then
     echo "ok compose full url policy"
 else
     echo "ok # Skip AppStream < 0.16.3"
+fi
+
+# test compose jxl image format
+if appstream_has_version 1 2 0; then
+    APPDIR=builddir_jxl \
+    run_build \
+        --mirror-screenshots-url=https://example.org/media \
+        --state-dir .fp-compose-image-format-jxl \
+        --compose-url-policy=full \
+        --compose-image-format=jxl \
+        org.flatpak.appstream_media.json
+
+        gzip -cdq builddir_jxl/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.jxl</icon>'
+
+    echo "ok compose jxl image format"
+else
+    echo "ok # Skip AppStream < 1.2.0"
 fi
