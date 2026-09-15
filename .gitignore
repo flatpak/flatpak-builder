@@ -104,3 +104,4 @@ system-helper/org.freedesktop.Flatpak.rules
 flatpak-bwrap
 py-compile
 libglnx-config.h
+subprojects/.wraplock
