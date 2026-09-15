@@ -94,6 +94,7 @@ static gboolean opt_log_system_bus;
 static gboolean opt_yes;
 static gint64 opt_source_date_epoch = SOURCE_DATE_EPOCH_DEFAULT;
 static gchar *opt_as_url_policy = NULL;
+static gchar *opt_as_image_format = NULL;
 
 static GOptionEntry entries[] = {
   { "verbose", 'v', 0, G_OPTION_ARG_NONE, &opt_verbose, "Print debug information during command processing", NULL },
@@ -151,6 +152,7 @@ static GOptionEntry entries[] = {
   { "no-shallow-clone", 0, 0, G_OPTION_ARG_NONE, &opt_no_shallow_clone, "Don't use shallow clones when mirroring git repos", NULL },
   { "override-source-date-epoch", 0, 0, G_OPTION_ARG_INT64, &opt_source_date_epoch, "Use this timestamp to perform the build, instead of the last modification time of the manifest.", NULL },
   { "compose-url-policy", 0, 0, G_OPTION_ARG_STRING, &opt_as_url_policy, "Set the AppStream compose URL policy to either 'partial' (default) or 'full'", "POLICY" },
+  { "compose-image-format", 0, 0, G_OPTION_ARG_STRING, &opt_as_image_format, "Set the AppStream compose image format to either 'png' (default) or 'jxl'", "FORMAT" },
   { NULL }
 };
 
@@ -639,6 +641,28 @@ main (int    argc,
         }
 
       builder_context_set_as_url_policy (build_context, policy);
+    }
+
+    {
+      BuilderAsImageFormat image_format = BUILDER_AS_IMAGE_FORMAT_PNG;
+
+      if (opt_as_image_format == NULL || g_strcmp0 (opt_as_image_format, "png") == 0)
+        image_format = BUILDER_AS_IMAGE_FORMAT_PNG;
+      else if (g_strcmp0 (opt_as_image_format, "jxl") == 0)
+        image_format = BUILDER_AS_IMAGE_FORMAT_JXL;
+      else
+        {
+          g_printerr ("Invalid value for --compose-image-format: %s\n", opt_as_image_format);
+          return 1;
+        }
+
+      if (image_format == BUILDER_AS_IMAGE_FORMAT_JXL && !appstream_has_version (1, 2, 0))
+        {
+          g_printerr ("AppStream version >= 1.2.0 required for 'jxl' compose image format\n");
+          return 1;
+        }
+
+      builder_context_set_as_image_format (build_context, image_format);
     }
 
   git_init_email ();

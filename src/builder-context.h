@@ -40,6 +40,10 @@ typedef enum {
   BUILDER_SOURCE_DATE_EPOCH_UNSET,
 } BuilderSourceDateEpochMode;
 
+typedef enum {
+  BUILDER_AS_IMAGE_FORMAT_PNG = 0,
+  BUILDER_AS_IMAGE_FORMAT_JXL,
+} BuilderAsImageFormat;
 
 /* Same as SOUP_HTTP_URI_FLAGS, means all possible flags for http uris */
 
@@ -212,6 +216,10 @@ char *          builder_context_resolve_repo_location (BuilderContext *self,
 void             builder_context_set_as_url_policy (BuilderContext      *self,
                                                     BuilderAsUrlPolicy  policy);
 BuilderAsUrlPolicy builder_context_get_as_url_policy (BuilderContext   *self);
+
+void             builder_context_set_as_image_format (BuilderContext       *self,
+                                                      BuilderAsImageFormat  format);
+BuilderAsImageFormat builder_context_get_as_image_format (BuilderContext   *self);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC (BuilderContext, g_object_unref)
 

@@ -93,6 +93,7 @@ struct BuilderContext
 
   BuilderAsUrlPolicy as_url_policy;
   BuilderSourceDateEpochMode  source_date_epoch_mode;
+  BuilderAsImageFormat as_image_format;
 };
 
 typedef struct
@@ -1308,6 +1309,19 @@ BuilderAsUrlPolicy
 builder_context_get_as_url_policy (BuilderContext *self)
 {
   return self->as_url_policy;
+}
+
+void
+builder_context_set_as_image_format (BuilderContext       *self,
+                                     BuilderAsImageFormat  format)
+{
+  self->as_image_format = format;
+}
+
+BuilderAsImageFormat
+builder_context_get_as_image_format (BuilderContext *self)
+{
+  return self->as_image_format;
 }
 
 gboolean
