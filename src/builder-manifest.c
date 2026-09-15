@@ -2428,6 +2428,7 @@ cmpstringp (const void *p1, const void *p2)
 static gboolean
 appstreamcli_compose (GError             **error,
                       BuilderAsUrlPolicy   as_url_policy,
+                      BuilderAsImageFormat as_image_format,
                       ...)
 {
   g_autoptr(GPtrArray) args = NULL;
@@ -2441,7 +2442,22 @@ appstreamcli_compose (GError             **error,
   if (as_url_policy == BUILDER_AS_URL_POLICY_FULL)
     g_ptr_array_add (args, g_strdup ("--no-partial-urls"));
 
-  va_start (ap, as_url_policy);
+  /* For AppStream >= 1.2.0 we need to explicitly pass --image-format,
+     since JXL is now the default and we want to keep producing
+     PNG unless the user asked for JXL. */
+  if (appstream_has_version (1, 2, 0))
+    {
+      g_ptr_array_add (args, g_strdup ("--image-format"));
+      g_ptr_array_add (args, g_strdup (as_image_format == BUILDER_AS_IMAGE_FORMAT_JXL ? "jxl" : "png"));
+    }
+  else
+    {
+      /* For AppStream < 1.2.0, --image-format doesn't exist and PNG is
+         the only supported format. The JXL choice is gated in main
+         on having >= 1.2.0 */
+    }
+
+  va_start (ap, as_image_format);
   while ((arg = va_arg (ap, const gchar *)))
     g_ptr_array_add (args, g_strdup (arg));
   g_ptr_array_add (args, NULL);
@@ -3092,6 +3108,7 @@ builder_manifest_cleanup (BuilderManifest *self,
           const char *opt_mirror_screenshots_url = builder_context_get_opt_mirror_screenshots_url (context);
           gboolean opt_export_only = builder_context_get_opt_export_only (context);
           BuilderAsUrlPolicy as_url_policy = builder_context_get_as_url_policy (context);
+          BuilderAsImageFormat as_image_format = builder_context_get_as_image_format (context);
 
           if (opt_mirror_screenshots_url && !opt_export_only)
             {
@@ -3104,6 +3121,7 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_print ("Saving screenshots in %s\n", flatpak_file_get_path_cached (media_dir));
               if (!appstreamcli_compose (error,
                                          as_url_policy,
+                                         as_image_format,
                                          "--prefix=/",
                                          origin,
                                          arg_base_url,
@@ -3121,6 +3139,7 @@ builder_manifest_cleanup (BuilderManifest *self,
               g_print ("Running appstreamcli compose\n");
               if (!appstreamcli_compose (error,
                                          as_url_policy,
+                                         as_image_format,
                                          "--prefix=/",
                                          origin,
                                          result_root_arg,
