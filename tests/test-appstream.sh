@@ -46,7 +46,9 @@ run_build \
     org.flatpak.appstream_media.json
 # we test for the icon tag instead of screenshot
 # the former works offline the latter does not
-gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
+gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz \
+    > appstream.xml
+assert_file_has_content_extended appstream.xml '>org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
 echo "ok compose partial url policy"
 
@@ -59,7 +61,9 @@ if appstream_has_version 0 16 3; then
         --compose-url-policy=full \
         org.flatpak.appstream_media.json
 
-    gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
+    gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz \
+        > appstream.xml
+    assert_file_has_content_extended appstream.xml '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
 
     echo "ok compose full url policy"
 else
@@ -76,7 +80,9 @@ if appstream_has_version 1 2 0; then
         --compose-image-format=jxl \
         org.flatpak.appstream_media.json
 
-        gzip -cdq builddir_jxl/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.jxl</icon>'
+        gzip -cdq builddir_jxl/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz \
+            > appstream.xml
+        assert_file_has_content_extended appstream.xml '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.jxl</icon>'
 
     echo "ok compose jxl image format"
 else
