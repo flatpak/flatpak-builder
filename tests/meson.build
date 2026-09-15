@@ -15,6 +15,7 @@ test_names = [
   'test-builder-licence-paths',
   'test-builder-locale-migration',
   'test-sandboxed-mode-source-resolution',
+  'test-appstream',
 ]
 
 tap_test = find_program(
