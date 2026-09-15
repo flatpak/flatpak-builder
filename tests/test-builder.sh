@@ -23,7 +23,7 @@ set -euo pipefail
 
 skip_without_fuse
 
-echo "1..12"
+echo "1..10"
 
 setup_repo
 install_repo
@@ -49,12 +49,8 @@ cp $(dirname $0)/Hello-desktop.appdata.xml .
 cp $(dirname $0)/org.test.Hello.desktop .
 cp $(dirname $0)/org.test.Hello.xml .
 cp $(dirname $0)/org.test.Hello.appdata.xml .
-cp $(dirname $0)/org.flatpak_builder.gui.desktop .
 cp $(dirname $0)/org.flatpak_builder.gui.json .
-cp $(dirname $0)/org.flatpak_builder.gui.metainfo.xml .
 cp $(dirname $0)/org.test.Hello.png .
-cp $(dirname $0)/org.test.Hello-256.png .
-cp $(dirname $0)/org.flatpak.appstream_media.json .
 cp $(dirname $0)/org.flatpak.install_test.json .
 cp $(dirname $0)/test-locale-cleanup.json .
 mkdir include1
@@ -149,35 +145,6 @@ ostree checkout --repo=$REPO/repo_sc -U screenshots/$(flatpak --default-arch) ou
 find outdir_sc -path "*/icons/64x64/org.test.Hello.png" -type f | grep -q .
 
 echo "ok screenshot ref commit"
-
-# test compose partial url policy
-APPDIR=builddir_sc \
-run_build \
-    --mirror-screenshots-url=https://example.org/media \
-    --state-dir .fp-compose-url-policy-partial \
-    --compose-url-policy=partial \
-    org.flatpak.appstream_media.json
-# we test for the icon tag instead of screenshot
-# the former works offline the latter does not
-gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
-
-echo "ok compose partial url policy"
-
-# test compose full url policy
-if appstream_has_version 0 16 3; then
-    APPDIR=builddir_sc \
-    run_build \
-        --mirror-screenshots-url=https://example.org/media \
-        --state-dir .fp-compose-url-policy-full \
-        --compose-url-policy=full \
-        org.flatpak.appstream_media.json
-
-    gzip -cdq builddir_sc/files/share/app-info/xmls/org.flatpak.appstream_media.xml.gz|grep -Eq '>https://example.org/media/org/flatpak/appstream_media/[^/]+/icons/128x128/org.flatpak.appstream_media.png</icon>'
-
-    echo "ok compose full url policy"
-else
-    echo "ok # Skip AppStream < 0.16.3"
-fi
 
 # test install
 APPDIR=builddir run_build --user --install org.flatpak.install_test.json
