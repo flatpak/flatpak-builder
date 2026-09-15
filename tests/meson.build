@@ -27,6 +27,7 @@ test_names = [
   'test-builder-locale-migration',
   'test-build-subj',
   'test-sandboxed-mode-source-resolution',
+  'test-appstream',
 ]
 
 tap_test = find_program(
