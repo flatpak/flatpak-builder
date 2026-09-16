@@ -38,6 +38,8 @@ struct BuilderSourceExtraData
   char         *filename;
   char         *url;
   char         *sha256;
+  char         *script;
+  char         *script_filename;
   guint64       size;
   guint64       installed_size;
 };
@@ -54,6 +56,8 @@ enum {
   PROP_FILENAME,
   PROP_URL,
   PROP_SHA256,
+  PROP_SCRIPT,
+  PROP_SCRIPT_FILENAME,
   PROP_SIZE,
   PROP_INSTALLED_SIZE,
   LAST_PROP
@@ -67,6 +71,8 @@ builder_source_extra_data_finalize (GObject *object)
   g_free (self->filename);
   g_free (self->url);
   g_free (self->sha256);
+  g_free (self->script);
+  g_free (self->script_filename);
 
   G_OBJECT_CLASS (builder_source_extra_data_parent_class)->finalize (object);
 }
@@ -91,6 +97,14 @@ builder_source_extra_data_get_property (GObject    *object,
 
     case PROP_SHA256:
       g_value_set_string (value, self->sha256);
+      break;
+
+    case PROP_SCRIPT:
+      g_value_set_string (value, self->script);
+      break;
+
+    case PROP_SCRIPT_FILENAME:
+      g_value_set_string (value, self->script_filename);
       break;
 
     case PROP_SIZE:
@@ -131,6 +145,16 @@ builder_source_extra_data_set_property (GObject      *object,
       self->sha256 = g_value_dup_string (value);
       break;
 
+    case PROP_SCRIPT:
+      g_free (self->script);
+      self->script = g_value_dup_string (value);
+      break;
+
+    case PROP_SCRIPT_FILENAME:
+      g_free (self->script_filename);
+      self->script_filename = g_value_dup_string (value);
+      break;
+
     case PROP_SIZE:
       self->size = g_value_get_uint64 (value);
       break;
@@ -155,14 +179,26 @@ builder_source_extra_data_download (BuilderSource  *source,
   if (self->filename == NULL)
     return flatpak_fail (error, "No filename specified for extra data source");
 
-  if (self->url == NULL)
-    return flatpak_fail (error, "No url specified for extra data source");
-
   if (self->sha256 == NULL)
     return flatpak_fail (error, "No sha256 specified for extra data source");
 
   if (self->size == 0)
     return flatpak_fail (error, "No size specified for extra data source");
+
+  if (self->url == NULL && self->script == NULL)
+    return flatpak_fail (error, "No url or script specified for extra data source");
+
+  if (self->url != NULL && self->script != NULL)
+    return flatpak_fail (error, "url and script are mutually exclusive for extra data source");
+
+  if (self->script != NULL)
+    {
+      g_autoptr(GFile) script_file =
+        g_file_resolve_relative_path (BUILDER_SOURCE (self)->base_dir, self->script);
+
+      if (!g_file_query_exists (script_file, NULL))
+        return flatpak_fail (error, "Extra data script %s not found", self->script);
+    }
 
   return TRUE;
 }
@@ -196,6 +232,8 @@ builder_source_extra_data_checksum (BuilderSource  *source,
 
   builder_cache_checksum_str (cache, self->filename);
   builder_cache_checksum_str (cache, self->url);
+  builder_cache_checksum_str (cache, self->script);
+  builder_cache_checksum_str (cache, self->script_filename);
   builder_cache_checksum_str (cache, self->sha256);
   builder_cache_checksum_uint64 (cache, self->size);
   builder_cache_checksum_uint64 (cache, self->installed_size);
@@ -207,7 +245,6 @@ builder_source_extra_data_finish (BuilderSource  *source,
                                   BuilderContext *context)
 {
   BuilderSourceExtraData *self = BUILDER_SOURCE_EXTRA_DATA (source);
-  char *arg;
   g_autofree char *installed_size = NULL;
 
   if (self->installed_size != 0)
@@ -215,14 +252,58 @@ builder_source_extra_data_finish (BuilderSource  *source,
   else
     installed_size = g_strdup ("");
 
-  arg = g_strdup_printf ("--extra-data=%s:%s:%"G_GUINT64_FORMAT":%s:%s",
-                         self->filename,
-                         self->sha256,
-                         self->size,
-                         installed_size,
-                         self->url);
+  if (self->script != NULL)
+    {
+      g_autoptr(GFile) app_dir = NULL;
+      g_autoptr(GFile) files_dir = NULL;
+      g_autoptr(GFile) script_source = NULL;
+      g_autoptr(GFile) script_dest = NULL;
+      g_autoptr(GFile) script_dest_dir = NULL;
+      const char *script_dest_name;
+      g_autofree char *installed_script = NULL;
+      guint32 perms = 0755;
 
-  g_ptr_array_add (args, arg);
+      if (self->script_filename != NULL)
+        script_dest_name = self->script_filename;
+      else
+        {
+          g_autofree char *basename = g_path_get_basename (self->script);
+          installed_script = g_strdup_printf ("bin/%s", basename);
+          script_dest_name = installed_script;
+        }
+
+      app_dir = g_object_ref (builder_context_get_app_dir (context));
+      files_dir = flatpak_build_file (app_dir, "files", NULL);
+      script_dest = g_file_resolve_relative_path (files_dir, script_dest_name);
+      script_dest_dir = g_file_get_parent (script_dest);
+      script_source = g_file_resolve_relative_path (BUILDER_SOURCE (self)->base_dir, self->script);
+
+      /* Copy the script into the app so that it gets exported and downloaded
+       * by clients when the extra data is fetched. */
+      if (!flatpak_mkdir_p (script_dest_dir, NULL, NULL) ||
+          !g_file_copy (script_source, script_dest,
+                        G_FILE_COPY_OVERWRITE, NULL, NULL, NULL, NULL) ||
+          !g_file_set_attribute (script_dest, G_FILE_ATTRIBUTE_UNIX_MODE,
+                                 G_FILE_ATTRIBUTE_TYPE_UINT32, &perms,
+                                 G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, NULL))
+        g_warning ("Failed to install extra data script %s in the app", self->script);
+
+      g_ptr_array_add (args, g_strdup_printf ("--extra-data-script=%s:%s:%"G_GUINT64_FORMAT":%s:%s",
+                                              self->filename,
+                                              self->sha256,
+                                              self->size,
+                                              installed_size,
+                                              script_dest_name));
+    }
+  else
+    {
+      g_ptr_array_add (args, g_strdup_printf ("--extra-data=%s:%s:%"G_GUINT64_FORMAT":%s:%s",
+                                              self->filename,
+                                              self->sha256,
+                                              self->size,
+                                              installed_size,
+                                              self->url));
+    }
 }
 
 static void
@@ -258,6 +339,20 @@ builder_source_extra_data_class_init (BuilderSourceExtraDataClass *klass)
   g_object_class_install_property (object_class,
                                    PROP_SHA256,
                                    g_param_spec_string ("sha256",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SCRIPT,
+                                   g_param_spec_string ("script",
+                                                        "",
+                                                        "",
+                                                        NULL,
+                                                        G_PARAM_READWRITE));
+  g_object_class_install_property (object_class,
+                                   PROP_SCRIPT_FILENAME,
+                                   g_param_spec_string ("script-filename",
                                                         "",
                                                         "",
                                                         NULL,

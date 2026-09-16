@@ -1021,7 +1021,15 @@
                     </varlistentry>
                     <varlistentry>
                         <term><option>url</option> (string)</term>
-                        <listitem><para>The url to the extra data.</para></listitem>
+                        <listitem><para>The url to the extra data. This is mutually exclusive with <option>script</option>.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>script</option> (string)</term>
+                        <listitem><para>The path to a script (relative to the manifest) that is run by the client to generate the url from which the extra data is downloaded. The script is copied into the app's <filename>files/</filename> directory and exported. When run, the script must print a JSON object to stdout, e.g. <literal>{ "url": "https://example.com/data.zip" }</literal>; the <literal>url</literal> member is used as the download url. This is mutually exclusive with <option>url</option>.</para></listitem>
+                    </varlistentry>
+                    <varlistentry>
+                        <term><option>script-filename</option> (string)</term>
+                        <listitem><para>The destination path of the script inside the app's <filename>files/</filename> directory. Defaults to <filename>bin/&lt;basename of script&gt;</filename>.</para></listitem>
                     </varlistentry>
                     <varlistentry>
                         <term><option>sha256</option> (string)</term>

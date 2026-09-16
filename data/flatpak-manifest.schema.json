@@ -1261,6 +1261,14 @@
           "description": "The url to the extra data.",
           "type": "string"
         },
+        "script": {
+          "description": "The path to a script that is run by the client to generate the url from which the extra data is downloaded. The script is copied into the app's files/ directory and exported. When run, the script must print a JSON object to stdout (e.g. { \"url\": \"https://...\" }) whose \"url\" member is the download url. Mutually exclusive with url.",
+          "type": "string"
+        },
+        "script-filename": {
+          "description": "The destination path of the script inside the app's files/ directory. Defaults to bin/<basename of script>.",
+          "type": "string"
+        },
         "sha256": {
           "description": "The sha256 of the extra data.",
           "type": "string"
@@ -1279,10 +1287,13 @@
         "^//.*": { "$ref": "#/$defs/ignored-prop/comment" }
       },
       "required": [
-        "url",
         "sha256",
         "size",
         "filename"
+      ],
+      "oneOf": [
+        { "required": [ "url" ] },
+        { "required": [ "script" ] }
       ],
       "additionalProperties": false
     }
