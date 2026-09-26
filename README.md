@@ -74,6 +74,6 @@ Rarely used:
  * svn
  * bzr
 
-# Maintainance docs
+# Maintenance docs
 
-Please see the [maintainance docs](https://github.com/flatpak/flatpak-builder/blob/main/MAINT.md).
+Please see the [maintenance docs](https://github.com/flatpak/flatpak-builder/blob/main/MAINT.md).
