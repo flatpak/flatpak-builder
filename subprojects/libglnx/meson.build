@@ -12,6 +12,7 @@ project(
 )
 
 add_project_arguments('-D_GNU_SOURCE', language: 'c')
+add_project_arguments('-Wno-missing-field-initializers', language: 'c')
 add_project_arguments('-Wno-unused-local-typedefs', language: 'c')
 
 # We are intentionally using non-ISO features in this (sub)project,
@@ -26,6 +27,7 @@ check_functions = [
   'renameat2',
   'memfd_create',
   'copy_file_range',
+  'name_to_handle_at',
 ]
 conf = configuration_data()
 foreach check_function : check_functions
@@ -110,6 +112,9 @@ libglnx_dep = declare_dependency(
   dependencies : libglnx_deps,
   include_directories : libglnx_inc,
   link_with : libglnx)
+if meson.version().version_compare('>= 0.54.0')
+  meson.override_dependency('libglnx', libglnx_dep)
+endif
 
 subdir('tests')
 
