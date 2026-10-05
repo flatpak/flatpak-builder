@@ -22,6 +22,7 @@ test_names = [
   'test-builder-python',
   'test-builder-flags',
   'test-builder-cleanup',
+  'test-builder-dir-source',
   'test-builder-licence-paths',
   'test-builder-src-date-epoch',
   'test-builder-locale-migration',
