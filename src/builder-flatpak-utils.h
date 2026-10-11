@@ -195,17 +195,15 @@ gboolean flatpak_file_is_in (GFile *file,
 typedef enum {
   FLATPAK_CP_FLAGS_NONE = 0,
   FLATPAK_CP_FLAGS_MERGE = 1<<0,
-  FLATPAK_CP_FLAGS_NO_CHOWN = 1<<1,
-  FLATPAK_CP_FLAGS_MOVE = 1<<2,
 } FlatpakCpFlags;
 
-gboolean   flatpak_cp_a (GFile         *src,
-                         GFile         *dest,
-                         GFile         *keep_in_toplevel,
-                         FlatpakCpFlags flags,
-                         GPtrArray     *skip_files,
-                         GCancellable  *cancellable,
-                         GError       **error);
+gboolean flatpak_cp_a (GFile         *src,
+                       GFile         *dest,
+                       GFile         *keep_in_toplevel,
+                       FlatpakCpFlags flags,
+                       GPtrArray     *skip_files,
+                       GCancellable  *cancellable,
+                       GError       **error);
 
 gboolean flatpak_zero_mtime (int parent_dfd,
                              const char *rel_path,
