@@ -300,7 +300,7 @@
                 <term><option>--build-only</option></term>
 
                 <listitem><para>
-                     Don't do the cleanup and finish stages, which is useful if you
+                     Don't do the cleanup, finish and export stages, which is useful if you
                      want to build more things into the app.
                 </para></listitem>
             </varlistentry>
@@ -309,8 +309,8 @@
                 <term><option>--finish-only</option></term>
 
                 <listitem><para>
-                     Only do the cleanup, finish and export stages, picking up
-                     where a --build-only command left off.
+                     Only do the finish and export stages, picking up
+                     where a --build-only command left off, omitting the cleanup stage.
                 </para></listitem>
             </varlistentry>
 
