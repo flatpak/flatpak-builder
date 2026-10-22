@@ -116,7 +116,7 @@ static GOptionEntry entries[] = {
   { "extra-sources", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_sources_dirs, "Add an extra source directory with state directory structure. The option can be repeated", "SOURCE-DIR"},
   { "extra-sources-url", 0, 0, G_OPTION_ARG_STRING_ARRAY, &opt_sources_urls, "Add a url of sources specified by SOURCE-URL multiple uses of this option possible", "SOURCE-URL"},
   { "build-only", 0, 0, G_OPTION_ARG_NONE, &opt_build_only, "Stop after build, don't run clean and finish phases", NULL },
-  { "finish-only", 0, 0, G_OPTION_ARG_NONE, &opt_finish_only, "Only run clean and finish and export phases", NULL },
+  { "finish-only", 0, 0, G_OPTION_ARG_NONE, &opt_finish_only, "Only run finish and export phases", NULL },
   { "export-only", 0, 0, G_OPTION_ARG_NONE, &opt_export_only, "Only run export phase", NULL },
   { "allow-missing-runtimes", 0, 0, G_OPTION_ARG_NONE, &opt_allow_missing_runtimes, "Don't fail if runtime and sdk missing", NULL },
   { "show-deps", 0, 0, G_OPTION_ARG_NONE, &opt_show_deps, "List the dependencies of the json file (see --show-deps --help)", NULL },
